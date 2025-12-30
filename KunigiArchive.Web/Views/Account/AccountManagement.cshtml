@@ -1,0 +1,75 @@
+﻿@model KunigiArchive.Web.ViewModels.Common.PaginatedViewModel<KunigiArchive.Web.ViewModels.Account.AccountDetailsViewModel>
+
+@{
+    ViewData["Title"] = "Διαχείριση Χρηστών";
+    ViewData["Banner"] = "Διαχείριση Χρηστών";
+
+    var searchQuery = ViewBag.SearchQuery ?? "";
+}
+
+<div class="mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a asp-controller="Account" asp-action="AccountCreate" class="btn btn-primary">Νέος Χρήστης</a>
+        @if (Model.Items.Any() || !string.IsNullOrEmpty(searchQuery))
+        {
+            <div class="d-flex gap-2">
+                <form asp-controller="Account" asp-action="AccountManagement" method="get" class="d-flex">
+                    <input type="hidden" name="pageNumber" value="1"/>
+                    <input type="hidden" name="pageSize" value="@Model.PageSize"/>
+                    <div class="input-group" style="max-width: 300px;">
+                        <input type="text" name="searchQuery" value="@searchQuery" class="form-control"
+                               placeholder="Αναζήτηση..."/>
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </form>
+                @if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    <a asp-controller="Account" asp-action="AccountManagement" class="btn btn-secondary">Καθαρισμός</a>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="list-group">
+        @foreach (var user in Model.Items)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <span>@user.Email</span>
+                        @if (!string.IsNullOrEmpty(user.Role))
+                        {
+                            <span class="badge bg-secondary ms-2">@user.Role</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!Model.Items.Any())
+    {
+        <p class="text-center text-muted mt-4">Δεν βρέθηκαν αποτελέσματα.</p>
+    }
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                    <a class="page-link"
+                       asp-controller="Account"
+                       asp-action="AccountManagement"
+                       asp-route-pageNumber="@i"
+                       asp-route-pageSize="@Model.PageSize"
+                       asp-route-searchQuery="@searchQuery">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

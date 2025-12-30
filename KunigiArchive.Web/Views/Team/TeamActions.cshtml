@@ -1,0 +1,57 @@
+﻿@model KunigiArchive.Web.ViewModels.Team.TeamDetailsViewModel;
+
+@{
+    ViewData["Title"] = $"{Model.Name} - Ενέργειες";
+    ViewData["Banner"] = Model.Name;
+
+    var columnClass = User.IsInRole("Admin") ? "col-md-3" : "col-md-4";
+}
+
+<div class="row g-4">
+    <div class="@columnClass">
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-eye-fill display-4 mb-3"></i>
+                <h5 class="card-title">Προβολή</h5>
+                <a asp-controller="Team" asp-action="TeamDetails" asp-route-slug="@Model.Slug"
+                   class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="@columnClass">
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-pencil display-4 mb-3"></i>
+                <h5 class="card-title">Επεξεργασία</h5>
+                <a asp-controller="Team" asp-action="TeamUpdate" asp-route-slug="@Model.Slug"
+                   class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="@columnClass">
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-card-image display-4 mb-3"></i>
+                <h5 class="card-title">Υλικό</h5>
+                <a asp-controller="Team" asp-action="TeamMedia" asp-route-slug="@Model.Slug"
+                   class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="@columnClass">
+            <div class="card">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-people-fill display-4 mb-3"></i>
+                    <h5 class="card-title">Διαχείριστές</h5>
+                    <a asp-controller="Team" asp-action="TeamManagers" asp-route-slug="@Model.Slug"
+                       class="stretched-link"></a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

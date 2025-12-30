@@ -1,0 +1,155 @@
+﻿@model KunigiArchive.Web.ViewModels.Team.TeamDetailsViewModel
+
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="row gx-lg-5 gy-4 mb-5 align-items-center">
+    <div class="col-md-5">
+        <div class="position-relative">
+            @if (string.IsNullOrEmpty(Model.Image))
+            {
+                <div
+                    class="ratio ratio-1x1 border border-2 border-dark d-flex align-items-center justify-content-center">
+                    <i class="bi bi-image fs-1 opacity-25"></i>
+                </div>
+            }
+            else
+            {
+                <img src="~/@Model.Image" class="img-fluid w-100 border border-2 border-dark rounded-0"
+                     alt="@Model.Name">
+            }
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <h1 class="display-2 fw-bold text-uppercase mb-2 text-break">@Model.Name</h1>
+
+        <div class="fs-4 font-monospace mb-4 border-bottom border-2 border-dark pb-3 d-inline-block">
+            @if (Model.YearFounded.HasValue)
+            {
+                <span class="fw-bold">@Model.YearFounded</span>
+                <span class="mx-2 opacity-50">/</span>
+            }
+
+            @if (Model.IsActive)
+            {
+                <span class="text-success fw-bold text-uppercase">Ενεργη</span>
+            }
+            else
+            {
+                <span class="text-danger fw-bold text-uppercase">Ανενεργη</span>
+            }
+        </div>
+
+        @if ((!string.IsNullOrEmpty(Model.Website) || !string.IsNullOrEmpty(Model.Facebook) ||
+              !string.IsNullOrEmpty(Model.Youtube) || !string.IsNullOrEmpty(Model.Instagram)) && Model.IsActive)
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @if (!string.IsNullOrEmpty(Model.Website))
+                {
+                    <a href="@Model.Website" target="_blank" class="btn btn-dark rounded-0 border-2 px-4 fw-bold">
+                        <i class="bi bi-globe me-2"></i> Website
+                    </a>
+                }
+                @if (!string.IsNullOrEmpty(Model.Facebook))
+                {
+                    <a href="@Model.Facebook" target="_blank" class="btn btn-dark rounded-0 border-2 px-3">
+                        <i class="bi bi-facebook"></i>
+                    </a>
+                }
+                @if (!string.IsNullOrEmpty(Model.Youtube))
+                {
+                    <a href="@Model.Youtube" target="_blank" class="btn btn-dark rounded-0 border-2 px-3">
+                        <i class="bi bi-youtube"></i>
+                    </a>
+                }
+                @if (!string.IsNullOrEmpty(Model.Instagram))
+                {
+                    <a href="@Model.Instagram" target="_blank" class="btn btn-dark rounded-0 border-2 px-3">
+                        <i class="bi bi-instagram"></i>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<hr class="border-2 border-dark opacity-100 mb-5"/>
+
+<div class="row gy-5">
+    <div class="col-12">
+        <h2 class="fw-bold text-uppercase mb-3">Δυο Λογακια</h2>
+        @if (!string.IsNullOrEmpty(Model.Description))
+        {
+            <div class="fs-5 lh-lg">
+                @Html.Raw(Model.Description)
+            </div>
+        }
+        else
+        {
+            <p class="text-muted fst-italic">Δεν υπάρχει περιγραφή διαθέσιμη.</p>
+        }
+    </div>
+
+    @if (Model.GamesHosted.Any() || Model.GamesWon.Any())
+    {
+        <div class="col-12">
+            <div class="row g-4">
+                @if (Model.GamesHosted.Any())
+                {
+                    <div class="col-md-6">
+                        <div class="border border-2 border-dark p-4 h-100">
+                            <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-dark">Διοργανώσεις <span
+                                    class="float-end">@Model.GamesHosted.Count</span></h4>
+                            <ul class="list-unstyled mb-0 d-grid gap-2">
+                                @foreach (var game in Model.GamesHosted)
+                                {
+                                    <li>
+                                        <a asp-controller="Game" asp-action="ParentGameDetails"
+                                           asp-route-slug="@game.Slug"
+                                           class="text-decoration-none text-body fw-bold fs-5 d-block py-1">
+                                            @game.FormattedTitle()
+                                            <i class="bi bi-arrow-right float-end opacity-50"></i>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+
+                @if (Model.GamesWon.Any())
+                {
+                    <div class="col-md-6">
+                        <div class="border border-2 border-dark p-4 h-100">
+                            <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-dark">Νίκες <span
+                                    class="float-end">@Model.GamesWon.Count</span></h4>
+                            <ul class="list-unstyled mb-0 d-grid gap-2">
+                                @foreach (var game in Model.GamesWon)
+                                {
+                                    <li>
+                                        <a asp-controller="Game" asp-action="ParentGameDetails"
+                                           asp-route-slug="@game.Slug"
+                                           class="text-decoration-none text-body fw-bold fs-5 d-block py-1">
+                                            @game.FormattedTitle()
+                                            <i class="bi bi-arrow-right float-end opacity-50"></i>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (Model.Media.Any())
+    {
+        <div class="col-12">
+            <h2 class="fw-bold text-uppercase mb-4">Υλικό</h2>
+            @await Html.PartialAsync("_MediaGallery", Model.Media)
+        </div>
+    }
+</div>
