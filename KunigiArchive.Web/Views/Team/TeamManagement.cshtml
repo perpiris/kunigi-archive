@@ -44,31 +44,41 @@
 
 @if (Model.Items.Any())
 {
-    <div class="list-group">
-        @foreach (var team in Model.Items)
-        {
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <span>@team.Name</span>
-                </div>
-                <div class="d-flex gap-2">
-                    <a asp-controller="Team" asp-action="TeamActions" asp-route-slug="@team.Slug"
-                       class="btn btn-secondary">Ενέργειες</a>
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"
-                            data-team-name="@team.Name" data-team-slug="@team.Slug">
-                        Διαγραφή
-                    </button>
-                </div>
-            </div>
-        }
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+            <tr>
+                <th scope="col">Όνομα Ομάδας</th>
+                <th scope="col" class="text-end">Ενέργειες</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var team in Model.Items)
+            {
+                <tr>
+                    <td class="align-middle">@team.Name</td>
+                    <td class="text-end align-middle">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a asp-controller="Team" asp-action="TeamActions" asp-route-slug="@team.Slug"
+                               class="btn btn-secondary btn-sm">Ενέργειες</a>
+                            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal"
+                                    data-team-name="@team.Name" data-team-slug="@team.Slug">
+                                Διαγραφή
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
     </div>
 }
 else
 {
     <div class="text-center py-5 border border-2 border-dark">
-        <h3 class="fw-bold text-uppercase">No Results Found</h3>
-        <p class="text-muted">Try adjusting your search query.</p>
-        <a asp-action="TeamManagement" class="btn btn-secondary mt-3">Reset Filters</a>
+        <h3 class="fw-bold text-uppercase">Δεν Βρέθηκαν Αποτελέσματα</h3>
+        <a asp-action="TeamManagement" class="btn btn-secondary mt-3">Καθαρισμός Φίλτρων</a>
     </div>
 }
 

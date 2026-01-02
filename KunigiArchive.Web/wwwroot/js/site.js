@@ -40,6 +40,10 @@
 
     function resetSubmitButton(form) {
         const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+
+        const overlay = document.getElementById('global-loader-overlay');
+        if (overlay) overlay.style.display = 'none';
+
         if (submitButton && submitButton.dataset.submitting === 'true') {
             const spinner = submitButton.querySelector('.spinner-border');
             if (spinner) {
@@ -57,10 +61,17 @@
             const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
 
             if (submitButton) {
+                if (typeof $ !== 'undefined' && $(form).length > 0 && !$(form).valid()) {
+                    return;
+                }
+
                 if (submitButton.dataset.submitting === 'true') {
                     event.preventDefault();
                     return;
                 }
+
+                const overlay = document.getElementById('global-loader-overlay');
+                if (overlay) overlay.style.display = 'flex';
 
                 submitButton.dataset.submitting = 'true';
                 submitButton.disabled = true;
