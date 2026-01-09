@@ -489,4 +489,5 @@ $RECYCLE.BIN/
 *.db-wal
 *.sqlite
 
-media/
+wwwroot/media/
+wwwroot/media/**/*
