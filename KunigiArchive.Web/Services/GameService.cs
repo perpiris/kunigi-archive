@@ -39,9 +39,11 @@ public class GameService : IGameService
         var query = _context.Games.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
+            var searchLower = searchQuery.ToLower();
             query = query.Where(x =>
-                x.Title != null && (x.OrderTitle.ToLower().Contains(searchQuery) ||
-                                    x.Title.ToLower().Contains(searchQuery)));
+                x.OrderTitle.ToLower().Contains(searchLower) ||
+                (x.Title != null && x.Title.ToLower().Contains(searchLower)) ||
+                x.Year.ToString().Contains(searchLower));
         }
 
         query = query.OrderBy(x => x.Year);
@@ -148,6 +150,10 @@ public class GameService : IGameService
         if (includeFullDetails)
         {
             query = query
+                .Include(x => x.Host)
+                .Include(x => x.Winner)
+                .Include(x => x.GameDays)
+                .ThenInclude(x => x.GameDayType)
                 .AsSplitQuery();
         }
 
@@ -165,6 +171,45 @@ public class GameService : IGameService
         return ServiceResponse<GameDetailsViewModel>.Successful(game.MapToGameDetailsViewModel(includeFullDetails));
     }
 
+    public async Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug, long? userId = null,
+        bool isAdmin = false)
+    {
+        var game = await _context.Games
+            .AsNoTracking()
+            .Include(x => x.GameDays)
+            .ThenInclude(x => x.GameDayType)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse<GameDaysViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        if (userId.HasValue && !await CanUserAccessGameAsync(userId.Value, slug, isAdmin))
+        {
+            return ServiceResponse<GameDaysViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
+        }
+
+        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        if (!string.IsNullOrWhiteSpace(game.Title))
+        {
+            formattedTitle += $" - {game.Title}";
+        }
+
+        var viewModel = new GameDaysViewModel
+        {
+            GameId = game.GameId,
+            Slug = game.Slug,
+            FormattedTitle = formattedTitle,
+            Days = game.GameDays.Select(x => new GameDayViewModel
+            {
+                GameDayId = x.GameDayId, Name = x.GameDayType.Label, IsEnabled = x.IsEnabled
+            }).ToList()
+        };
+
+        return ServiceResponse<GameDaysViewModel>.Successful(viewModel);
+    }
+
     private async Task<bool> CanUserAccessGameAsync(long userId, string slug, bool isAdmin = false)
     {
         if (isAdmin)
@@ -179,5 +224,19 @@ public class GameService : IGameService
         }
 
         return await _context.TeamManagers.AnyAsync(x => x.TeamId == team.TeamId && x.AppUserId == userId);
+    }
+
+    public async Task<ServiceResponse<bool>> ToggleGameDayAsync(long gameDayId)
+    {
+        var gameDay = await _context.GameDays.FindAsync(gameDayId);
+        if (gameDay == null)
+        {
+            return ServiceResponse<bool>.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        gameDay.IsEnabled = !gameDay.IsEnabled;
+        await _context.SaveChangesAsync();
+
+        return ServiceResponse<bool>.Successful(gameDay.IsEnabled);
     }
 }

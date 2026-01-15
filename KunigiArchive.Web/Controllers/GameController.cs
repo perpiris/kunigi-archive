@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Game;
 using Microsoft.AspNetCore.Authorization;
@@ -97,5 +98,41 @@ public class GameController : Controller
 
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet("{slug}/days")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GameDays(string slug)
+    {
+        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        var isAdmin = User.IsInRole("Admin");
+
+        var serviceResponse = await _gameService.GetGameDaysViewModelAsync(slug, userId, isAdmin);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameActions), new { slug });
+    }
+
+    [HttpPost("{slug}/days/{gameDayId:long}/toggle")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> ToggleGameDay(string slug, long gameDayId)
+    {
+        var serviceResponse = await _gameService.ToggleGameDayAsync(gameDayId);
+
+        if (serviceResponse.Success)
+        {
+            var message = serviceResponse.Data ? "Η ημέρα ενεργοποιήθηκε." : "Η ημέρα απενεργοποιήθηκε.";
+            AlertMessageHandler.SetMessage(TempData, ServiceResponse.Successful(message));
+        }
+        else
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        }
+
+        return RedirectToAction(nameof(GameDays), new { slug });
     }
 }

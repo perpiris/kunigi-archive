@@ -16,4 +16,9 @@ public interface IGameService
 
     Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails,
         long? userId = null, bool isAdmin = false);
+
+    Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug, long? userId = null,
+        bool isAdmin = false);
+
+    Task<ServiceResponse<bool>> ToggleGameDayAsync(long gameDayId);
 }
