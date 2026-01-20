@@ -17,7 +17,7 @@ public class TeamController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> TeamList(short pageNumber = 1, short pageSize = 10, string? searchQuery = null)
+    public async Task<IActionResult> TeamList(short pageNumber = 1, short pageSize = 8, string? searchQuery = null)
     {
         var serviceResponse = await _teamService.GetPaginatedTeamsAsync(pageNumber, pageSize, searchQuery);
         ViewBag.SearchQuery = searchQuery;
@@ -26,7 +26,7 @@ public class TeamController : Controller
 
     [Authorize(Roles = "Admin")]
     [HttpGet("manage")]
-    public async Task<IActionResult> TeamManagement(short pageNumber = 1, short pageSize = 10,
+    public async Task<IActionResult> TeamManagement(short pageNumber = 1, short pageSize = 8,
         string? searchQuery = null)
     {
         var serviceResponse = await _teamService.GetPaginatedTeamsAsync(pageNumber, pageSize, searchQuery);

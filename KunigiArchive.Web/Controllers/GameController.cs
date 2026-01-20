@@ -18,7 +18,7 @@ public class GameController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GameList(short pageNumber = 1, short pageSize = 10, string? searchQuery = null)
+    public async Task<IActionResult> GameList(short pageNumber = 1, short pageSize = 8, string? searchQuery = null)
     {
         var serviceResponse = await _gameService.GetPaginatedGamesAsync(pageNumber, pageSize, searchQuery);
         ViewBag.SearchQuery = searchQuery;
@@ -27,7 +27,7 @@ public class GameController : Controller
 
     [HttpGet("manage")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GameManagement(short pageNumber = 1, short pageSize = 10,
+    public async Task<IActionResult> GameManagement(short pageNumber = 1, short pageSize = 8,
         string? searchQuery = null)
     {
         var serviceResponse = await _gameService.GetPaginatedGamesAsync(pageNumber, pageSize, searchQuery);

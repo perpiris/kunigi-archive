@@ -44,13 +44,15 @@
 
 @if (Model.Items.Any())
 {
-    <div class="row g-2">
+    <div class="row g-4">
         @foreach (var game in Model.Items)
         {
-            <div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2-4">
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                 <div class="card h-100 border-2 border-dark">
-                    <div class="card-header text-center bg-transparent border-bottom border-2 border-dark py-2">
-                        <h6 class="fw-bold text-uppercase mb-0 small">@game.FormattedTitle()</h6>
+                    <div
+                        class="card-header d-flex align-items-center justify-content-center bg-transparent border-bottom border-2 border-dark py-2"
+                        style="min-height: 3.5rem;">
+                        <h5 class="fw-bold text-uppercase mb-0 small text-center">@($"{game.OrderTitle} - {game.Year}")</h5>
                     </div>
 
                     <div class="position-relative overflow-hidden"

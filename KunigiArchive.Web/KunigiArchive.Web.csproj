@@ -22,4 +22,14 @@
         <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Update="wwwroot\media\**">
+            <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+        </Content>
+
+        <Content Update="@(Content)">
+            <Visible Condition="'%(NuGetItemType)' == 'Content'">false</Visible>
+        </Content>
+    </ItemGroup>
+
 </Project>

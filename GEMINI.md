@@ -1,83 +1,65 @@
-# KunigiArchive
+# KunigiArchive Project Context
 
 ## Project Overview
+KunigiArchive is an ASP.NET Core MVC web application designed to archive and manage the history of "Kunigi" games. It serves as a central repository for Teams, Games, Puzzles, and associated multimedia content. The application is built on the future **.NET 10** framework.
 
-**KunigiArchive** is an ASP.NET Core MVC web application designed to serve as a digital archive for "To Kinigi" (The Hunt), likely a scavenger hunt or team-based competition. It manages historical data about games, teams, puzzles, and associated media.
-
-### Technical Stack
-
-*   **Framework:** .NET 10.0 (ASP.NET Core MVC)
-*   **Database:** SQLite
-*   **ORM:** Entity Framework Core 10.0.1
-*   **Authentication/Authorization:** ASP.NET Core Identity
-*   **Logging:** Serilog (Console & Rolling File sinks)
-*   **Frontend:** Razor Views (Server-side rendering) with Bootstrap/jQuery (inferred from `wwwroot/lib`)
-*   **Email:** Mailtrap (configured in `appsettings.json`)
-
-## Architecture & Directory Structure
-
-The project follows a standard monolithic N-Tier architecture organized by function:
-
-*   **`KunigiArchive.Web/`**: The main web application project.
-    *   **`Controllers/`**: Handles HTTP requests and application flow (`GameController`, `TeamController`, etc.).
-    *   **`Data/`**: Database context (`DataContext`), migrations, and seeding logic (`DataSeed`).
-    *   **`Entities/`**: Domain models representing the database schema (`Game`, `Team`, `Puzzle`, `AppUser`).
-    *   **`Services/`**: Business logic layer (`GameService`, `TeamService`, `EmailService`) interacting with repositories/context.
-    *   **`ViewModels/`**: DTOs for carrying data between Controllers and Views.
-    *   **`Views/`**: Razor pages for the UI.
-    *   **`wwwroot/`**: Static files (CSS, JS, images). User-uploaded media is stored in `wwwroot/media`.
+## Tech Stack
+*   **Framework:** .NET 10.0 (`net10.0`)
+*   **Type:** ASP.NET Core MVC
+*   **Database:** SQLite (`Microsoft.EntityFrameworkCore.Sqlite`)
+*   **ORM:** Entity Framework Core
+*   **Authentication:** ASP.NET Core Identity
+*   **Logging:** Serilog (Console and File sinks)
+*   **Frontend:** Razor Views, Bootstrap, jQuery
 
 ## Building and Running
 
 ### Prerequisites
-
 *   .NET 10.0 SDK
 
-### Commands
-
-**Restore Dependencies:**
+### Key Commands
 ```bash
+# Restore dependencies
 dotnet restore
-```
 
-**Build:**
-```bash
+# Build the project
 dotnet build
+
+# Run the application (from root)
+dotnet run --project KunigiArchive.Web
+
+# Run with hot reload (Recommended for development)
+dotnet watch run --project KunigiArchive.Web
 ```
 
-**Run Application:**
+### Database Management
+The application applies pending migrations and seeds data automatically on startup (`Program.cs`).
+To create a new migration after modifying Entities:
 ```bash
-cd KunigiArchive.Web
-dotnet run
+dotnet ef migrations add <MigrationName> --project KunigiArchive.Web --output-dir Data/Migrations
 ```
-*The application will automatically apply pending migrations and seed default data (Roles, Admin User) on startup.*
 
-## Configuration & Setup
+## Architecture & patterns
 
-### Database
-The application uses SQLite. The connection string is defined in `appsettings.json`:
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Data Source=kunigi_archive.db"
-}
-```
-The database file `kunigi_archive.db` will be created in the running directory if it does not exist.
+### Directory Structure
+*   **`Controllers/`**: Handle HTTP requests. Most logic is delegated to Services.
+*   **`Services/`**: Business logic layer. All services are registered as `Scoped`.
+    *   `AlertMessageHandler`: Helper for passing success/error messages to Views via `TempData`.
+*   **`Entities/`**: Database models (Code-First EF Core).
+*   **`ViewModels/`**: DTOs for View rendering and Form submission.
+*   **`Data/`**: `DataContext` configuration and Seeding logic.
+*   **`wwwroot/media/`**: Storage location for user-uploaded content (Teams/Games images).
 
-### Authentication & Seeding
-On startup, `DataSeed.Seed` ensures the following:
-*   **Roles:** "Admin", "Manager"
-*   **Admin User:** `iperpirakis@gmail.com` (Password: `Admin@123!`)
-*   **Development User:** `manager@test.com` (Password: `Manager@123!`) - *Only in Development environment*
-*   **GameDayTypes:** Seeds initial types like "Χωρός", "Σάββατο", etc.
+### Key Conventions
+*   **Routing:** Entities often use a `Slug` property for friendly URLs (e.g., `/teams/some-team-name`) instead of IDs.
+*   **Media Handling:** Files are uploaded to the local file system (`wwwroot/media`). `DirectoryService` manages path resolution.
+*   **Authorization:**
+    *   Role-based access control is strictly enforced (`[Authorize(Roles = "Admin")]`).
+    *   Main roles: `Admin`, `Manager`.
+    *   `Manager` role is usually scoped to specific Teams.
+*   **Error Handling:** Custom exception pages (`/error`) in production; Developer page in development.
+*   **Logging:** Structured logging via Serilog is configured in `appsettings.json` to write to `Logs/`.
 
-### Logging
-Logs are written to:
-1.  Console
-2.  File: `Logs/app-{Date}.log`
-
-## Development Conventions
-
-*   **Namespace:** `KunigiArchive.Web`
-*   **Styling:** Follows standard C# conventions.
-*   **Dependency Injection:** Services are registered in `Program.cs`. Most business services are scoped (`AddScoped`).
-*   **Static Assets:** Media files uploaded by users are stored in `wwwroot/media`, which is created at runtime if missing.
+## Configuration
+*   **`appsettings.json`**: Contains DB connection strings (`DefaultConnection`), Email settings (`Mailtrap`), and Serilog config.
+*   **`Program.cs`**: Registers services, configures the HTTP pipeline, and handles database migration/seeding on startup.
