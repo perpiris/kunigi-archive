@@ -37,11 +37,17 @@
                                     <div class="row align-items-end">
                                         @if (isAdmin)
                                         {
-                                            <div class="col-md-3">
+                                            <div class="col-md-6">
                                                 <div class="mb-3">
                                                     <label asp-for="UpdatedSlug" class="form-label fw-semibold"></label>
                                                     <input asp-for="UpdatedSlug" class="form-control"/>
                                                     <span asp-validation-for="UpdatedSlug"
+                                                          class="text-danger small"></span>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label asp-for="UpdatedName" class="form-label fw-semibold"></label>
+                                                    <input asp-for="UpdatedName" class="form-control"/>
+                                                    <span asp-validation-for="UpdatedName"
                                                           class="text-danger small"></span>
                                                 </div>
                                             </div>

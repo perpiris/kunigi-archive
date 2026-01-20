@@ -11,6 +11,8 @@ public class TeamUpdateViewModel
 
     [DisplayName("Slug")] public required string UpdatedSlug { get; set; }
 
+    [DisplayName("Όνομα")] public required string UpdatedName { get; set; }
+
     [DisplayName("Ενεργή")] public bool IsActive { get; set; }
 
     [DisplayName("Έτος Ίδρυσης")] public short? YearFounded { get; set; }

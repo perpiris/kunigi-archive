@@ -64,6 +64,7 @@ public static class TeamMappings
             Name = team.Name,
             Slug = team.Slug,
             UpdatedSlug = team.Slug,
+            UpdatedName = team.Name,
             IsActive = team.IsActive,
             YearFounded = team.YearFounded,
             Description = team.Description,

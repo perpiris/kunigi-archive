@@ -148,6 +148,7 @@ public class TeamService : ITeamService
 
         if (User.IsInRole("Admin"))
         {
+            team.Name = viewModel.Name;
             team.Slug = viewModel.UpdatedSlug;
         }
 
