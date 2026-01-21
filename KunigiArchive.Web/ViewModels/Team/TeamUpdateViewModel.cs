@@ -9,9 +9,9 @@ public class TeamUpdateViewModel
     public required string Name { get; set; }
     public required string Slug { get; set; }
 
-    [DisplayName("Slug")] public required string UpdatedSlug { get; set; }
+    [DisplayName("Slug")] public string? UpdatedSlug { get; set; }
 
-    [DisplayName("Όνομα")] public required string UpdatedName { get; set; }
+    [DisplayName("Όνομα")] public string? UpdatedName { get; set; }
 
     [DisplayName("Ενεργή")] public bool IsActive { get; set; }
 

@@ -124,7 +124,12 @@ public class TeamController : Controller
         }
 
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
-        return RedirectToAction(nameof(TeamActions), new { slug = viewModel.UpdatedSlug });
+        if (!string.IsNullOrEmpty(viewModel.UpdatedSlug) && viewModel.UpdatedSlug != viewModel.Slug)
+        {
+            return RedirectToAction(nameof(TeamActions), new { slug = viewModel.UpdatedSlug });
+        }
+
+        return RedirectToAction(nameof(TeamActions), new { slug = viewModel.Slug });
     }
 
     [Authorize(Roles = "Admin")]
