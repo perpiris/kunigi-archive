@@ -29,14 +29,14 @@ public class AccountService : IAccountService
         DataContext context,
         UserManager<AppUser> userManager,
         IEmailService emailService,
-        IMemoryCache memoryCach,
+        IMemoryCache memoryCache,
         IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
         _context = context;
         _userManager = userManager;
         _emailService = emailService;
-        _memoryCache = memoryCach;
+        _memoryCache = memoryCache;
         _httpContextAccessor = httpContextAccessor;
     }
 
