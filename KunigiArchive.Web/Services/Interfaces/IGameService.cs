@@ -20,5 +20,5 @@ public interface IGameService
     Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug, long? userId = null,
         bool isAdmin = false);
 
-    Task<ServiceResponse<bool>> ToggleGameDayAsync(long gameDayId);
+    Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds);
 }

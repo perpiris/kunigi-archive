@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Game;
 using Microsoft.AspNetCore.Authorization;
@@ -117,22 +116,12 @@ public class GameController : Controller
         return RedirectToAction(nameof(GameActions), new { slug });
     }
 
-    [HttpPost("{slug}/days/{gameDayId:long}/toggle")]
+    [HttpPost("{slug}/days")]
     [Authorize(Roles = "Admin,Manager")]
-    public async Task<IActionResult> ToggleGameDay(string slug, long gameDayId)
+    public async Task<IActionResult> UpdateGameDays(string slug, List<long> enabledDayIds)
     {
-        var serviceResponse = await _gameService.ToggleGameDayAsync(gameDayId);
-
-        if (serviceResponse.Success)
-        {
-            var message = serviceResponse.Data ? "Η ημέρα ενεργοποιήθηκε." : "Η ημέρα απενεργοποιήθηκε.";
-            AlertMessageHandler.SetMessage(TempData, ServiceResponse.Successful(message));
-        }
-        else
-        {
-            AlertMessageHandler.SetMessage(TempData, serviceResponse);
-        }
-
-        return RedirectToAction(nameof(GameDays), new { slug });
+        var serviceResponse = await _gameService.UpdateGameDaysAsync(slug, enabledDayIds);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameActions), new { slug });
     }
 }

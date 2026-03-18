@@ -226,17 +226,24 @@ public class GameService : IGameService
         return await _context.TeamManagers.AnyAsync(x => x.TeamId == team.TeamId && x.AppUserId == userId);
     }
 
-    public async Task<ServiceResponse<bool>> ToggleGameDayAsync(long gameDayId)
+    public async Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds)
     {
-        var gameDay = await _context.GameDays.FindAsync(gameDayId);
-        if (gameDay == null)
+        var game = await _context.Games
+            .Include(x => x.GameDays)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
         {
-            return ServiceResponse<bool>.Failure("Η ημέρα δεν βρέθηκε.");
+            return ServiceResponse.Failure("Το παιχνίδι δεν βρέθηκε.");
         }
 
-        gameDay.IsEnabled = !gameDay.IsEnabled;
+        foreach (var gameDay in game.GameDays)
+        {
+            gameDay.IsEnabled = enabledDayIds.Contains(gameDay.GameDayId);
+        }
+
         await _context.SaveChangesAsync();
 
-        return ServiceResponse<bool>.Successful(gameDay.IsEnabled);
+        return ServiceResponse.Successful("Οι αλλαγές αποθηκεύτηκαν.");
     }
 }
