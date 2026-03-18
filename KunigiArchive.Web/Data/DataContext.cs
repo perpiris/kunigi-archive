@@ -20,6 +20,7 @@ public class DataContext : IdentityDbContext<AppUser, AppRole, long>
     public DbSet<GameDayMedia> GameDayMedia { get; set; }
     public DbSet<Puzzle> Puzzles { get; set; }
     public DbSet<PuzzleMedia> PuzzleMedia { get; set; }
+    public DbSet<Post> Posts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

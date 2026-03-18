@@ -13,4 +13,5 @@ public class GameDay
     public virtual Game Game { get; set; } = null!;
     public virtual ICollection<Puzzle> Puzzles { get; set; } = [];
     public virtual ICollection<GameDayMedia> GameDayMedia { get; set; } = [];
+    public virtual ICollection<Post> Posts { get; set; } = [];
 }
