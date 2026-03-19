@@ -1,0 +1,24 @@
+@model KunigiArchive.Web.ViewModels.Game.GameDayViewModel
+
+@{
+    var gameSlug = (string)ViewBag.GameSlug;
+    var gameTitle = (string)ViewBag.GameTitle;
+    ViewData["Title"] = $"{Model.Name} - {gameTitle}";
+}
+
+<div class="mb-4">
+    <a asp-controller="Game" asp-action="GameDetails" asp-route-slug="@gameSlug"
+       class="text-decoration-none text-body">
+        <i class="bi bi-arrow-left me-2"></i>@gameTitle
+    </a>
+</div>
+
+<h1 class="display-4 fw-bold text-uppercase mb-4">@Model.Name</h1>
+
+<hr class="border-2 border-dark opacity-100 mb-5"/>
+
+<div class="border border-2 border-dark p-5 text-center">
+    <i class="bi bi-cone-striped display-1 opacity-25 mb-3"></i>
+    <h3 class="fw-bold text-uppercase text-muted">Σύντομα Διαθέσιμο</h3>
+    <p class="text-muted">Οι λεπτομέρειες αυτής της ημέρας θα είναι σύντομα διαθέσιμες.</p>
+</div>

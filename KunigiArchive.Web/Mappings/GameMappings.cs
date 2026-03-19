@@ -23,9 +23,18 @@ public static class GameMappings
         {
             viewModel.Winner = game.Winner.Name;
             viewModel.WinnerId = game.Winner.TeamId;
+            viewModel.WinnerSlug = game.Winner.Slug;
 
             viewModel.Host = game.Host.Name;
             viewModel.HostId = game.Host.TeamId;
+            viewModel.HostSlug = game.Host.Slug;
+
+            viewModel.GameDays = game.GameDays
+                .Where(gd => gd.IsEnabled)
+                .Select(gd => new GameDayViewModel
+                {
+                    GameDayId = gd.GameDayId, Name = gd.GameDayType.Label, IsEnabled = gd.IsEnabled
+                }).ToList();
 
             // media files
         }

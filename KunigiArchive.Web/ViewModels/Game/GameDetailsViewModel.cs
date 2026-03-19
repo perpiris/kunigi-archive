@@ -12,8 +12,11 @@ public class GameDetailsViewModel
     public string? Image { get; set; }
     public long WinnerId { get; set; }
     public string Winner { get; set; } = string.Empty;
+    public string WinnerSlug { get; set; } = string.Empty;
     public long HostId { get; set; }
     public string Host { get; set; } = string.Empty;
+    public string HostSlug { get; set; } = string.Empty;
+    public List<GameDayViewModel> GameDays { get; set; } = [];
 
     public string FormattedTitle()
     {

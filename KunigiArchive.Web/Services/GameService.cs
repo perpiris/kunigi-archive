@@ -143,7 +143,8 @@ public class GameService : IGameService
             : ServiceResponse.Successful("Το παιχνίδι δημιουργήθηκε με επιτυχία.");
     }
 
-    public async Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails)
+    public async Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails,
+        bool isForPublicView = false)
     {
         var query = _context.Games.AsQueryable();
         if (includeFullDetails)
@@ -165,9 +166,12 @@ public class GameService : IGameService
             return ServiceResponse<GameDetailsViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
         }
 
-        return !HasGameAccess(game)
-            ? ServiceResponse<GameDetailsViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.")
-            : ServiceResponse<GameDetailsViewModel>.Successful(game.MapToGameDetailsViewModel(includeFullDetails));
+        if (!isForPublicView && !HasGameAccess(game))
+        {
+            return ServiceResponse<GameDetailsViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        return ServiceResponse<GameDetailsViewModel>.Successful(game.MapToGameDetailsViewModel(includeFullDetails));
     }
 
     public async Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug)
@@ -324,6 +328,7 @@ public class GameService : IGameService
         {
             var storageDirectory = $"games/{game.Year}";
             var saveResult = await _directoryService.SaveFileAsync(image, storageDirectory, "profile");
+            
             if (!saveResult.Success)
             {
                 _logger.LogError("Failed to save profile image for game {GameSlug}: {Message}", game.Slug,

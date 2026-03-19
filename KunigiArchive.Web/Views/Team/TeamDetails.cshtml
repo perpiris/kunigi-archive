@@ -106,7 +106,7 @@
                                 @foreach (var game in Model.GamesHosted)
                                 {
                                     <li>
-                                        <a asp-controller="Game" asp-action="ParentGameDetails"
+                                        <a asp-controller="Game" asp-action="GameDetails"
                                            asp-route-slug="@game.Slug"
                                            class="text-decoration-none text-body fw-bold fs-5 d-block py-1">
                                             @game.FormattedTitle()
@@ -129,7 +129,7 @@
                                 @foreach (var game in Model.GamesWon)
                                 {
                                     <li>
-                                        <a asp-controller="Game" asp-action="ParentGameDetails"
+                                        <a asp-controller="Game" asp-action="GameDetails"
                                            asp-route-slug="@game.Slug"
                                            class="text-decoration-none text-body fw-bold fs-5 d-block py-1">
                                             @game.FormattedTitle()

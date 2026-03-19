@@ -1,0 +1,101 @@
+@model KunigiArchive.Web.ViewModels.Game.GameDetailsViewModel
+
+@{
+    ViewData["Title"] = Model.FormattedTitle();
+}
+
+<div class="row gx-lg-5 gy-4 mb-5 align-items-center">
+    <div class="col-md-5">
+        <div class="position-relative">
+            @if (string.IsNullOrEmpty(Model.Image))
+            {
+                <div
+                    class="ratio ratio-1x1 border border-2 border-dark d-flex align-items-center justify-content-center">
+                    <i class="bi bi-image fs-1 opacity-25"></i>
+                </div>
+            }
+            else
+            {
+                <img src="~/@Model.Image" class="img-fluid w-100 border border-2 border-dark rounded-0"
+                     alt="@Model.FormattedTitle()">
+            }
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <h1 class="display-2 fw-bold text-uppercase mb-2 text-break">@Model.OrderTitle</h1>
+
+        <div class="fs-4 font-monospace mb-4 border-bottom border-2 border-dark pb-3 d-inline-block">
+            <span class="fw-bold">@Model.Year</span>
+            @if (!string.IsNullOrWhiteSpace(Model.Title))
+            {
+                <span class="mx-2 opacity-50">/</span>
+                <span class="fw-bold">@Model.Title</span>
+            }
+        </div>
+
+        <div class="d-flex flex-column gap-2 fs-5">
+            @if (!string.IsNullOrEmpty(Model.Host))
+            {
+                <div>
+                    <span class="text-muted">Διοργάνωση:</span>
+                    <a asp-controller="Team" asp-action="TeamDetails" asp-route-slug="@Model.HostSlug"
+                       class="fw-bold text-decoration-none text-body">
+                        @Model.Host
+                    </a>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Winner))
+            {
+                <div>
+                    <span class="text-muted">Νικητής:</span>
+                    <a asp-controller="Team" asp-action="TeamDetails" asp-route-slug="@Model.WinnerSlug"
+                       class="fw-bold text-decoration-none text-body">
+                        @Model.Winner
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<hr class="border-2 border-dark opacity-100 mb-5"/>
+
+<div class="row gy-5">
+    <div class="col-12">
+        <h2 class="fw-bold text-uppercase mb-3">Περιγραφή</h2>
+        @if (!string.IsNullOrEmpty(Model.Description))
+        {
+            <div class="fs-5 lh-lg">
+                @Html.Raw(Model.Description)
+            </div>
+        }
+        else
+        {
+            <p class="text-muted fst-italic">Δεν υπάρχει περιγραφή διαθέσιμη.</p>
+        }
+    </div>
+
+    @if (Model.GameDays.Any())
+    {
+        <div class="col-12">
+            <div class="border border-2 border-dark p-4">
+                <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-dark">Ημέρες <span
+                        class="float-end">@Model.GameDays.Count</span></h4>
+                <ul class="list-unstyled mb-0 d-grid gap-2">
+                    @foreach (var day in Model.GameDays)
+                    {
+                        <li>
+                            <a asp-controller="Game" asp-action="GameDayDetails"
+                               asp-route-slug="@Model.Slug" asp-route-id="@day.GameDayId"
+                               class="text-decoration-none text-body fw-bold fs-5 d-block py-1">
+                                @day.Name
+                                <i class="bi bi-arrow-right float-end opacity-50"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+</div>

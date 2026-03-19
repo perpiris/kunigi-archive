@@ -81,6 +81,40 @@ public class GameController : Controller
         return View(prepareAgainResponse.Data);
     }
 
+    [HttpGet("{slug}")]
+    public async Task<IActionResult> GameDetails(string slug)
+    {
+        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, true, true);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameList));
+    }
+
+    [HttpGet("{slug}/day/{id:long}")]
+    public async Task<IActionResult> GameDayDetails(string slug, long id)
+    {
+        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, true, true);
+        if (!serviceResponse.Success)
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+            return RedirectToAction(nameof(GameList));
+        }
+
+        var gameDay = serviceResponse.Data!.GameDays.FirstOrDefault(d => d.GameDayId == id);
+        if (gameDay == null)
+        {
+            return RedirectToAction(nameof(GameDetails), new { slug });
+        }
+
+        ViewBag.GameSlug = slug;
+        ViewBag.GameTitle = serviceResponse.Data!.FormattedTitle();
+        return View(gameDay);
+    }
+
     [HttpGet("{slug}/update")]
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameUpdate(string slug)

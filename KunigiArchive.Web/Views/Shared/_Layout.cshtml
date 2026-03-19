@@ -19,7 +19,7 @@
         const storedTheme = localStorage.getItem('theme');
         const getPreferredTheme = () => {
             if (storedTheme) return storedTheme;
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
         };
         document.documentElement.setAttribute('data-bs-theme', getPreferredTheme());
     </script>

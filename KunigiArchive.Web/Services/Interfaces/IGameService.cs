@@ -14,7 +14,8 @@ public interface IGameService
 
     Task<ServiceResponse> CreateGameAsync(GameCreateViewModel gameCreateViewModel, ModelStateDictionary modelState);
 
-    Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails);
+    Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails,
+        bool isForPublicView = false);
 
     Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug);
 
