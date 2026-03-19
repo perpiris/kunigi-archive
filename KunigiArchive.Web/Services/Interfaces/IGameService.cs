@@ -21,4 +21,10 @@ public interface IGameService
         bool isAdmin = false);
 
     Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds);
+
+    Task<ServiceResponse<GameUpdateViewModel>> PrepareGameUpdateViewModelAsync(string slug,
+        GameUpdateViewModel? gameUpdateViewModel = null);
+
+    Task<ServiceResponse<string>> UpdateGameAsync(GameUpdateViewModel gameUpdateViewModel,
+        ModelStateDictionary modelState);
 }

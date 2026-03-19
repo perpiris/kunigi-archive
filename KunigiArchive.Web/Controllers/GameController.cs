@@ -82,6 +82,54 @@ public class GameController : Controller
         return View(prepareAgainResponse.Data);
     }
 
+    [HttpGet("{slug}/update")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GameUpdate(string slug)
+    {
+        var serviceResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug);
+        if (!serviceResponse.Success)
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+            return RedirectToAction(nameof(GameManagement));
+        }
+
+        return View(serviceResponse.Data);
+    }
+
+    [HttpPost("{slug}/update")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GameUpdate(string slug, GameUpdateViewModel gameUpdateViewModel)
+    {
+        if (!ModelState.IsValid)
+        {
+            var prepareResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug, gameUpdateViewModel);
+            if (!prepareResponse.Success)
+            {
+                AlertMessageHandler.SetMessage(TempData, prepareResponse);
+                return RedirectToAction(nameof(GameManagement));
+            }
+
+            return View(prepareResponse.Data);
+        }
+
+        var serviceResponse = await _gameService.UpdateGameAsync(gameUpdateViewModel, ModelState);
+        if (serviceResponse.Success)
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+            return RedirectToAction(nameof(GameActions), new { slug = serviceResponse.Data });
+        }
+
+        var prepareAgainResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug, gameUpdateViewModel);
+        if (!prepareAgainResponse.Success)
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+            return RedirectToAction(nameof(GameManagement));
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return View(prepareAgainResponse.Data);
+    }
+
     [Authorize(Roles = "Admin,Manager")]
     [HttpGet("{slug}/actions")]
     public async Task<IActionResult> GameActions(string slug)

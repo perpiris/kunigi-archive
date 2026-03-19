@@ -1,0 +1,115 @@
+@model KunigiArchive.Web.ViewModels.Game.GameUpdateViewModel
+@{
+    ViewData["Title"] = "Επεξεργασία Παιχνιδιού";
+    ViewData["Banner"] = "Επεξεργασία Παιχνιδιού";
+}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form asp-controller="Game" asp-action="GameUpdate" asp-route-slug="@Model.Slug" method="post"
+                      autocomplete="off" novalidate>
+                    <input type="hidden" asp-for="GameId"/>
+                    <input type="hidden" asp-for="Slug"/>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="UpdatedSlug" class="form-label"></label>
+                                <input asp-for="UpdatedSlug" class="form-control"/>
+                                <span asp-validation-for="UpdatedSlug" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label asp-for="Year" class="form-label"></label>
+                                <input asp-for="Year" class="form-control"/>
+                                <span asp-validation-for="Year" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label asp-for="Order" class="form-label"></label>
+                                <input asp-for="Order" class="form-control"/>
+                                <span asp-validation-for="Order" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="HostId" class="form-label"></label>
+                                <div class="custom-select-wrapper" id="hostWrapper">
+                                    <input type="text"
+                                           class="form-control custom-select-display"
+                                           id="hostDisplay"
+                                           placeholder="Επιλογή"
+                                           readonly
+                                           data-val="true"
+                                           data-val-required="Το πεδίο απαιτείται."/>
+                                    <div class="custom-select-dropdown" id="hostDropdown">
+                                        <div class="custom-select-search">
+                                            <input type="text"
+                                                   id="hostSearch"
+                                                   placeholder="Αναζήτηση..."
+                                                   autocomplete="off"/>
+                                        </div>
+                                        <ul class="custom-select-options" id="hostOptions"></ul>
+                                    </div>
+                                </div>
+                                <select asp-for="HostId" asp-items="Model.HostSelectList" id="hostSelect"
+                                        style="position:absolute;left:-9999px;width:1px;height:1px;" tabindex="-1"
+                                        aria-hidden="true">
+                                    <option value="">-- Επιλέξτε --</option>
+                                </select>
+                                <span asp-validation-for="HostId" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="WinnerId" class="form-label"></label>
+                                <div class="custom-select-wrapper" id="winnerWrapper">
+                                    <input type="text"
+                                           class="form-control custom-select-display"
+                                           id="winnerDisplay"
+                                           placeholder="Επιλογή"
+                                           readonly
+                                           data-val="true"
+                                           data-val-required="Το πεδίο απαιτείται."/>
+                                    <div class="custom-select-dropdown" id="winnerDropdown">
+                                        <div class="custom-select-search">
+                                            <input type="text"
+                                                   id="winnerSearch"
+                                                   placeholder="Αναζήτηση..."
+                                                   autocomplete="off"/>
+                                        </div>
+                                        <ul class="custom-select-options" id="winnerOptions"></ul>
+                                    </div>
+                                </div>
+                                <select asp-for="WinnerId" asp-items="Model.WinnerSelectList" id="winnerSelect"
+                                        style="position:absolute;left:-9999px;width:1px;height:1px;" tabindex="-1"
+                                        aria-hidden="true">
+                                    <option value="">-- Επιλέξτε --</option>
+                                </select>
+                                <span asp-validation-for="WinnerId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-controller="Game" asp-action="GameActions" asp-route-slug="@Model.Slug"
+                           class="btn btn-secondary">Πίσω</a>
+                        <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            initCustomSelect('host');
+            initCustomSelect('winner');
+        });
+    </script>
+}

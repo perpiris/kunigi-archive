@@ -226,6 +226,101 @@ public class GameService : IGameService
         return await _context.TeamManagers.AnyAsync(x => x.TeamId == team.TeamId && x.AppUserId == userId);
     }
 
+    public async Task<ServiceResponse<GameUpdateViewModel>> PrepareGameUpdateViewModelAsync(string slug,
+        GameUpdateViewModel? gameUpdateViewModel = null)
+    {
+        var game = await _context.Games
+            .AsNoTracking()
+            .Include(x => x.Host)
+            .Include(x => x.Winner)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse<GameUpdateViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        var teamList = await _context.Teams.ToListAsync();
+        var selectListItems = teamList
+            .Select(x => new SelectListItem { Value = x.TeamId.ToString(), Text = x.Name })
+            .OrderBy(x => x.Text)
+            .ToList();
+
+        selectListItems.Insert(0, new SelectListItem { Value = "", Text = "Επιλογή Ομάδας" });
+        var selectList = new SelectList(selectListItems, "Value", "Text");
+
+        if (gameUpdateViewModel == null)
+        {
+            gameUpdateViewModel = new GameUpdateViewModel
+            {
+                GameId = game.GameId,
+                Slug = game.Slug,
+                UpdatedSlug = game.Slug,
+                Year = game.Year,
+                Order = game.Order,
+                HostId = game.Host.TeamId,
+                WinnerId = game.Winner.TeamId,
+                HostSelectList = selectList,
+                WinnerSelectList = selectList
+            };
+
+            return ServiceResponse<GameUpdateViewModel>.Successful(gameUpdateViewModel);
+        }
+
+        gameUpdateViewModel.HostSelectList = selectList;
+        gameUpdateViewModel.WinnerSelectList = selectList;
+
+        return ServiceResponse<GameUpdateViewModel>.Successful(gameUpdateViewModel);
+    }
+
+    public async Task<ServiceResponse<string>> UpdateGameAsync(GameUpdateViewModel gameUpdateViewModel,
+        ModelStateDictionary modelState)
+    {
+        var game = await _context.Games.FirstOrDefaultAsync(x => x.GameId == gameUpdateViewModel.GameId);
+        if (game == null)
+        {
+            return ServiceResponse<string>.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        var allGames = await _context.Games.Where(x => x.GameId != game.GameId).ToListAsync();
+
+        if (allGames.Any(x => x.Year == gameUpdateViewModel.Year))
+        {
+            modelState.AddModelError("Year", "Υπάρχει ήδη παιχνίδι για αυτή τη χρονιά.");
+        }
+
+        if (allGames.Any(x => x.Order == gameUpdateViewModel.Order))
+        {
+            modelState.AddModelError("Order", "Υπάρχει ήδη παιχνίδι για αυτή τη σειρά.");
+        }
+
+        var newSlug = game.Slug;
+        if (!string.IsNullOrWhiteSpace(gameUpdateViewModel.UpdatedSlug) &&
+            gameUpdateViewModel.UpdatedSlug != game.Slug)
+        {
+            newSlug = SlugGenerator.GenerateSlug(gameUpdateViewModel.UpdatedSlug);
+            if (await _context.Games.AnyAsync(x => x.Slug == newSlug && x.GameId != game.GameId))
+            {
+                modelState.AddModelError("UpdatedSlug", "Το slug χρησιμοποιείται ήδη.");
+            }
+        }
+
+        if (!modelState.IsValid)
+        {
+            return ServiceResponse<string>.Failure();
+        }
+
+        game.Year = gameUpdateViewModel.Year;
+        game.Order = gameUpdateViewModel.Order;
+        game.HostId = gameUpdateViewModel.HostId;
+        game.WinnerId = gameUpdateViewModel.WinnerId;
+        game.Slug = newSlug;
+
+        await _context.SaveChangesAsync();
+
+        return ServiceResponse<string>.Successful(newSlug, "Οι αλλαγές αποθηκεύτηκαν.");
+    }
+
     public async Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds)
     {
         var game = await _context.Games
