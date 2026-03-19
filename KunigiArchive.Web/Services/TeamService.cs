@@ -100,13 +100,15 @@ public class TeamService : ITeamService
         if (includeFullDetails)
         {
             query = query
-                .Include(x => x.HostedGames)
                 .Include(x => x.WonGames)
                 .Include(x => x.MediaFiles)
                 .AsSplitQuery();
         }
 
-        query = query.Include(x => x.Managers);
+        query = query
+            .Include(x => x.HostedGames)
+            .Include(x => x.Managers);
+
         var team = await query.FirstOrDefaultAsync(x => x.Slug == slug);
         if (team == null)
         {

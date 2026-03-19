@@ -1,4 +1,3 @@
-﻿using System.Security.Claims;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Game;
 using Microsoft.AspNetCore.Authorization;
@@ -83,22 +82,22 @@ public class GameController : Controller
     }
 
     [HttpGet("{slug}/update")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameUpdate(string slug)
     {
         var serviceResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug);
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
-            return RedirectToAction(nameof(GameManagement));
+            return RedirectToAction(nameof(GameActions), new { slug });
         }
 
         return View(serviceResponse.Data);
     }
 
     [HttpPost("{slug}/update")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GameUpdate(string slug, GameUpdateViewModel gameUpdateViewModel)
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GameUpdate(string slug, GameUpdateViewModel gameUpdateViewModel, IFormFile? image)
     {
         if (!ModelState.IsValid)
         {
@@ -106,13 +105,13 @@ public class GameController : Controller
             if (!prepareResponse.Success)
             {
                 AlertMessageHandler.SetMessage(TempData, prepareResponse);
-                return RedirectToAction(nameof(GameManagement));
+                return RedirectToAction(nameof(GameActions), new { slug });
             }
 
             return View(prepareResponse.Data);
         }
 
-        var serviceResponse = await _gameService.UpdateGameAsync(gameUpdateViewModel, ModelState);
+        var serviceResponse = await _gameService.UpdateGameAsync(gameUpdateViewModel, image, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -123,7 +122,7 @@ public class GameController : Controller
         if (!prepareAgainResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
-            return RedirectToAction(nameof(GameManagement));
+            return RedirectToAction(nameof(GameActions), new { slug });
         }
 
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -134,10 +133,7 @@ public class GameController : Controller
     [HttpGet("{slug}/actions")]
     public async Task<IActionResult> GameActions(string slug)
     {
-        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-        var isAdmin = User.IsInRole("Admin");
-
-        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, false, userId, isAdmin);
+        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, false);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -151,10 +147,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameDays(string slug)
     {
-        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-        var isAdmin = User.IsInRole("Admin");
-
-        var serviceResponse = await _gameService.GetGameDaysViewModelAsync(slug, userId, isAdmin);
+        var serviceResponse = await _gameService.GetGameDaysViewModelAsync(slug);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);

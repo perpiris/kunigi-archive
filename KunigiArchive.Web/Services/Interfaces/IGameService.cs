@@ -14,17 +14,15 @@ public interface IGameService
 
     Task<ServiceResponse> CreateGameAsync(GameCreateViewModel gameCreateViewModel, ModelStateDictionary modelState);
 
-    Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails,
-        long? userId = null, bool isAdmin = false);
+    Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails);
 
-    Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug, long? userId = null,
-        bool isAdmin = false);
+    Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug);
 
     Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds);
 
     Task<ServiceResponse<GameUpdateViewModel>> PrepareGameUpdateViewModelAsync(string slug,
         GameUpdateViewModel? gameUpdateViewModel = null);
 
-    Task<ServiceResponse<string>> UpdateGameAsync(GameUpdateViewModel gameUpdateViewModel,
+    Task<ServiceResponse<string>> UpdateGameAsync(GameUpdateViewModel gameUpdateViewModel, IFormFile? image,
         ModelStateDictionary modelState);
 }

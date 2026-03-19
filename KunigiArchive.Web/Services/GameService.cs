@@ -143,8 +143,7 @@ public class GameService : IGameService
             : ServiceResponse.Successful("Το παιχνίδι δημιουργήθηκε με επιτυχία.");
     }
 
-    public async Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails,
-        long? userId = null, bool isAdmin = false)
+    public async Task<ServiceResponse<GameDetailsViewModel>> GetGameBySlugAsync(string slug, bool includeFullDetails)
     {
         var query = _context.Games.AsQueryable();
         if (includeFullDetails)
@@ -163,16 +162,12 @@ public class GameService : IGameService
             return ServiceResponse<GameDetailsViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
         }
 
-        if (userId.HasValue && !await CanUserAccessGameAsync(userId.Value, slug, isAdmin))
-        {
-            return ServiceResponse<GameDetailsViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
-        }
-
-        return ServiceResponse<GameDetailsViewModel>.Successful(game.MapToGameDetailsViewModel(includeFullDetails));
+        return !HasGameAccess(game)
+            ? ServiceResponse<GameDetailsViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.")
+            : ServiceResponse<GameDetailsViewModel>.Successful(game.MapToGameDetailsViewModel(includeFullDetails));
     }
 
-    public async Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug, long? userId = null,
-        bool isAdmin = false)
+    public async Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug)
     {
         var game = await _context.Games
             .AsNoTracking()
@@ -185,9 +180,9 @@ public class GameService : IGameService
             return ServiceResponse<GameDaysViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
         }
 
-        if (userId.HasValue && !await CanUserAccessGameAsync(userId.Value, slug, isAdmin))
+        if (!HasGameAccess(game))
         {
-            return ServiceResponse<GameDaysViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
+            return ServiceResponse<GameDaysViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
         var formattedTitle = $"{game.OrderTitle} {game.Year}";
@@ -210,28 +205,13 @@ public class GameService : IGameService
         return ServiceResponse<GameDaysViewModel>.Successful(viewModel);
     }
 
-    private async Task<bool> CanUserAccessGameAsync(long userId, string slug, bool isAdmin = false)
-    {
-        if (isAdmin)
-        {
-            return true;
-        }
-
-        var team = await _context.Teams.AsNoTracking().FirstOrDefaultAsync(x => x.Slug == slug);
-        if (team is null)
-        {
-            return false;
-        }
-
-        return await _context.TeamManagers.AnyAsync(x => x.TeamId == team.TeamId && x.AppUserId == userId);
-    }
-
     public async Task<ServiceResponse<GameUpdateViewModel>> PrepareGameUpdateViewModelAsync(string slug,
         GameUpdateViewModel? gameUpdateViewModel = null)
     {
         var game = await _context.Games
             .AsNoTracking()
             .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
             .Include(x => x.Winner)
             .FirstOrDefaultAsync(x => x.Slug == slug);
 
@@ -240,85 +220,119 @@ public class GameService : IGameService
             return ServiceResponse<GameUpdateViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
         }
 
-        var teamList = await _context.Teams.ToListAsync();
-        var selectListItems = teamList
-            .Select(x => new SelectListItem { Value = x.TeamId.ToString(), Text = x.Name })
-            .OrderBy(x => x.Text)
-            .ToList();
-
-        selectListItems.Insert(0, new SelectListItem { Value = "", Text = "Επιλογή Ομάδας" });
-        var selectList = new SelectList(selectListItems, "Value", "Text");
-
-        if (gameUpdateViewModel == null)
+        if (!HasGameAccess(game))
         {
-            gameUpdateViewModel = new GameUpdateViewModel
-            {
-                GameId = game.GameId,
-                Slug = game.Slug,
-                UpdatedSlug = game.Slug,
-                Year = game.Year,
-                Order = game.Order,
-                HostId = game.Host.TeamId,
-                WinnerId = game.Winner.TeamId,
-                HostSelectList = selectList,
-                WinnerSelectList = selectList
-            };
-
-            return ServiceResponse<GameUpdateViewModel>.Successful(gameUpdateViewModel);
+            return ServiceResponse<GameUpdateViewModel>.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        gameUpdateViewModel.HostSelectList = selectList;
-        gameUpdateViewModel.WinnerSelectList = selectList;
+        SelectList? selectList = null;
+        if (User.IsInRole("Admin"))
+        {
+            var selectListItems = (await _context.Teams.ToListAsync())
+                .Select(x => new SelectListItem { Value = x.TeamId.ToString(), Text = x.Name })
+                .OrderBy(x => x.Text)
+                .ToList();
+            selectListItems.Insert(0, new SelectListItem { Value = "", Text = "Επιλογή Ομάδας" });
+            selectList = new SelectList(selectListItems, "Value", "Text");
+        }
+
+        gameUpdateViewModel ??= new GameUpdateViewModel
+        {
+            GameId = game.GameId,
+            Slug = game.Slug,
+            UpdatedSlug = game.Slug,
+            Year = game.Year,
+            Order = game.Order,
+            HostId = game.Host.TeamId,
+            WinnerId = game.Winner.TeamId,
+            Description = game.Description,
+            Image = game.Image
+        };
+
+        if (selectList != null)
+        {
+            gameUpdateViewModel.HostSelectList = selectList;
+            gameUpdateViewModel.WinnerSelectList = selectList;
+        }
 
         return ServiceResponse<GameUpdateViewModel>.Successful(gameUpdateViewModel);
     }
 
     public async Task<ServiceResponse<string>> UpdateGameAsync(GameUpdateViewModel gameUpdateViewModel,
-        ModelStateDictionary modelState)
+        IFormFile? image, ModelStateDictionary modelState)
     {
-        var game = await _context.Games.FirstOrDefaultAsync(x => x.GameId == gameUpdateViewModel.GameId);
+        var game = await _context.Games
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .FirstOrDefaultAsync(x => x.GameId == gameUpdateViewModel.GameId);
+
         if (game == null)
         {
             return ServiceResponse<string>.Failure("Το παιχνίδι δεν βρέθηκε.");
         }
 
-        var allGames = await _context.Games.Where(x => x.GameId != game.GameId).ToListAsync();
-
-        if (allGames.Any(x => x.Year == gameUpdateViewModel.Year))
+        if (!HasGameAccess(game))
         {
-            modelState.AddModelError("Year", "Υπάρχει ήδη παιχνίδι για αυτή τη χρονιά.");
+            return ServiceResponse<string>.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        if (allGames.Any(x => x.Order == gameUpdateViewModel.Order))
+        if (User.IsInRole("Admin"))
         {
-            modelState.AddModelError("Order", "Υπάρχει ήδη παιχνίδι για αυτή τη σειρά.");
-        }
+            var allGames = await _context.Games.Where(x => x.GameId != game.GameId).ToListAsync();
 
-        var newSlug = game.Slug;
-        if (!string.IsNullOrWhiteSpace(gameUpdateViewModel.UpdatedSlug) &&
-            gameUpdateViewModel.UpdatedSlug != game.Slug)
-        {
-            newSlug = SlugGenerator.GenerateSlug(gameUpdateViewModel.UpdatedSlug);
-            if (await _context.Games.AnyAsync(x => x.Slug == newSlug && x.GameId != game.GameId))
+            if (allGames.Any(x => x.Year == gameUpdateViewModel.Year))
             {
-                modelState.AddModelError("UpdatedSlug", "Το slug χρησιμοποιείται ήδη.");
+                modelState.AddModelError("Year", "Υπάρχει ήδη παιχνίδι για αυτή τη χρονιά.");
             }
+
+            if (allGames.Any(x => x.Order == gameUpdateViewModel.Order))
+            {
+                modelState.AddModelError("Order", "Υπάρχει ήδη παιχνίδι για αυτή τη σειρά.");
+            }
+
+            var newSlug = game.Slug;
+            if (!string.IsNullOrWhiteSpace(gameUpdateViewModel.UpdatedSlug) &&
+                gameUpdateViewModel.UpdatedSlug != game.Slug)
+            {
+                newSlug = SlugGenerator.GenerateSlug(gameUpdateViewModel.UpdatedSlug);
+                if (await _context.Games.AnyAsync(x => x.Slug == newSlug && x.GameId != game.GameId))
+                {
+                    modelState.AddModelError("UpdatedSlug", "Το slug χρησιμοποιείται ήδη.");
+                }
+            }
+
+            if (!modelState.IsValid)
+            {
+                return ServiceResponse<string>.Failure();
+            }
+
+            game.Year = gameUpdateViewModel.Year;
+            game.Order = gameUpdateViewModel.Order;
+            game.HostId = gameUpdateViewModel.HostId;
+            game.WinnerId = gameUpdateViewModel.WinnerId;
+            game.Slug = newSlug;
         }
 
-        if (!modelState.IsValid)
+        game.Description = gameUpdateViewModel.Description;
+
+        if (image is not null)
         {
-            return ServiceResponse<string>.Failure();
-        }
+            var storageDirectory = $"games/{game.Year}";
+            var saveResult = await _directoryService.SaveFileAsync(image, storageDirectory, "profile");
+            if (!saveResult.Success)
+            {
+                _logger.LogError("Failed to save profile image for game {GameSlug}: {Message}", game.Slug,
+                    saveResult.Message);
+                modelState.AddModelError("Image", "Σφάλμα κατά την αποθήκευση της εικόνας.");
+                return ServiceResponse<string>.Failure("Σφάλμα κατά την αποθήκευση της εικόνας.");
+            }
 
-        game.Year = gameUpdateViewModel.Year;
-        game.Order = gameUpdateViewModel.Order;
-        game.HostId = gameUpdateViewModel.HostId;
-        game.WinnerId = gameUpdateViewModel.WinnerId;
-        game.Slug = newSlug;
+            game.Image = saveResult.Data!;
+        }
 
         await _context.SaveChangesAsync();
 
-        return ServiceResponse<string>.Successful(newSlug, "Οι αλλαγές αποθηκεύτηκαν.");
+        return ServiceResponse<string>.Successful(game.Slug, "Οι αλλαγές αποθηκεύτηκαν.");
     }
 
     public async Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds)
@@ -340,5 +354,16 @@ public class GameService : IGameService
         await _context.SaveChangesAsync();
 
         return ServiceResponse.Successful("Οι αλλαγές αποθηκεύτηκαν.");
+    }
+
+    private bool HasGameAccess(Game game)
+    {
+        if (User.IsInRole("Admin"))
+        {
+            return true;
+        }
+
+        var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        return game.Host.Managers.Any(m => m.AppUserId == userId);
     }
 }

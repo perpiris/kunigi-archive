@@ -24,19 +24,19 @@ public static class TeamMappings
             Image = team.Image
         };
 
+        viewModel.GamesHosted = team.HostedGames.Select(x => new GameDetailsViewModel
+            {
+                GameId = x.GameId,
+                Slug = x.Slug,
+                OrderTitle = x.OrderTitle,
+                Title = x.Title,
+                Year = x.Year
+            })
+            .ToList();
+
         if (includeFullDetails)
         {
             viewModel.GamesWon = team.WonGames.Select(x => new GameDetailsViewModel
-                {
-                    GameId = x.GameId,
-                    Slug = x.Slug,
-                    OrderTitle = x.OrderTitle,
-                    Title = x.Title,
-                    Year = x.Year
-                })
-                .ToList();
-
-            viewModel.GamesHosted = team.HostedGames.Select(x => new GameDetailsViewModel
                 {
                     GameId = x.GameId,
                     Slug = x.Slug,

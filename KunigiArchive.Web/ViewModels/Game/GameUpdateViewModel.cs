@@ -27,6 +27,10 @@ public class GameUpdateViewModel
     [Required(ErrorMessage = "Το πεδίο απαιτείται.")]
     public long WinnerId { get; set; }
 
+    [DisplayName("Περιγραφή")] public string? Description { get; set; }
+
+    [DisplayName("Φωτογραφία")] public string? Image { get; set; }
+
     public SelectList HostSelectList { get; set; } = new(Enumerable.Empty<SelectListItem>());
     public SelectList WinnerSelectList { get; set; } = new(Enumerable.Empty<SelectListItem>());
 }
