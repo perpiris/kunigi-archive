@@ -149,12 +149,15 @@ public class GameService : IGameService
         if (includeFullDetails)
         {
             query = query
-                .Include(x => x.Host)
                 .Include(x => x.Winner)
                 .Include(x => x.GameDays)
                 .ThenInclude(x => x.GameDayType)
                 .AsSplitQuery();
         }
+
+        query = query
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers);
 
         var game = await query.FirstOrDefaultAsync(x => x.Slug == slug);
         if (game == null)
@@ -171,6 +174,8 @@ public class GameService : IGameService
     {
         var game = await _context.Games
             .AsNoTracking()
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
             .Include(x => x.GameDays)
             .ThenInclude(x => x.GameDayType)
             .FirstOrDefaultAsync(x => x.Slug == slug);
@@ -338,12 +343,19 @@ public class GameService : IGameService
     public async Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds)
     {
         var game = await _context.Games
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
             .Include(x => x.GameDays)
             .FirstOrDefaultAsync(x => x.Slug == slug);
 
         if (game == null)
         {
             return ServiceResponse.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
         foreach (var gameDay in game.GameDays)
