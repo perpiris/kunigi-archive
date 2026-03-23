@@ -5,6 +5,7 @@ using KunigiArchive.Web.Entities;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Account;
 using KunigiArchive.Web.ViewModels.Common;
+using KunigiArchive.Web.ViewModels.Team;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
@@ -226,6 +227,97 @@ public class AccountService : IAccountService
         }
 
         return ServiceResponse.Successful("Ο κωδικός άλλαξε επιτυχώς.");
+    }
+
+    public async Task<ServiceResponse<AccountEditViewModel>> GetAccountByIdAsync(long userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return ServiceResponse<AccountEditViewModel>.Failure("Ο χρήστης δεν βρέθηκε.");
+        }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var currentRole = roles.FirstOrDefault() ?? string.Empty;
+
+        var managedTeams = await _context.TeamManagers
+            .Where(tm => tm.AppUserId == userId)
+            .Include(tm => tm.Team)
+            .Select(tm => new TeamDetailsViewModel
+            {
+                TeamId = tm.Team.TeamId, Name = tm.Team.Name, Slug = tm.Team.Slug, IsActive = tm.Team.IsActive
+            })
+            .ToListAsync();
+
+        var viewModel = new AccountEditViewModel
+        {
+            AppUserId = user.Id, Email = user.Email!, SelectedRole = currentRole, ManagedTeams = managedTeams
+        };
+
+        return ServiceResponse<AccountEditViewModel>.Successful(viewModel);
+    }
+
+    public async Task<ServiceResponse> ChangeRoleAsync(long userId, string newRole)
+    {
+        var currentUserId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (userId == currentUserId)
+        {
+            return ServiceResponse.Failure("Δεν μπορείτε να αλλάξετε τον ρόλο του δικού σας λογαριασμού.");
+        }
+
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
+        }
+
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        var currentRole = currentRoles.FirstOrDefault() ?? string.Empty;
+
+        if (currentRole == newRole)
+        {
+            return ServiceResponse.Warning("Ο χρήστης έχει ήδη αυτόν τον ρόλο.");
+        }
+
+        if (currentRole == "Manager")
+        {
+            var teamManagerRecords = await _context.TeamManagers
+                .Where(tm => tm.AppUserId == userId)
+                .ToListAsync();
+
+            if (teamManagerRecords.Count > 0)
+            {
+                _context.TeamManagers.RemoveRange(teamManagerRecords);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        if (!string.IsNullOrEmpty(currentRole))
+        {
+            var removeResult = await _userManager.RemoveFromRoleAsync(user, currentRole);
+            if (!removeResult.Succeeded)
+            {
+                _logger.LogWarning("Failed to remove role {Role} from user {Email}", currentRole, user.Email);
+                return ServiceResponse.Failure("Αποτυχία αφαίρεσης τρέχοντος ρόλου.");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(newRole))
+        {
+            var addResult = await _userManager.AddToRoleAsync(user, newRole);
+            if (!addResult.Succeeded)
+            {
+                _logger.LogWarning("Failed to add role {Role} to user {Email}", newRole, user.Email);
+                if (!string.IsNullOrEmpty(currentRole))
+                {
+                    await _userManager.AddToRoleAsync(user, currentRole);
+                }
+
+                return ServiceResponse.Failure("Αποτυχία ανάθεσης νέου ρόλου.");
+            }
+        }
+
+        return ServiceResponse.Successful("Ο ρόλος ενημερώθηκε επιτυχώς.");
     }
 
     public async Task<ServiceResponse<IEnumerable<AccountDetailsViewModel>>> GetAvailableManagersAsync()

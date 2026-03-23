@@ -13,6 +13,8 @@ public interface IAccountService
     Task<ServiceResponse<AccountDetailsViewModel>> GetAccountDetailsAsync();
     Task<ServiceResponse> ChangeEmailAsync(AccountSettingsViewModel viewModel, ModelStateDictionary modelState);
     Task<ServiceResponse> ChangePasswordAsync(AccountSettingsViewModel viewModel, ModelStateDictionary modelState);
+    Task<ServiceResponse<AccountEditViewModel>> GetAccountByIdAsync(long userId);
+    Task<ServiceResponse> ChangeRoleAsync(long userId, string newRole);
     Task<ServiceResponse<IEnumerable<AccountDetailsViewModel>>> GetAvailableManagersAsync();
     Task<ServiceResponse> InitiatePasswordResetAsync(string email);
     Task<ServiceResponse> ResetPasswordAsync(string email, string token, string newPassword);

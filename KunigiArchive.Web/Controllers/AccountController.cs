@@ -57,6 +57,30 @@ public class AccountController : Controller
         return View(accountCreateViewModel);
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpGet("details/{id:long}")]
+    public async Task<IActionResult> AccountDetails(long id)
+    {
+        var serviceResponse = await _accountService.GetAccountByIdAsync(id);
+        if (!serviceResponse.Success || serviceResponse.Data == null)
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+            return RedirectToAction(nameof(AccountManagement));
+        }
+
+        PrepareEditViewModel(serviceResponse.Data);
+        return View(serviceResponse.Data);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("details/{id:long}/change-role")]
+    public async Task<IActionResult> ChangeRole(long id, AccountEditViewModel viewModel)
+    {
+        var serviceResponse = await _accountService.ChangeRoleAsync(id, viewModel.SelectedRole);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(AccountDetails), new { id });
+    }
+
     [HttpGet("settings")]
     public async Task<IActionResult> AccountSettings()
     {
@@ -123,6 +147,16 @@ public class AccountController : Controller
     {
         viewModel.RolesList =
         [
+            new SelectListItem { Value = "Admin", Text = "Γενικός Διαχειριστής" },
+            new SelectListItem { Value = "Manager", Text = "Διαχειριστής Ομάδας" }
+        ];
+    }
+
+    private static void PrepareEditViewModel(AccountEditViewModel viewModel)
+    {
+        viewModel.RolesList =
+        [
+            new SelectListItem { Value = "", Text = "Χωρίς Ρόλο" },
             new SelectListItem { Value = "Admin", Text = "Γενικός Διαχειριστής" },
             new SelectListItem { Value = "Manager", Text = "Διαχειριστής Ομάδας" }
         ];

@@ -1,0 +1,97 @@
+@model KunigiArchive.Web.ViewModels.Account.AccountEditViewModel
+
+@{
+    ViewData["Title"] = "Λεπτομέρειες Χρήστη";
+    ViewData["Banner"] = "Λεπτομέρειες Χρήστη";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <a asp-controller="Account" asp-action="AccountManagement" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Πίσω
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card border-0 mt-2 p-2">
+            <div class="card-body p-4">
+                <h5 class="mb-4">Στοιχεία Λογαριασμού</h5>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Email</label>
+                    <input type="text" class="form-control" value="@Model.Email" disabled/>
+                </div>
+
+                <form asp-controller="Account" asp-action="ChangeRole" asp-route-id="@Model.AppUserId" method="post">
+                    <div class="mb-3">
+                        <label asp-for="SelectedRole" class="form-label fw-semibold d-block"></label>
+                        @foreach (var role in Model.RolesList)
+                        {
+                            var roleId = string.IsNullOrEmpty(role.Value) ? "None" : role.Value;
+                            <div class="form-check form-check-inline">
+                                <input asp-for="SelectedRole" type="radio" value="@role.Value" class="form-check-input"
+                                       id="role-@roleId"/>
+                                <label class="form-check-label" for="role-@roleId">@role.Text</label>
+                            </div>
+                        }
+                        <span asp-validation-for="SelectedRole" class="text-danger small d-block mt-1"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 mt-2 p-2">
+            <div class="card-body p-4">
+                <h5 class="mb-4">Διαχείριση Ομάδων</h5>
+                @if (Model.SelectedRole == "Manager")
+                {
+                    if (Model.ManagedTeams.Any())
+                    {
+                        @foreach (var team in Model.ManagedTeams)
+                        {
+                            <div class="card border-light mb-3">
+                                <div class="card-body py-3 px-4">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-semibold text-dark">@team.Name</div>
+                                            @if (!team.IsActive)
+                                            {
+                                                <span class="badge bg-secondary">Ανενεργή</span>
+                                            }
+                                        </div>
+                                        <a asp-controller="Team" asp-action="TeamManagers" asp-route-slug="@team.Slug"
+                                           class="btn btn-outline-primary btn-sm">
+                                            Διαχείριση
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-muted text-center py-4">
+                            Ο χρήστης δεν διαχειρίζεται κάποια ομάδα
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted text-center py-4">
+                        Μόνο οι διαχειριστές ομάδας μπορούν να ανατεθούν σε ομάδες
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+}

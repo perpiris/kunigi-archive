@@ -55,7 +55,8 @@
             <tbody>
             @foreach (var user in Model.Items)
             {
-                <tr>
+                <tr role="button"
+                    onclick="window.location='@Url.Action("AccountDetails", "Account", new { id = user.AppUserId })'">
                     <td class="align-middle">@user.Email</td>
                     <td class="align-middle">
                         @if (!string.IsNullOrEmpty(user.Role))
