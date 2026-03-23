@@ -9,10 +9,12 @@ namespace KunigiArchive.Web.Controllers;
 public class GameController : Controller
 {
     private readonly IGameService _gameService;
+    private readonly IPuzzleService _puzzleService;
 
-    public GameController(IGameService gameService)
+    public GameController(IGameService gameService, IPuzzleService puzzleService)
     {
         _gameService = gameService;
+        _puzzleService = puzzleService;
     }
 
     [HttpGet]
@@ -198,5 +200,88 @@ public class GameController : Controller
         var serviceResponse = await _gameService.UpdateGameDaysAsync(slug, enabledDayIds);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(GameActions), new { slug });
+    }
+
+    [HttpGet("{slug}/day/{gameDayId:long}/puzzles")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> ManagePuzzles(string slug, long gameDayId)
+    {
+        var serviceResponse = await _puzzleService.GetPuzzleManagementAsync(slug, gameDayId);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameActions), new { slug });
+    }
+
+    [HttpGet("{slug}/day/{gameDayId:long}/puzzles/create")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> CreatePuzzle(string slug, long gameDayId)
+    {
+        var serviceResponse = await _puzzleService.PrepareCreateViewModelAsync(slug, gameDayId);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(ManagePuzzles), new { slug, gameDayId });
+    }
+
+    [HttpPost("{slug}/day/{gameDayId:long}/puzzles/create")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> CreatePuzzle(string slug, long gameDayId,
+        PuzzleCreateViewModel viewModel)
+    {
+        var serviceResponse = await _puzzleService.CreatePuzzleAsync(viewModel, ModelState);
+        if (serviceResponse.Success)
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+            return RedirectToAction(nameof(ManagePuzzles), new { slug, gameDayId });
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return View(viewModel);
+    }
+
+    [HttpGet("{slug}/day/{gameDayId:long}/puzzles/{puzzleId:long}/edit")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> EditPuzzle(string slug, long gameDayId, long puzzleId)
+    {
+        var serviceResponse = await _puzzleService.GetPuzzleEditAsync(puzzleId);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(ManagePuzzles), new { slug, gameDayId });
+    }
+
+    [HttpPost("{slug}/day/{gameDayId:long}/puzzles/{puzzleId:long}/edit")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> EditPuzzle(string slug, long gameDayId, long puzzleId,
+        PuzzleEditViewModel viewModel)
+    {
+        var serviceResponse = await _puzzleService.UpdatePuzzleAsync(viewModel, ModelState);
+        if (serviceResponse.Success)
+        {
+            AlertMessageHandler.SetMessage(TempData, serviceResponse);
+            return RedirectToAction(nameof(ManagePuzzles), new { slug, gameDayId });
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return View(viewModel);
+    }
+
+    [HttpPost("{slug}/day/{gameDayId:long}/puzzles/{puzzleId:long}/delete")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> DeletePuzzle(string slug, long gameDayId, long puzzleId)
+    {
+        var serviceResponse = await _puzzleService.DeletePuzzleAsync(puzzleId);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(ManagePuzzles), new { slug, gameDayId });
     }
 }

@@ -25,6 +25,7 @@ builder.Services.AddScoped<IDirectoryService, DirectoryService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<IGameService, GameService>();
+builder.Services.AddScoped<IPuzzleService, PuzzleService>();
 
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));

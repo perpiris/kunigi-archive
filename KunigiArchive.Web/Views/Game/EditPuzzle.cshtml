@@ -1,0 +1,64 @@
+@model KunigiArchive.Web.ViewModels.Game.PuzzleEditViewModel
+
+@{
+    ViewData["Title"] = "Επεξεργασία Γρίφου";
+    ViewData["Banner"] = "Επεξεργασία Γρίφου";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 mt-2 p-2">
+            <div class="card-body p-4">
+                <form asp-controller="Game" asp-action="EditPuzzle" method="post" enctype="multipart/form-data"
+                      autocomplete="off">
+                    <input type="hidden" asp-for="PuzzleId"/>
+                    <input type="hidden" asp-for="GameDayId"/>
+
+                    <div class="mb-3">
+                        <label asp-for="Question" class="form-label fw-semibold">Ερώτηση</label>
+                        <textarea asp-for="Question" class="form-control" rows="5"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Αρχεία Ερώτησης</label>
+                        <input type="file" name="QuestionMediaFiles" class="form-control" multiple/>
+                        <div class="form-text">
+                            Τα νέα αρχεία θα προστεθούν στα υπάρχοντα.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Answer" class="form-label fw-semibold">Απάντηση</label>
+                        <textarea asp-for="Answer" class="form-control" rows="5"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Αρχεία Απάντησης</label>
+                        <input type="file" name="AnswerMediaFiles" class="form-control" multiple/>
+                        <div class="form-text">
+                            Τα νέα αρχεία θα προστεθούν στα υπάρχοντα.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Group" class="form-label fw-semibold">Πακέτο</label>
+                        <input asp-for="Group" type="number" class="form-control" min="0"
+                               placeholder="Προαιρετικό — αριθμός πακέτου"/>
+                        <div class="form-text">
+                            Γρίφοι με τον ίδιο αριθμό πακέτου ομαδοποιούνται μαζί. Βάλτε 0 ή αφήστε κενό για να
+                            αφαιρέσετε από πακέτο.
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <a asp-controller="Game" asp-action="ManagePuzzles"
+                           asp-route-slug="@ViewContext.RouteData.Values["slug"]"
+                           asp-route-gameDayId="@Model.GameDayId"
+                           class="btn btn-secondary">Πίσω</a>
+                        <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
