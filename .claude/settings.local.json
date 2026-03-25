@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo:*)",
+      "Read(//tmp/**)",
+      "Bash(find /c/Repos/KunigiArchive -type f -path */Views/Account/* -name *.cshtml)",
+      "Bash(dotnet build:*)",
+      "Bash(curl -s \"https://api.github.com/repos/perpiris/kunigi/contents/Kunigi/Entities\")",
+      "Bash(python3 -c \"import sys,json; [print\\(f[''''name'''']\\) for f in json.loads\\(sys.stdin.read\\(\\)\\)]\")",
+      "Bash(curl -s https://api.github.com/repos/perpiris/kunigi/contents/Kunigi/Entities)",
+      "Bash(curl -s \"https://api.github.com/repos/perpiris/kunigi/contents/\")",
+      "Bash(python3 -c \"import sys,json; [print\\(f[''''name''''], f[''''type'''']\\) for f in json.loads\\(sys.stdin.read\\(\\)\\)]\")",
+      "Bash(curl:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Bash(done)",
+      "Bash(xargs grep:*)",
+      "Bash(xargs ls:*)",
+      "Bash(find /c/Repos/KunigiArchive -path */Views/Game* -type f)"
+    ]
+  }
+}

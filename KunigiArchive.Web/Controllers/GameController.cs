@@ -169,7 +169,7 @@ public class GameController : Controller
     [HttpGet("{slug}/actions")]
     public async Task<IActionResult> GameActions(string slug)
     {
-        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, false);
+        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, true);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -200,6 +200,84 @@ public class GameController : Controller
         var serviceResponse = await _gameService.UpdateGameDaysAsync(slug, enabledDayIds);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(GameActions), new { slug });
+    }
+
+    [HttpGet("{slug}/media")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GameMedia(string slug)
+    {
+        var serviceResponse = await _gameService.GetGameMediaViewModelAsync(slug);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameActions), new { slug });
+    }
+
+    [HttpPost("{slug}/media/upload")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> UploadGameMedia(string slug, List<IFormFile> files)
+    {
+        var serviceResponse = await _gameService.UploadGameMediaAsync(slug, files);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameMedia), new { slug });
+    }
+
+    [HttpPost("{slug}/media/{gameMediaId:long}/delete")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> DeleteGameMedia(string slug, long gameMediaId)
+    {
+        var serviceResponse = await _gameService.DeleteGameMediaAsync(slug, gameMediaId);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameMedia), new { slug });
+    }
+
+    [HttpGet("{slug}/day/{gameDayId:long}/actions")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GameDayActions(string slug, long gameDayId)
+    {
+        var serviceResponse = await _gameService.GetGameDayActionsAsync(slug, gameDayId);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameDays), new { slug });
+    }
+
+    [HttpGet("{slug}/day/{gameDayId:long}/media")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> GameDayMedia(string slug, long gameDayId)
+    {
+        var serviceResponse = await _gameService.GetGameDayMediaViewModelAsync(slug, gameDayId);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameDayActions), new { slug, gameDayId });
+    }
+
+    [HttpPost("{slug}/day/{gameDayId:long}/media/upload")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> UploadGameDayMedia(string slug, long gameDayId, List<IFormFile> files)
+    {
+        var serviceResponse = await _gameService.UploadGameDayMediaAsync(slug, gameDayId, files);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameDayMedia), new { slug, gameDayId });
+    }
+
+    [HttpPost("{slug}/day/{gameDayId:long}/media/{gameDayMediaId:long}/delete")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> DeleteGameDayMedia(string slug, long gameDayId, long gameDayMediaId)
+    {
+        var serviceResponse = await _gameService.DeleteGameDayMediaAsync(slug, gameDayId, gameDayMediaId);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(GameDayMedia), new { slug, gameDayId });
     }
 
     [HttpGet("{slug}/day/{gameDayId:long}/puzzles")]

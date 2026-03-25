@@ -1,0 +1,163 @@
+@model KunigiArchive.Web.ViewModels.Game.GameMediaViewModel
+
+@{
+    ViewData["Title"] = $"Υλικό {Model.FormattedTitle}";
+    ViewData["Banner"] = Model.FormattedTitle;
+}
+
+@functions {
+
+    static bool IsVideo(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName)) return false;
+        string[] videoExtensions = [".mp4", ".mov", ".webm", ".mkv", ".avi", ".wmv"];
+        return videoExtensions.Any(ext => fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+    }
+
+}
+
+<style>
+    .media-card {
+        position: relative;
+        overflow: visible;
+        height: 100%;
+    }
+
+    .media-card-body {
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .media-thumbnail {
+        height: 150px;
+        object-fit: cover;
+        cursor: pointer;
+        background-color: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .video-thumbnail video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .delete-btn {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background-color: #dc3545;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        color: #fff;
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.3s ease;
+    }
+
+    .delete-btn:hover {
+        background-color: #c82333;
+        transform: scale(1.1);
+    }
+
+    .upload-card .card-body {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.2rem;
+        color: #6c757d;
+    }
+
+    .upload-card:hover {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <a asp-controller="Game" asp-action="GameActions" asp-route-slug="@Model.Slug" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Πίσω
+    </a>
+</div>
+
+<div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4">
+    <div class="col">
+        <div class="card h-100 upload-card" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            <div class="card-body">
+                <i class="bi bi-plus-circle" style="font-size: 3rem;"></i>
+                <div class="mt-2 small">Προσθήκη</div>
+            </div>
+        </div>
+    </div>
+
+    @foreach (var item in Model.Media)
+    {
+        <div class="col">
+            <div class="card media-card">
+                <div class="media-card-body">
+                    @if (IsVideo(item.FileName))
+                    {
+                        <div class="video-thumbnail media-thumbnail">
+                            <video preload="metadata">
+                                <source src="~/@item.Path" type="video/mp4">
+                            </video>
+                        </div>
+                    }
+                    else
+                    {
+                        <img src="~/@item.Path" class="media-thumbnail" alt="@item.OriginalFileName">
+                    }
+                    <div class="mt-2 text-center">
+                        <small class="text-muted text-truncate d-block"
+                               title="@item.OriginalFileName">@item.OriginalFileName</small>
+                    </div>
+                </div>
+
+                <form asp-controller="Game" asp-action="DeleteGameMedia" asp-route-slug="@Model.Slug"
+                      asp-route-gameMediaId="@item.GameMediaId" method="post">
+                    <button type="submit" class="delete-btn"
+                            onclick="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το αρχείο;');"
+                            title="Διαγραφή">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Game" asp-action="UploadGameMedia" asp-route-slug="@Model.Slug" method="post"
+                  enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadModalLabel">Μεταφόρτωση Αρχείων</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="files" class="form-label">Επιλέξτε αρχεία (Εικόνες ή Βίντεο)</label>
+                        <input type="file" class="form-control" name="files" multiple required accept="image/*,video/*">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+                    <button type="submit" class="btn btn-primary">Μεταφόρτωση</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -214,6 +214,46 @@ public class GameService : IGameService
         return ServiceResponse<GameDaysViewModel>.Successful(viewModel);
     }
 
+    public async Task<ServiceResponse<GameDayActionsViewModel>> GetGameDayActionsAsync(string slug, long gameDayId)
+    {
+        var game = await _context.Games
+            .AsNoTracking()
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .Include(x => x.GameDays)
+            .ThenInclude(x => x.GameDayType)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse<GameDayActionsViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(game))
+        {
+            return ServiceResponse<GameDayActionsViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var gameDay = game.GameDays.FirstOrDefault(x => x.GameDayId == gameDayId);
+        if (gameDay == null)
+        {
+            return ServiceResponse<GameDayActionsViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        if (!string.IsNullOrWhiteSpace(game.Title))
+        {
+            formattedTitle += $" - {game.Title}";
+        }
+
+        var viewModel = new GameDayActionsViewModel
+        {
+            GameDayId = gameDay.GameDayId, GameSlug = game.Slug, GameDayName = gameDay.GameDayType.Label, GameFormattedTitle = formattedTitle
+        };
+
+        return ServiceResponse<GameDayActionsViewModel>.Successful(viewModel);
+    }
+
     public async Task<ServiceResponse<GameUpdateViewModel>> PrepareGameUpdateViewModelAsync(string slug,
         GameUpdateViewModel? gameUpdateViewModel = null)
     {
@@ -371,6 +411,256 @@ public class GameService : IGameService
         await _context.SaveChangesAsync();
 
         return ServiceResponse.Successful("Οι αλλαγές αποθηκεύτηκαν.");
+    }
+
+    public async Task<ServiceResponse<GameMediaViewModel>> GetGameMediaViewModelAsync(string slug)
+    {
+        var game = await _context.Games
+            .AsNoTracking()
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .Include(x => x.MediaFiles)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse<GameMediaViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(game))
+        {
+            return ServiceResponse<GameMediaViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var viewModel = new GameMediaViewModel
+        {
+            GameId = game.GameId,
+            Slug = game.Slug,
+            FormattedTitle = FormatGameTitle(game),
+            Media = game.MediaFiles
+                .OrderByDescending(x => x.TimeStamp)
+                .Select(x => new GameMediaItemViewModel
+                {
+                    GameMediaId = x.GameMediaId,
+                    Path = x.Path,
+                    OriginalFileName = x.OriginalFileName,
+                    FileName = x.FileName,
+                    TimeStamp = x.TimeStamp
+                }).ToList()
+        };
+
+        return ServiceResponse<GameMediaViewModel>.Successful(viewModel);
+    }
+
+    public async Task<ServiceResponse> UploadGameMediaAsync(string slug, List<IFormFile> files)
+    {
+        var game = await _context.Games
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var storageDirectory = $"games/{game.Year}";
+
+        foreach (var file in files)
+        {
+            var saveResult = await _directoryService.SaveFileAsync(file, storageDirectory);
+            if (!saveResult.Success)
+            {
+                _logger.LogError("Failed to upload file {FileName} for game {GameSlug}: {Message}", file.FileName, slug,
+                    saveResult.Message);
+                return ServiceResponse.Failure($"Σφάλμα κατά την αποθήκευση του αρχείου {file.FileName}.");
+            }
+
+            var newMedia = new GameMedia
+            {
+                GameId = game.GameId, Path = saveResult.Data!, OriginalFileName = file.FileName, FileName = Path.GetFileName(saveResult.Data!)
+            };
+            _context.GameMedia.Add(newMedia);
+        }
+
+        await _context.SaveChangesAsync();
+        return ServiceResponse.Successful("Τα αρχεία πολυμέσων ανέβηκαν με επιτυχία.");
+    }
+
+    public async Task<ServiceResponse> DeleteGameMediaAsync(string slug, long gameMediaId)
+    {
+        var game = await _context.Games
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .Include(x => x.MediaFiles)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var media = game.MediaFiles.FirstOrDefault(x => x.GameMediaId == gameMediaId);
+        if (media == null)
+        {
+            return ServiceResponse.Failure("Το αρχείο πολυμέσων δεν βρέθηκε.");
+        }
+
+        var deleteResult = _directoryService.DeleteFile(media.Path);
+        if (!deleteResult.Success)
+        {
+            _logger.LogError("Failed to delete physical file {FilePath} for media ID {MediaId}: {Message}", media.Path,
+                media.GameMediaId, deleteResult.Message);
+            return ServiceResponse.Failure("Σφάλμα κατά τη διαγραφή του αρχείου από το δίσκο.");
+        }
+
+        _context.GameMedia.Remove(media);
+        await _context.SaveChangesAsync();
+
+        return ServiceResponse.Successful("Το αρχείο πολυμέσων διαγράφηκε με επιτυχία.");
+    }
+
+    public async Task<ServiceResponse<GameDayMediaViewModel>> GetGameDayMediaViewModelAsync(string slug, long gameDayId)
+    {
+        var gameDay = await _context.GameDays
+            .AsNoTracking()
+            .Include(x => x.GameDayType)
+            .Include(x => x.Game)
+            .ThenInclude(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .Include(x => x.GameDayMedia)
+            .FirstOrDefaultAsync(x => x.GameDayId == gameDayId);
+
+        if (gameDay == null)
+        {
+            return ServiceResponse<GameDayMediaViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(gameDay.Game))
+        {
+            return ServiceResponse<GameDayMediaViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var viewModel = new GameDayMediaViewModel
+        {
+            GameDayId = gameDay.GameDayId,
+            GameSlug = gameDay.Game.Slug,
+            GameDayName = gameDay.GameDayType.Label,
+            GameFormattedTitle = FormatGameTitle(gameDay.Game),
+            Media = gameDay.GameDayMedia
+                .OrderByDescending(x => x.TimeStamp)
+                .Select(x => new GameDayMediaItemViewModel
+                {
+                    GameDayMediaId = x.GameDayMediaId,
+                    Path = x.Path,
+                    OriginalFileName = x.OriginalFileName,
+                    FileName = x.FileName,
+                    TimeStamp = x.TimeStamp
+                }).ToList()
+        };
+
+        return ServiceResponse<GameDayMediaViewModel>.Successful(viewModel);
+    }
+
+    public async Task<ServiceResponse> UploadGameDayMediaAsync(string slug, long gameDayId, List<IFormFile> files)
+    {
+        var gameDay = await _context.GameDays
+            .Include(x => x.Game)
+            .ThenInclude(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .FirstOrDefaultAsync(x => x.GameDayId == gameDayId);
+
+        if (gameDay == null)
+        {
+            return ServiceResponse.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(gameDay.Game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var storageDirectory = $"games/{gameDay.Game.Year}";
+
+        foreach (var file in files)
+        {
+            var saveResult = await _directoryService.SaveFileAsync(file, storageDirectory);
+            if (!saveResult.Success)
+            {
+                _logger.LogError("Failed to upload file {FileName} for game day {GameDayId}: {Message}", file.FileName,
+                    gameDayId, saveResult.Message);
+                return ServiceResponse.Failure($"Σφάλμα κατά την αποθήκευση του αρχείου {file.FileName}.");
+            }
+
+            var newMedia = new GameDayMedia
+            {
+                GameDayId = gameDay.GameDayId, Path = saveResult.Data!, OriginalFileName = file.FileName, FileName = Path.GetFileName(saveResult.Data!)
+            };
+            _context.GameDayMedia.Add(newMedia);
+        }
+
+        await _context.SaveChangesAsync();
+        return ServiceResponse.Successful("Τα αρχεία πολυμέσων ανέβηκαν με επιτυχία.");
+    }
+
+    public async Task<ServiceResponse> DeleteGameDayMediaAsync(string slug, long gameDayId, long gameDayMediaId)
+    {
+        var gameDay = await _context.GameDays
+            .Include(x => x.Game)
+            .ThenInclude(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .Include(x => x.GameDayMedia)
+            .FirstOrDefaultAsync(x => x.GameDayId == gameDayId);
+
+        if (gameDay == null)
+        {
+            return ServiceResponse.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(gameDay.Game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var media = gameDay.GameDayMedia.FirstOrDefault(x => x.GameDayMediaId == gameDayMediaId);
+        if (media == null)
+        {
+            return ServiceResponse.Failure("Το αρχείο πολυμέσων δεν βρέθηκε.");
+        }
+
+        var deleteResult = _directoryService.DeleteFile(media.Path);
+        if (!deleteResult.Success)
+        {
+            _logger.LogError("Failed to delete physical file {FilePath} for media ID {MediaId}: {Message}", media.Path,
+                media.GameDayMediaId, deleteResult.Message);
+            return ServiceResponse.Failure("Σφάλμα κατά τη διαγραφή του αρχείου από το δίσκο.");
+        }
+
+        _context.GameDayMedia.Remove(media);
+        await _context.SaveChangesAsync();
+
+        return ServiceResponse.Successful("Το αρχείο πολυμέσων διαγράφηκε με επιτυχία.");
+    }
+
+    private static string FormatGameTitle(Game game)
+    {
+        var result = $"{game.OrderTitle} {game.Year}";
+        if (!string.IsNullOrWhiteSpace(game.Title))
+        {
+            result += $" - {game.Title}";
+        }
+
+        return result;
     }
 
     private bool HasGameAccess(Game game)

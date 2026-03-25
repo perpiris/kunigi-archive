@@ -19,6 +19,8 @@ public interface IGameService
 
     Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug);
 
+    Task<ServiceResponse<GameDayActionsViewModel>> GetGameDayActionsAsync(string slug, long gameDayId);
+
     Task<ServiceResponse> UpdateGameDaysAsync(string slug, List<long> enabledDayIds);
 
     Task<ServiceResponse<GameUpdateViewModel>> PrepareGameUpdateViewModelAsync(string slug,
@@ -26,4 +28,12 @@ public interface IGameService
 
     Task<ServiceResponse<string>> UpdateGameAsync(GameUpdateViewModel gameUpdateViewModel, IFormFile? image,
         ModelStateDictionary modelState);
+
+    Task<ServiceResponse<GameMediaViewModel>> GetGameMediaViewModelAsync(string slug);
+    Task<ServiceResponse> UploadGameMediaAsync(string slug, List<IFormFile> files);
+    Task<ServiceResponse> DeleteGameMediaAsync(string slug, long gameMediaId);
+
+    Task<ServiceResponse<GameDayMediaViewModel>> GetGameDayMediaViewModelAsync(string slug, long gameDayId);
+    Task<ServiceResponse> UploadGameDayMediaAsync(string slug, long gameDayId, List<IFormFile> files);
+    Task<ServiceResponse> DeleteGameDayMediaAsync(string slug, long gameDayId, long gameDayMediaId);
 }

@@ -6,7 +6,9 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <a asp-controller="Game" asp-action="GameActions" asp-route-slug="@Model.GameSlug" class="btn btn-secondary">
+    <a asp-controller="Game" asp-action="GameDayActions"
+       asp-route-slug="@Model.GameSlug" asp-route-gameDayId="@Model.GameDayId"
+       class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Πίσω
     </a>
     <a asp-controller="Game" asp-action="CreatePuzzle"
