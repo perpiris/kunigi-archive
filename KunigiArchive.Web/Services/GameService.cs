@@ -50,7 +50,6 @@ public class GameService : IGameService
 
         var totalCount = await query.CountAsync();
         var items = await query
-            .OrderBy(x => x.GameId)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();

@@ -175,6 +175,9 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Property<long>("GameTypeId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Image")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsEnabled")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -299,12 +302,12 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<long>("GameDayId")
+                    b.Property<long>("GameId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("PostId");
 
-                    b.HasIndex("GameDayId");
+                    b.HasIndex("GameId");
 
                     b.ToTable("Posts");
                 });
@@ -645,13 +648,13 @@ namespace KunigiArchive.Web.Data.Mirations
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.Post", b =>
                 {
-                    b.HasOne("KunigiArchive.Web.Entities.GameDay", "GameDay")
+                    b.HasOne("KunigiArchive.Web.Entities.Game", "Game")
                         .WithMany("Posts")
-                        .HasForeignKey("GameDayId")
+                        .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("GameDay");
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.Puzzle", b =>
@@ -767,13 +770,13 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Navigation("GameDays");
 
                     b.Navigation("MediaFiles");
+
+                    b.Navigation("Posts");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.GameDay", b =>
                 {
                     b.Navigation("GameDayMedia");
-
-                    b.Navigation("Posts");
 
                     b.Navigation("Puzzles");
                 });

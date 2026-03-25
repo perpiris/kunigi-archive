@@ -29,10 +29,5 @@ public class GameDayConfiguration : IEntityTypeConfiguration<GameDay>
             .WithOne(x => x.GameDay)
             .HasForeignKey(x => x.GameDayId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasMany(x => x.Posts)
-            .WithOne(x => x.GameDay)
-            .HasForeignKey(x => x.GameDayId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }

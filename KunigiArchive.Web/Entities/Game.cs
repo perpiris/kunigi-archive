@@ -17,4 +17,5 @@ public class Game
     public virtual Team Winner { get; set; } = null!;
     public virtual ICollection<GameDay> GameDays { get; set; } = [];
     public virtual ICollection<GameMedia> MediaFiles { get; set; } = [];
+    public virtual ICollection<Post> Posts { get; set; } = [];
 }

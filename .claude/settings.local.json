@@ -16,7 +16,8 @@
       "Bash(done)",
       "Bash(xargs grep:*)",
       "Bash(xargs ls:*)",
-      "Bash(find /c/Repos/KunigiArchive -path */Views/Game* -type f)"
+      "Bash(find /c/Repos/KunigiArchive -path */Views/Game* -type f)",
+      "Bash(dotnet ef:*)"
     ]
   }
 }

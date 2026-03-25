@@ -4,6 +4,7 @@ using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.Settings;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -15,7 +16,10 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 builder.Services.AddMemoryCache();
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+});
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));

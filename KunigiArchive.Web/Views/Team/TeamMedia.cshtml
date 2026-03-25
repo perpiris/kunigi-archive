@@ -128,8 +128,8 @@
                 <form asp-controller="Team" asp-action="DeleteTeamMedia" asp-route-slug="@Model.Slug"
                       asp-route-teamMediaId="@item.TeamMediaId" method="post">
                     <button type="submit" class="delete-btn"
-                            onclick="return confirm('Are you sure you want to delete this file?');"
-                            title="Delete Media">
+                            onclick="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το αρχείο;');"
+                            title="Διαγραφή">
                         <i class="bi bi-trash-fill"></i>
                     </button>
                 </form>
@@ -144,18 +144,18 @@
             <form asp-controller="Team" asp-action="UploadTeamMedia" asp-route-slug="@Model.Slug" method="post"
                   enctype="multipart/form-data">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="uploadModalLabel">Upload New Media</h5>
+                    <h5 class="modal-title" id="uploadModalLabel">Μεταφόρτωση Αρχείων</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="files" class="form-label">Select Files (Images or Videos)</label>
+                        <label for="files" class="form-label">Επιλέξτε αρχεία (Εικόνες ή Βίντεο)</label>
                         <input type="file" class="form-control" name="files" multiple required accept="image/*,video/*">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Upload</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+                    <button type="submit" class="btn btn-primary">Μεταφόρτωση</button>
                 </div>
             </form>
         </div>

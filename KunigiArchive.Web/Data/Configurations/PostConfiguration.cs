@@ -16,9 +16,9 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
         builder.Property(x => x.CreatedAt)
             .IsRequired();
 
-        builder.HasOne(x => x.GameDay)
+        builder.HasOne(x => x.Game)
             .WithMany(x => x.Posts)
-            .HasForeignKey(x => x.GameDayId)
+            .HasForeignKey(x => x.GameId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -50,7 +50,6 @@ public class TeamService : ITeamService
 
         var totalCount = await query.CountAsync();
         var items = await query
-            .OrderBy(x => x.TeamId)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -112,7 +111,7 @@ public class TeamService : ITeamService
         var team = await query.FirstOrDefaultAsync(x => x.Slug == slug);
         if (team == null)
         {
-            return ServiceResponse<TeamDetailsViewModel>.Failure("Η ομάδας δεν βρέθηκε.");
+            return ServiceResponse<TeamDetailsViewModel>.Failure("Η ομάδα δεν βρέθηκε.");
         }
 
         if (!isForPublicView && !HasTeamAccess(team))
@@ -132,7 +131,7 @@ public class TeamService : ITeamService
 
         if (team is null)
         {
-            return ServiceResponse.Failure("Η ομάδας δεν βρέθηκε.");
+            return ServiceResponse.Failure("Η ομάδα δεν βρέθηκε.");
         }
 
         if (!HasTeamAccess(team))
@@ -150,6 +149,25 @@ public class TeamService : ITeamService
 
         if (User.IsInRole("Admin"))
         {
+            if (!string.IsNullOrWhiteSpace(viewModel.UpdatedSlug) && viewModel.UpdatedSlug != team.Slug)
+            {
+                var slugExists = await _context.Teams.AnyAsync(x => x.Slug == viewModel.UpdatedSlug && x.TeamId != team.TeamId);
+                if (slugExists)
+                {
+                    modelState.AddModelError("UpdatedSlug", "Το slug χρησιμοποιείται ήδη.");
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(viewModel.UpdatedName) && viewModel.UpdatedName != team.Name)
+            {
+                var nameSlug = SlugGenerator.GenerateSlug(viewModel.UpdatedName);
+                var nameExists = await _context.Teams.AnyAsync(x => x.Slug == nameSlug && x.TeamId != team.TeamId);
+                if (nameExists)
+                {
+                    modelState.AddModelError("UpdatedName", "Υπάρχει ήδη ομάδα με αυτό το όνομα.");
+                }
+            }
+
             team.Name = viewModel.UpdatedName!;
             team.Slug = viewModel.UpdatedSlug!;
         }
@@ -186,11 +204,18 @@ public class TeamService : ITeamService
         var team = await _context.Teams
             .Include(x => x.Managers)
             .Include(x => x.MediaFiles)
+            .Include(x => x.HostedGames)
+            .Include(x => x.WonGames)
             .FirstOrDefaultAsync(x => x.Slug == slug);
 
         if (team is null)
         {
             return ServiceResponse.Failure("Η ομάδα δεν βρέθηκε.");
+        }
+
+        if (team.HostedGames.Count != 0 || team.WonGames.Count != 0)
+        {
+            return ServiceResponse.Failure("Δεν είναι δυνατή η διαγραφή ομάδας που συνδέεται με παιχνίδια.");
         }
 
         if (team.Managers.Count != 0)
@@ -328,12 +353,18 @@ public class TeamService : ITeamService
     public async Task<ServiceResponse<TeamMediaViewModel>> GetTeamMediaViewModelAsync(string slug)
     {
         var team = await _context.Teams
+            .Include(x => x.Managers)
             .Include(x => x.MediaFiles)
             .FirstOrDefaultAsync(x => x.Slug == slug);
 
         if (team is null)
         {
             return ServiceResponse<TeamMediaViewModel>.Failure("Η ομάδα δεν βρέθηκε.");
+        }
+
+        if (!HasTeamAccess(team))
+        {
+            return ServiceResponse<TeamMediaViewModel>.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
         }
 
         var teamMediaViewModel = new TeamMediaViewModel
@@ -362,6 +393,11 @@ public class TeamService : ITeamService
         if (!HasTeamAccess(team))
         {
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα επεξεργασίας αυτής της ομάδας.");
+        }
+
+        if (files.Count == 0)
+        {
+            return ServiceResponse.Failure("Δεν επιλέχθηκαν αρχεία για μεταφόρτωση.");
         }
 
         var storageDirectory = $"teams/{team.Slug}";
@@ -405,7 +441,7 @@ public class TeamService : ITeamService
 
         if (!HasTeamAccess(team))
         {
-            return ServiceResponse<TeamDetailsViewModel>.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
         }
 
         var media = team.MediaFiles.FirstOrDefault(media => media.TeamMediaId == teamMediaId);
