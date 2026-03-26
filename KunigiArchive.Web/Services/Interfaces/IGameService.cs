@@ -33,6 +33,11 @@ public interface IGameService
     Task<ServiceResponse> UploadGameMediaAsync(string slug, List<IFormFile> files);
     Task<ServiceResponse> DeleteGameMediaAsync(string slug, long gameMediaId);
 
+    Task<ServiceResponse<GameDayUpdateViewModel>> PrepareGameDayUpdateAsync(string slug, long gameDayId);
+    Task<ServiceResponse> UpdateGameDayAsync(GameDayUpdateViewModel viewModel);
+
+    Task<ServiceResponse<GameDayDetailsViewModel>> GetGameDayDetailsForPublicViewAsync(string slug, long gameDayId);
+
     Task<ServiceResponse<GameDayMediaViewModel>> GetGameDayMediaViewModelAsync(string slug, long gameDayId);
     Task<ServiceResponse> UploadGameDayMediaAsync(string slug, long gameDayId, List<IFormFile> files);
     Task<ServiceResponse> DeleteGameDayMediaAsync(string slug, long gameDayId, long gameDayMediaId);

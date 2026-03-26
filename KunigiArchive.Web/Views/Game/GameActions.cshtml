@@ -51,6 +51,17 @@
             </div>
         </div>
     </div>
+
+    <div class="@columnClass">
+        <div class="card">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-megaphone display-4 mb-3"></i>
+                <h5 class="card-title">Αναρτήσεις</h5>
+                <a asp-controller="Game" asp-action="ManagePosts" asp-route-slug="@Model.Slug"
+                   class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
 </div>
 
 @if (Model.GameDays.Count > 0)

@@ -152,6 +152,8 @@ public class GameService : IGameService
                 .Include(x => x.Winner)
                 .Include(x => x.GameDays)
                 .ThenInclude(x => x.GameDayType)
+                .Include(x => x.MediaFiles)
+                .Include(x => x.Posts)
                 .AsSplitQuery();
         }
 
@@ -171,6 +173,66 @@ public class GameService : IGameService
         }
 
         return ServiceResponse<GameDetailsViewModel>.Successful(game.MapToGameDetailsViewModel(includeFullDetails));
+    }
+
+    public async Task<ServiceResponse<GameDayDetailsViewModel>> GetGameDayDetailsForPublicViewAsync(string slug,
+        long gameDayId)
+    {
+        var game = await _context.Games
+            .AsNoTracking()
+            .Include(x => x.GameDays.Where(gd => gd.GameDayId == gameDayId))
+            .ThenInclude(gd => gd.GameDayType)
+            .Include(x => x.GameDays.Where(gd => gd.GameDayId == gameDayId))
+            .ThenInclude(gd => gd.Puzzles.OrderBy(p => p.Order))
+            .ThenInclude(p => p.MediaFiles)
+            .Include(x => x.GameDays.Where(gd => gd.GameDayId == gameDayId))
+            .ThenInclude(gd => gd.GameDayMedia)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse<GameDayDetailsViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        var gameDay = game.GameDays.FirstOrDefault();
+        if (gameDay == null || !gameDay.IsEnabled)
+        {
+            return ServiceResponse<GameDayDetailsViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        if (!string.IsNullOrWhiteSpace(game.Title))
+        {
+            formattedTitle += $" - {game.Title}";
+        }
+
+        var viewModel = new GameDayDetailsViewModel
+        {
+            GameDayId = gameDay.GameDayId,
+            Name = gameDay.GameDayType.Label,
+            Description = gameDay.Description,
+            GameSlug = slug,
+            GameFormattedTitle = formattedTitle,
+            Puzzles = gameDay.Puzzles.OrderBy(p => p.Order).Select(p => new PuzzleDetailsViewModel
+            {
+                PuzzleId = p.PuzzleId,
+                GameDayId = p.GameDayId,
+                Order = p.Order,
+                Group = p.Group,
+                Question = p.Question,
+                Answer = p.Answer,
+                QuestionMedia = p.MediaFiles
+                    .Where(m => m.MediaType == "Q")
+                    .Select(m => new MediaFileViewModel { MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path }).ToList(),
+                AnswerMedia = p.MediaFiles
+                    .Where(m => m.MediaType == "A")
+                    .Select(m => new MediaFileViewModel { MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path }).ToList()
+            }).ToList(),
+            Media = gameDay.GameDayMedia.Select(m => new MediaFileViewModel { MediaFileId = m.GameDayMediaId, FileName = m.FileName, Path = m.Path }).ToList()
+        };
+
+        return ServiceResponse<GameDayDetailsViewModel>.Successful(viewModel);
     }
 
     public async Task<ServiceResponse<GameDaysViewModel>> GetGameDaysViewModelAsync(string slug)
@@ -251,6 +313,78 @@ public class GameService : IGameService
         };
 
         return ServiceResponse<GameDayActionsViewModel>.Successful(viewModel);
+    }
+
+    public async Task<ServiceResponse<GameDayUpdateViewModel>> PrepareGameDayUpdateAsync(string slug, long gameDayId)
+    {
+        var game = await _context.Games
+            .AsNoTracking()
+            .Include(x => x.Host)
+            .ThenInclude(x => x.Managers)
+            .Include(x => x.GameDays)
+            .ThenInclude(x => x.GameDayType)
+            .FirstOrDefaultAsync(x => x.Slug == slug);
+
+        if (game == null)
+        {
+            return ServiceResponse<GameDayUpdateViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(game))
+        {
+            return ServiceResponse<GameDayUpdateViewModel>.Warning(
+                "Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var gameDay = game.GameDays.FirstOrDefault(x => x.GameDayId == gameDayId);
+        if (gameDay == null)
+        {
+            return ServiceResponse<GameDayUpdateViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        if (!string.IsNullOrWhiteSpace(game.Title))
+        {
+            formattedTitle += $" - {game.Title}";
+        }
+
+        var viewModel = new GameDayUpdateViewModel
+        {
+            GameDayId = gameDay.GameDayId,
+            GameSlug = game.Slug,
+            GameDayName = gameDay.GameDayType.Label,
+            GameFormattedTitle = formattedTitle,
+            Title = gameDay.Title,
+            Description = gameDay.Description
+        };
+
+        return ServiceResponse<GameDayUpdateViewModel>.Successful(viewModel);
+    }
+
+    public async Task<ServiceResponse> UpdateGameDayAsync(GameDayUpdateViewModel viewModel)
+    {
+        var gameDay = await _context.GameDays
+            .Include(gd => gd.Game)
+            .ThenInclude(g => g.Host)
+            .ThenInclude(h => h.Managers)
+            .FirstOrDefaultAsync(gd => gd.GameDayId == viewModel.GameDayId);
+
+        if (gameDay == null)
+        {
+            return ServiceResponse.Failure("Η ημέρα δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(gameDay.Game))
+        {
+            return ServiceResponse.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        gameDay.Title = viewModel.Title;
+        gameDay.Description = viewModel.Description;
+
+        await _context.SaveChangesAsync();
+
+        return ServiceResponse.Successful("Η ημέρα ενημερώθηκε επιτυχώς.");
     }
 
     public async Task<ServiceResponse<GameUpdateViewModel>> PrepareGameUpdateViewModelAsync(string slug,

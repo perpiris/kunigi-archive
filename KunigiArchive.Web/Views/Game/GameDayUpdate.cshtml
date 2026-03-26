@@ -1,0 +1,82 @@
+@model KunigiArchive.Web.ViewModels.Game.GameDayUpdateViewModel
+
+@{
+    ViewData["Title"] = $"{Model.GameDayName} - Επεξεργασία";
+    ViewData["Banner"] = Model.GameFormattedTitle;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 mt-2">
+            <div class="card-body p-4">
+                <form asp-controller="Game" asp-action="GameDayUpdate"
+                      asp-route-slug="@Model.GameSlug" asp-route-gameDayId="@Model.GameDayId"
+                      method="post" autocomplete="off" id="update-gameday-form">
+                    <input type="hidden" asp-for="GameDayId"/>
+                    <input type="hidden" asp-for="GameSlug"/>
+                    <input type="hidden" asp-for="GameDayName"/>
+                    <input type="hidden" asp-for="GameFormattedTitle"/>
+
+                    <h5 class="mb-4">@Model.GameDayName</h5>
+
+                    <div class="mb-4">
+                        <label asp-for="Title" class="form-label fw-semibold"></label>
+                        <input asp-for="Title" class="form-control"/>
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label fw-semibold"></label>
+                        <input asp-for="Description" type="hidden"/>
+                        <div id="editor-container" style="height: 400px;">@Html.Raw(Model.Description)</div>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-controller="Game" asp-action="GameDayActions"
+                           asp-route-slug="@Model.GameSlug" asp-route-gameDayId="@Model.GameDayId"
+                           class="btn btn-secondary">Πίσω</a>
+                        <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+    <link rel="stylesheet" href="~/lib/quill/quill.snow.css"/>
+    <script src="~/lib/quill/quill.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let quill = new Quill('#editor-container', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{'header': 1}, {'header': 2}],
+                        [{'list': 'ordered'}, {'list': 'bullet'}],
+                        [{'indent': '-1'}, {'indent': '+1'}],
+                        [{'direction': 'rtl'}],
+                        [{'size': ['small', false, 'large', 'huge']}],
+                        [{'color': []}, {'background': []}],
+                        [{'align': []}],
+                        ['clean'],
+                        ['link', 'image', 'video']
+                    ]
+                }
+            });
+
+            let form = document.querySelector('#update-gameday-form');
+            let descriptionInput = form.querySelector('input[name="Description"]');
+
+            form.addEventListener('submit', function () {
+                let html = quill.root.innerHTML;
+                descriptionInput.value = (html === '<p><br></p>') ? '' : html;
+            });
+        });
+    </script>
+}

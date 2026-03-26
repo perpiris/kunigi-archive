@@ -1,4 +1,6 @@
-﻿namespace KunigiArchive.Web.ViewModels.Game;
+﻿using KunigiArchive.Web.ViewModels.Common;
+
+namespace KunigiArchive.Web.ViewModels.Game;
 
 public class GameDetailsViewModel
 {
@@ -17,6 +19,8 @@ public class GameDetailsViewModel
     public string Host { get; set; } = string.Empty;
     public string HostSlug { get; set; } = string.Empty;
     public List<GameDayViewModel> GameDays { get; set; } = [];
+    public List<MediaFileViewModel> Media { get; set; } = [];
+    public List<PostDetailsViewModel> Posts { get; set; } = [];
 
     public string FormattedTitle()
     {

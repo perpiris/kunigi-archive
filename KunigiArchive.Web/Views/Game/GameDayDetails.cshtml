@@ -1,15 +1,13 @@
-@model KunigiArchive.Web.ViewModels.Game.GameDayViewModel
+@model KunigiArchive.Web.ViewModels.Game.GameDayDetailsViewModel
 
 @{
-    var gameSlug = (string)ViewBag.GameSlug;
-    var gameTitle = (string)ViewBag.GameTitle;
-    ViewData["Title"] = $"{Model.Name} - {gameTitle}";
+    ViewData["Title"] = $"{Model.Name} - {Model.GameFormattedTitle}";
 }
 
 <div class="mb-4">
-    <a asp-controller="Game" asp-action="GameDetails" asp-route-slug="@gameSlug"
+    <a asp-controller="Game" asp-action="GameDetails" asp-route-slug="@Model.GameSlug"
        class="text-decoration-none text-body">
-        <i class="bi bi-arrow-left me-2"></i>@gameTitle
+        <i class="bi bi-arrow-left me-2"></i>@Model.GameFormattedTitle
     </a>
 </div>
 
@@ -17,8 +15,266 @@
 
 <hr class="border-2 border-dark opacity-100 mb-5"/>
 
-<div class="border border-2 border-dark p-5 text-center">
-    <i class="bi bi-cone-striped display-1 opacity-25 mb-3"></i>
-    <h3 class="fw-bold text-uppercase text-muted">Σύντομα Διαθέσιμο</h3>
-    <p class="text-muted">Οι λεπτομέρειες αυτής της ημέρας θα είναι σύντομα διαθέσιμες.</p>
+<div class="row gy-5">
+    @if (!string.IsNullOrEmpty(Model.Description))
+    {
+        <div class="col-12">
+            <div class="fs-5 lh-lg">
+                @Html.Raw(Model.Description)
+            </div>
+        </div>
+    }
+
+    @if (Model.Puzzles.Any())
+    {
+        <div class="col-12">
+            <h2 class="fw-bold text-uppercase mb-4">Γρίφοι</h2>
+
+            <div class="puzzle-timeline">
+                @{
+                    var processedPuzzles = new HashSet<long>();
+                    var groupCounter = 0;
+                }
+
+                @foreach (var puzzle in Model.Puzzles)
+                {
+                    if (processedPuzzles.Contains(puzzle.PuzzleId))
+                    {
+                        continue;
+                    }
+
+                    @if (puzzle.Group.HasValue)
+                    {
+                        var groupPuzzles = Model.Puzzles
+                            .Where(p => p.Group == puzzle.Group)
+                            .ToList();
+
+                        foreach (var gp in groupPuzzles)
+                        {
+                            processedPuzzles.Add(gp.PuzzleId);
+                        }
+
+                        groupCounter++;
+
+                        <div class="timeline-item timeline-group">
+                            <div class="timeline-marker">
+                                <i class="bi bi-collection"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="group-header mb-3">
+                                    <h4 class="fw-bold text-uppercase mb-1">Πακέτο @groupCounter</h4>
+                                    <span class="text-muted">
+                                        Γρίφοι: @string.Join(", ", groupPuzzles.Select(p => p.Order))
+                                    </span>
+                                </div>
+
+                                @foreach (var groupPuzzle in groupPuzzles)
+                                {
+                                    <div class="border-start border-3 border-dark ps-3 mb-4">
+                                        <h5 class="fw-bold mb-3">@(groupPuzzle.Order)ος Γρίφος</h5>
+                                        @await Html.PartialAsync("_PuzzleContent", groupPuzzle)
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        processedPuzzles.Add(puzzle.PuzzleId);
+
+                        <div class="timeline-item">
+                            <div class="timeline-marker">
+                                <span>@puzzle.Order</span>
+                            </div>
+                            <div class="timeline-content">
+                                <h4 class="fw-bold mb-3">@(puzzle.Order)ος Γρίφος</h4>
+                                @await Html.PartialAsync("_PuzzleContent", puzzle)
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="col-12">
+            <div class="border border-2 border-dark p-5 text-center">
+                <i class="bi bi-puzzle display-1 opacity-25 mb-3"></i>
+                <h3 class="fw-bold text-uppercase text-muted">Δεν υπάρχουν γρίφοι</h3>
+                <p class="text-muted">Δεν έχουν προστεθεί γρίφοι σε αυτήν την ημέρα.</p>
+            </div>
+        </div>
+    }
+
+    @if (Model.Media.Any())
+    {
+        <div class="col-12">
+            <h2 class="fw-bold text-uppercase mb-4">Υλικό</h2>
+            @await Html.PartialAsync("_MediaGallery", Model.Media)
+        </div>
+    }
 </div>
+
+<link rel="stylesheet" href="~/lib/fancybox/fancybox.css"/>
+
+<style>
+    .puzzle-timeline {
+        position: relative;
+        padding-left: 60px;
+    }
+
+    .puzzle-timeline::before {
+        content: '';
+        position: absolute;
+        left: 22px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background-color: #212529;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 3rem;
+    }
+
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -60px;
+        top: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background-color: #212529;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1rem;
+        z-index: 1;
+    }
+
+    .timeline-group .timeline-marker {
+        background-color: #0d6efd;
+    }
+
+    .timeline-content {
+        background-color: #fff;
+        border: 2px solid #212529;
+        padding: 1.5rem;
+    }
+
+    .group-header {
+        border-bottom: 2px solid #212529;
+        padding-bottom: 0.75rem;
+    }
+
+    .puzzle-media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+        margin-top: 0.5rem;
+    }
+
+    .puzzle-media-grid.single-item {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+    }
+
+    .puzzle-media-item img,
+    .puzzle-media-item video {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        display: block;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+    }
+
+    .puzzle-media-grid.single-item .puzzle-media-item img,
+    .puzzle-media-grid.single-item .puzzle-media-item video {
+        height: auto;
+        max-height: 300px;
+        object-fit: contain;
+    }
+
+    .puzzle-media-item img:hover,
+    .puzzle-media-item video:hover {
+        opacity: 0.85;
+    }
+
+    .puzzle-media-item .video-wrapper {
+        position: relative;
+    }
+
+    .puzzle-media-item .play-icon {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        pointer-events: none;
+    }
+
+    .puzzle-media-item .play-icon i {
+        font-size: 2rem;
+        color: white;
+        opacity: 0.9;
+    }
+
+    .puzzle-media-item .audio-wrapper audio {
+        width: 100%;
+    }
+
+    @@media (max-width: 768px) {
+        .puzzle-timeline {
+            padding-left: 50px;
+        }
+
+        .puzzle-timeline::before {
+            left: 17px;
+        }
+
+        .timeline-marker {
+            left: -50px;
+            width: 36px;
+            height: 36px;
+            font-size: 0.85rem;
+        }
+
+        .timeline-content {
+            padding: 1rem;
+        }
+
+        .puzzle-media-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .puzzle-media-item img,
+        .puzzle-media-item video {
+            height: 120px;
+        }
+    }
+</style>
+
+<script src="~/lib/fancybox/fancybox.umd.js"></script>
+
+<script>
+    Fancybox.bind("[data-fancybox]", {
+        Carousel: {
+            Thumbs: false,
+        },
+    });
+</script>

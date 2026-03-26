@@ -17,7 +17,14 @@
       "Bash(xargs grep:*)",
       "Bash(xargs ls:*)",
       "Bash(find /c/Repos/KunigiArchive -path */Views/Game* -type f)",
-      "Bash(dotnet ef:*)"
+      "Bash(dotnet ef:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(grep -ri 'class Post' /tmp/kunigi-ref/Kunigi/ --include=*.cs)",
+      "Bash(find /tmp/kunigi-ref -name *Post* -o -name *post*)",
+      "Bash(grep -ri Post /tmp/kunigi-ref/Kunigi/ --include=*.cs -l)",
+      "Bash(taskkill /F /PID 408)"
     ]
   }
 }

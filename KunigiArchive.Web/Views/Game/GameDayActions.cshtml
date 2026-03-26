@@ -19,6 +19,18 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-body text-center p-4">
+                <i class="bi bi-pencil display-4 mb-3"></i>
+                <h5 class="card-title">Επεξεργασία</h5>
+                <a asp-controller="Game" asp-action="GameDayUpdate"
+                   asp-route-slug="@Model.GameSlug" asp-route-gameDayId="@Model.GameDayId"
+                   class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center p-4">
                 <i class="bi bi-puzzle display-4 mb-3"></i>
                 <h5 class="card-title">Γρίφοι</h5>
                 <a asp-controller="Game" asp-action="ManagePuzzles"

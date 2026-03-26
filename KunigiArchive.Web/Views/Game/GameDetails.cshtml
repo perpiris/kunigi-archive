@@ -79,23 +79,52 @@
     @if (Model.GameDays.Any())
     {
         <div class="col-12">
-            <div class="border border-2 border-dark p-4">
-                <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-dark">Ημέρες <span
-                        class="float-end">@Model.GameDays.Count</span></h4>
-                <ul class="list-unstyled mb-0 d-grid gap-2">
-                    @foreach (var day in Model.GameDays)
-                    {
-                        <li>
-                            <a asp-controller="Game" asp-action="GameDayDetails"
-                               asp-route-slug="@Model.Slug" asp-route-id="@day.GameDayId"
-                               class="text-decoration-none text-body fw-bold fs-5 d-block py-1">
-                                @day.Name
-                                <i class="bi bi-arrow-right float-end opacity-50"></i>
-                            </a>
-                        </li>
-                    }
-                </ul>
+            <h2 class="fw-bold text-uppercase mb-3">Ημέρες</h2>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var day in Model.GameDays)
+                {
+                    <a asp-controller="Game" asp-action="GameDayDetails"
+                       asp-route-slug="@Model.Slug" asp-route-id="@day.GameDayId"
+                       class="btn btn-outline-dark fw-bold px-4">
+                        @day.Name
+                    </a>
+                }
             </div>
+        </div>
+    }
+
+    @if (Model.Posts.Any())
+    {
+        <div class="col-12">
+            <h2 class="fw-bold text-uppercase mb-3">Αναρτήσεις</h2>
+            <div class="accordion" id="postAccordion">
+                @foreach (var post in Model.Posts)
+                {
+                    var collapseId = $"post-{post.PostId}";
+                    <div class="accordion-item border-2 border-dark">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#@collapseId">
+                                @post.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </button>
+                        </h2>
+                        <div id="@collapseId" class="accordion-collapse collapse"
+                             data-bs-parent="#postAccordion">
+                            <div class="accordion-body fs-5 lh-lg">
+                                @Html.Raw(post.Content)
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (Model.Media.Any())
+    {
+        <div class="col-12">
+            <h2 class="fw-bold text-uppercase mb-4">Υλικό</h2>
+            @await Html.PartialAsync("_MediaGallery", Model.Media)
         </div>
     }
 </div>
