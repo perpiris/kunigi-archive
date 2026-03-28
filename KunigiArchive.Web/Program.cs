@@ -1,10 +1,14 @@
+using System.IO.Compression;
+using System.Threading.RateLimiting;
 using KunigiArchive.Web.Data;
 using KunigiArchive.Web.Entities;
+using KunigiArchive.Web.Middleware;
 using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -21,6 +25,26 @@ builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
 });
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+    options.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+    options.Level = CompressionLevel.SmallestSize);
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("fixed", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
@@ -71,11 +95,21 @@ if (!Directory.Exists(mediaPath))
     Directory.CreateDirectory(mediaPath);
 }
 
-app.UseStaticFiles();
+app.UseMiddleware<RequestCorrelationMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseResponseCompression();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.CacheControl = "public, max-age=2592000";
+    }
+});
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 app.UseStatusCodePagesWithRedirects("/not-found");
 app.UseRouting();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapStaticAssets();

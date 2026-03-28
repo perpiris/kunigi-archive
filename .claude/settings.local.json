@@ -24,7 +24,10 @@
       "Bash(grep -ri 'class Post' /tmp/kunigi-ref/Kunigi/ --include=*.cs)",
       "Bash(find /tmp/kunigi-ref -name *Post* -o -name *post*)",
       "Bash(grep -ri Post /tmp/kunigi-ref/Kunigi/ --include=*.cs -l)",
-      "Bash(taskkill /F /PID 408)"
+      "Bash(taskkill /F /PID 408)",
+      "Bash(xargs cat:*)",
+      "Bash(grep -r \"logger\\\\|Logger\\\\|ILogger\" /c/Repos/KunigiArchive/KunigiArchive.Web/Services/*.cs)",
+      "Bash(dotnet add:*)"
     ]
   }
 }

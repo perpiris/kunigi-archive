@@ -4,6 +4,10 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <Version>1.0.0</Version>
+        <AssemblyTitle>KunigiArchive</AssemblyTitle>
+        <Product>KunigiArchive</Product>
+        <Copyright>© $([System.DateTime]::Now.Year) KunigiArchive</Copyright>
     </PropertyGroup>
 
     <ItemGroup>
