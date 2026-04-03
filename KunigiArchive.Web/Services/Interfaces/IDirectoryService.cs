@@ -9,4 +9,6 @@ public interface IDirectoryService
         SaveFileAsync(IFormFile mediaFile, string storagePath, string? desiredFileName = null);
 
     ServiceResponse DeleteFile(string filePath);
+
+    Task GenerateMissingThumbnailsAsync();
 }

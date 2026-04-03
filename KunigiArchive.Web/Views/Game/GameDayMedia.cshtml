@@ -14,6 +14,13 @@
         return videoExtensions.Any(ext => fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
     }
 
+    static string GetThumbnailPath(string path)
+    {
+        var lastSlash = path.LastIndexOf('/');
+        if (lastSlash < 0) return path;
+        return $"{path[..(lastSlash + 1)]}thumb_{path[(lastSlash + 1)..]}";
+    }
+
 }
 
 <style>
@@ -121,7 +128,7 @@
                     }
                     else
                     {
-                        <img src="~/@item.Path" class="media-thumbnail" alt="@item.OriginalFileName">
+                        <img src="~/@GetThumbnailPath(item.Path)" class="media-thumbnail" alt="@item.OriginalFileName" loading="lazy">
                     }
                     <div class="mt-2 text-center">
                         <small class="text-muted text-truncate d-block"

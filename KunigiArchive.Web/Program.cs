@@ -37,6 +37,13 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
 builder.Services.Configure<GzipCompressionProviderOptions>(options =>
     options.Level = CompressionLevel.SmallestSize);
 
+builder.Services.AddWebOptimizer(pipeline =>
+{
+    pipeline.MinifyJsFiles("js/**/*.js");
+    pipeline.MinifyCssFiles("css/**/*.css", "lib/bootstrap/dist/css/**/*.css",
+        "lib/fancybox/**/*.css", "lib/quill/**/*.css");
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -98,6 +105,7 @@ if (!Directory.Exists(mediaPath))
 app.UseMiddleware<RequestCorrelationMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseResponseCompression();
+app.UseWebOptimizer();
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
@@ -128,6 +136,9 @@ using (var scope = app.Services.CreateScope())
     }
 
     await DataSeed.Seed(app.Services);
+
+    var directoryService = scope.ServiceProvider.GetRequiredService<IDirectoryService>();
+    await directoryService.GenerateMissingThumbnailsAsync();
 }
 
 app.Run();

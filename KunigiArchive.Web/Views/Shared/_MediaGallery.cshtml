@@ -14,7 +14,7 @@
                data-fancybox="gallery"
                class="media-item">
                 <div class="media-thumbnail">
-                    <img src="@mediaPath" alt="@item.FileName"/>
+                    <img src="@GetThumbnailPath(mediaPath)" alt="@item.FileName" loading="lazy"/>
                 </div>
             </a>
         }
@@ -159,6 +159,13 @@
             "mp4" or "avi" or "mov" or "wmv" or "webm" => "video",
             _ => "unknown"
         };
+    }
+
+    static string GetThumbnailPath(string path)
+    {
+        var lastSlash = path.LastIndexOf('/');
+        if (lastSlash < 0) return path;
+        return $"{path[..(lastSlash + 1)]}thumb_{path[(lastSlash + 1)..]}";
     }
 
 }

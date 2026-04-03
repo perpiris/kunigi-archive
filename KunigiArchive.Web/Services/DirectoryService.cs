@@ -1,4 +1,6 @@
 ﻿using KunigiArchive.Web.Services.Interfaces;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 
 namespace KunigiArchive.Web.Services;
 
@@ -85,7 +87,8 @@ public class DirectoryService : IDirectoryService
             try
             {
                 var existingFiles = Directory.GetFiles(directoryPath, $"{desiredFileName}.*");
-                foreach (var file in existingFiles)
+                var existingThumbs = Directory.GetFiles(directoryPath, $"thumb_{desiredFileName}.*");
+                foreach (var file in existingFiles.Concat(existingThumbs))
                 {
                     File.Delete(file);
                 }
@@ -108,6 +111,8 @@ public class DirectoryService : IDirectoryService
         {
             await using var fileStream = new FileStream(fullPath, FileMode.Create);
             await mediaFile.CopyToAsync(fileStream);
+
+            await GenerateThumbnailAsync(fullPath);
 
             var webPath = $"media/{Path.Combine(storagePath, newFileName).Replace(Path.DirectorySeparatorChar, '/')}";
             return ServiceResponse<string>.Successful(webPath, "Το αρχείο αποθηκεύτηκε επιτυχώς.");
@@ -139,6 +144,13 @@ public class DirectoryService : IDirectoryService
         try
         {
             File.Delete(fullPath);
+
+            var thumbPath = GetThumbnailPath(fullPath);
+            if (File.Exists(thumbPath))
+            {
+                File.Delete(thumbPath);
+            }
+
             return ServiceResponse.Successful($"Το αρχείο διαγράφηκε επιτυχώς: {fullPath}");
         }
         catch (Exception ex)
@@ -146,6 +158,76 @@ public class DirectoryService : IDirectoryService
             _logger.LogError(ex, "Failed to delete media file at: {Path}", fullPath);
             return ServiceResponse.Failure($"Αποτυχία διαγραφής αρχείου: {fullPath}");
         }
+    }
+
+    public async Task GenerateMissingThumbnailsAsync()
+    {
+        if (!Directory.Exists(_basePath))
+        {
+            return;
+        }
+
+        var imageFiles = Directory.EnumerateFiles(_basePath, "*.*", SearchOption.AllDirectories)
+            .Where(f => IsImageFile(f) && !Path.GetFileName(f).StartsWith("thumb_"));
+
+        var count = 0;
+
+        foreach (var filePath in imageFiles)
+        {
+            var thumbPath = GetThumbnailPath(filePath);
+            if (File.Exists(thumbPath))
+            {
+                continue;
+            }
+
+            try
+            {
+                await GenerateThumbnailAsync(filePath);
+                count++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to generate thumbnail for: {Path}", filePath);
+            }
+        }
+
+        if (count > 0)
+        {
+            _logger.LogInformation("Generated {Count} missing thumbnails", count);
+        }
+    }
+
+    private async Task GenerateThumbnailAsync(string filePath)
+    {
+        if (!IsImageFile(filePath))
+        {
+            return;
+        }
+
+        var thumbPath = GetThumbnailPath(filePath);
+
+        using var image = await Image.LoadAsync(filePath);
+
+        const int maxWidth = 400;
+        if (image.Width > maxWidth)
+        {
+            image.Mutate(x => x.Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(maxWidth, 0) }));
+        }
+
+        await image.SaveAsync(thumbPath);
+    }
+
+    private static string GetThumbnailPath(string filePath)
+    {
+        var directory = Path.GetDirectoryName(filePath)!;
+        var fileName = Path.GetFileName(filePath);
+        return Path.Combine(directory, $"thumb_{fileName}");
+    }
+
+    private static bool IsImageFile(string filePath)
+    {
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        return extension is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp";
     }
 
     private string GetFullPath(string subfolder)
