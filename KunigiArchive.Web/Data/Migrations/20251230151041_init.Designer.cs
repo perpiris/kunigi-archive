@@ -3,19 +3,22 @@ using System;
 using KunigiArchive.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace KunigiArchive.Web.Data.Mirations
+namespace KunigiArchive.Web.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20251230151041_init")]
+    partial class init
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.AppRole", b =>
                 {
@@ -175,9 +178,6 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Property<long>("GameTypeId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Image")
-                        .HasColumnType("TEXT");
-
                     b.Property<bool>("IsEnabled")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -287,29 +287,6 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.HasIndex("GameId");
 
                     b.ToTable("GameMedia");
-                });
-
-            modelBuilder.Entity("KunigiArchive.Web.Entities.Post", b =>
-                {
-                    b.Property<long>("PostId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("GameId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("PostId");
-
-                    b.HasIndex("GameId");
-
-                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.Puzzle", b =>
@@ -646,17 +623,6 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Navigation("Game");
                 });
 
-            modelBuilder.Entity("KunigiArchive.Web.Entities.Post", b =>
-                {
-                    b.HasOne("KunigiArchive.Web.Entities.Game", "Game")
-                        .WithMany("Posts")
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Game");
-                });
-
             modelBuilder.Entity("KunigiArchive.Web.Entities.Puzzle", b =>
                 {
                     b.HasOne("KunigiArchive.Web.Entities.GameDay", "GameDay")
@@ -770,8 +736,6 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Navigation("GameDays");
 
                     b.Navigation("MediaFiles");
-
-                    b.Navigation("Posts");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.GameDay", b =>

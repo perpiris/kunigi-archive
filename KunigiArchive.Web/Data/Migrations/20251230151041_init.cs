@@ -2,7 +2,7 @@
 
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace KunigiArchive.Web.Data.Mirations;
+namespace KunigiArchive.Web.Data.Migrations;
 
 /// <inheritdoc />
 public partial class init : Migration

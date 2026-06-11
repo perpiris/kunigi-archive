@@ -68,12 +68,12 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 builder.Services.AddIdentity<AppUser, AppRole>(options =>
     {
-        options.Password.RequireDigit = false;
-        options.Password.RequiredLength = 6;
+        options.Password.RequireDigit = true;
+        options.Password.RequiredLength = 8;
         options.Password.RequireNonAlphanumeric = false;
-        options.Password.RequireUppercase = false;
-        options.Password.RequireLowercase = false;
-        options.Password.RequiredUniqueChars = 0;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequiredUniqueChars = 1;
     })
     .AddEntityFrameworkStores<DataContext>()
     .AddDefaultTokenProviders();
@@ -81,7 +81,7 @@ builder.Services.AddIdentity<AppUser, AppRole>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.AccessDeniedPath = "/";
-    options.LoginPath = "/login";
+    options.LoginPath = "/auth/login";
 });
 
 var app = builder.Build();

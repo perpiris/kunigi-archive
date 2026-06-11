@@ -122,45 +122,37 @@ public class TeamService : ITeamService
         return ServiceResponse<TeamDetailsViewModel>.Successful(team.MapToTeamDetailsViewModel(includeFullDetails));
     }
 
-    public async Task<ServiceResponse> UpdateTeamAsync(TeamUpdateViewModel viewModel, IFormFile? image,
+    public async Task<ServiceResponse<string>> UpdateTeamAsync(TeamUpdateViewModel viewModel, IFormFile? image,
         ModelStateDictionary modelState)
     {
         var team = await _context.Teams
             .Include(x => x.Managers)
+            .Include(x => x.MediaFiles)
             .FirstOrDefaultAsync(x => x.Slug == viewModel.Slug);
 
         if (team is null)
         {
-            return ServiceResponse.Failure("Η ομάδα δεν βρέθηκε.");
+            return ServiceResponse<string>.Failure("Η ομάδα δεν βρέθηκε.");
         }
 
         if (!HasTeamAccess(team))
         {
-            return ServiceResponse<TeamDetailsViewModel>.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
+            return ServiceResponse<string>.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
         }
 
-        team.IsActive = viewModel.IsActive;
-        team.YearFounded = viewModel.YearFounded;
-        team.Description = viewModel.Description;
-        team.Facebook = viewModel.Facebook;
-        team.Instagram = viewModel.Instagram;
-        team.Youtube = viewModel.Youtube;
-        team.Website = viewModel.Website;
+        var newName = team.Name;
+        var newSlug = team.Slug;
 
         if (User.IsInRole("Admin"))
         {
-            if (!string.IsNullOrWhiteSpace(viewModel.UpdatedSlug) && viewModel.UpdatedSlug != team.Slug)
+            if (string.IsNullOrWhiteSpace(viewModel.UpdatedName))
             {
-                var slugExists = await _context.Teams.AnyAsync(x => x.Slug == viewModel.UpdatedSlug && x.TeamId != team.TeamId);
-                if (slugExists)
-                {
-                    modelState.AddModelError("UpdatedSlug", "Το slug χρησιμοποιείται ήδη.");
-                }
+                modelState.AddModelError("UpdatedName", "Το όνομα δεν μπορεί να είναι κενό.");
             }
-
-            if (!string.IsNullOrWhiteSpace(viewModel.UpdatedName) && viewModel.UpdatedName != team.Name)
+            else if (viewModel.UpdatedName.Trim() != team.Name)
             {
-                var nameSlug = SlugGenerator.GenerateSlug(viewModel.UpdatedName);
+                newName = viewModel.UpdatedName.Trim();
+                var nameSlug = SlugGenerator.GenerateSlug(newName);
                 var nameExists = await _context.Teams.AnyAsync(x => x.Slug == nameSlug && x.TeamId != team.TeamId);
                 if (nameExists)
                 {
@@ -168,14 +160,42 @@ public class TeamService : ITeamService
                 }
             }
 
-            team.Name = viewModel.UpdatedName!;
-            team.Slug = viewModel.UpdatedSlug!;
+            if (!string.IsNullOrWhiteSpace(viewModel.UpdatedSlug) && viewModel.UpdatedSlug != team.Slug)
+            {
+                var sanitizedSlug = SlugGenerator.GenerateSlug(viewModel.UpdatedSlug);
+                if (string.IsNullOrWhiteSpace(sanitizedSlug))
+                {
+                    modelState.AddModelError("UpdatedSlug", "Το slug δεν είναι έγκυρο.");
+                }
+                else if (sanitizedSlug != team.Slug)
+                {
+                    var slugExists =
+                        await _context.Teams.AnyAsync(x => x.Slug == sanitizedSlug && x.TeamId != team.TeamId);
+                    if (slugExists)
+                    {
+                        modelState.AddModelError("UpdatedSlug", "Το slug χρησιμοποιείται ήδη.");
+                    }
+                    else
+                    {
+                        newSlug = sanitizedSlug;
+                    }
+                }
+            }
         }
 
         if (!modelState.IsValid)
         {
-            return ServiceResponse.Failure();
+            return ServiceResponse<string>.Failure();
         }
+
+        team.Name = newName;
+        team.IsActive = viewModel.IsActive;
+        team.YearFounded = viewModel.YearFounded;
+        team.Description = viewModel.Description;
+        team.Facebook = viewModel.Facebook;
+        team.Instagram = viewModel.Instagram;
+        team.Youtube = viewModel.Youtube;
+        team.Website = viewModel.Website;
 
         if (image is not null)
         {
@@ -187,16 +207,40 @@ public class TeamService : ITeamService
                 _logger.LogError("Failed to save profile image for team {TeamSlug}: {Message}", team.Slug,
                     saveResult.Message);
                 modelState.AddModelError("Image", "Σφάλμα κατά την αποθήκευση της εικόνας.");
-                return ServiceResponse.Failure("Σφάλμα κατά την αποθήκευση της εικόνας.");
+                return ServiceResponse<string>.Failure("Σφάλμα κατά την αποθήκευση της εικόνας.");
             }
 
             team.Image = saveResult.Data!;
         }
 
-        _context.Teams.Update(team);
+        if (newSlug != team.Slug)
+        {
+            var oldSlug = team.Slug;
+            var moveResult = _directoryService.MoveDirectory($"teams/{oldSlug}", $"teams/{newSlug}");
+            if (!moveResult.Success)
+            {
+                modelState.AddModelError("UpdatedSlug", "Αποτυχία μετονομασίας του φακέλου πολυμέσων.");
+                return ServiceResponse<string>.Failure("Αποτυχία μετονομασίας του φακέλου πολυμέσων της ομάδας.");
+            }
+
+            team.Slug = newSlug;
+
+            var oldPrefix = $"media/teams/{oldSlug}/";
+            var newPrefix = $"media/teams/{newSlug}/";
+            if (team.Image is not null && team.Image.StartsWith(oldPrefix))
+            {
+                team.Image = newPrefix + team.Image[oldPrefix.Length..];
+            }
+
+            foreach (var media in team.MediaFiles.Where(m => m.Path.StartsWith(oldPrefix)))
+            {
+                media.Path = newPrefix + media.Path[oldPrefix.Length..];
+            }
+        }
+
         await _context.SaveChangesAsync();
 
-        return ServiceResponse.Successful("Η ομάδα ενημερώθηκε με επιτυχία.");
+        return ServiceResponse<string>.Successful(team.Slug, "Η ομάδα ενημερώθηκε με επιτυχία.");
     }
 
     public async Task<ServiceResponse> DeleteTeamAsync(string slug)

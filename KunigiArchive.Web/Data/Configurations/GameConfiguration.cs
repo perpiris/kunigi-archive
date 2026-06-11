@@ -32,7 +32,7 @@ public class GameConfiguration : IEntityTypeConfiguration<Game>
 
         builder.HasMany(x => x.GameDays)
             .WithOne(x => x.Game)
-            .HasForeignKey(x => x.GameDayId)
+            .HasForeignKey(x => x.GameId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

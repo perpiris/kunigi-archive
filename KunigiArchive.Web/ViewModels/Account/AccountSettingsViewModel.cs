@@ -14,7 +14,7 @@ public class AccountSettingsViewModel
     public string? OldPassword { get; set; }
 
     [StringLength(100, ErrorMessage = "Ο {0} πρέπει να είναι μεταξύ {2} και μέγιστο {1} χαρακτήρες.",
-        MinimumLength = 6)]
+        MinimumLength = 8)]
     [DataType(DataType.Password)]
     [Display(Name = "Νέος Κωδικός")]
     public string? NewPassword { get; set; }

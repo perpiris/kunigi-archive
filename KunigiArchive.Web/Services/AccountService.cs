@@ -101,7 +101,7 @@ public class AccountService : IAccountService
 
         var user = new AppUser { UserName = viewModel.Email, Email = viewModel.Email };
 
-        var password = GeneratePasswordFromEmail(user.Email);
+        var password = GenerateTemporaryPassword();
         var identityResult = await _userManager.CreateAsync(user, password);
         if (!identityResult.Succeeded)
         {
@@ -373,27 +373,36 @@ public class AccountService : IAccountService
         if (!addPasswordResult.Succeeded)
         {
             var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
-            return ServiceResponse.Failure($"Σφάλμα κατά την αφαίρεση του παλιού κωδικού: {errors}");
+            return ServiceResponse.Failure($"Σφάλμα κατά τον ορισμό του νέου κωδικού: {errors}");
         }
 
         _memoryCache.Remove($"PasswordReset:{email}");
         return ServiceResponse.Successful("Ο κωδικός επαναφέρθηκε επιτυχώς.");
     }
 
-    private static string GeneratePasswordFromEmail(string email)
+    private static string GenerateTemporaryPassword()
     {
-        var username = email.Split('@')[0];
+        // Ambiguous characters (I/l/1, O/0) excluded; must satisfy the Identity
+        // password policy (length, digit, uppercase, lowercase).
+        const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const string lower = "abcdefghijkmnopqrstuvwxyz";
+        const string digits = "23456789";
+        const string all = upper + lower + digits;
 
-        var random = new byte[2];
+        var random = new byte[12];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(random);
 
-        var digit1 = random[0] % 10;
-        var digit2 = random[1] % 10;
-        var digit3 = (random[0] >> 4) % 10;
-        var digit4 = (random[1] >> 4) % 10;
+        var result = new char[random.Length];
+        result[0] = upper[random[0] % upper.Length];
+        result[1] = lower[random[1] % lower.Length];
+        result[2] = digits[random[2] % digits.Length];
+        for (var i = 3; i < result.Length; i++)
+        {
+            result[i] = all[random[i] % all.Length];
+        }
 
-        return $"{username}{digit1}{digit2}{digit3}{digit4}";
+        return new string(result);
     }
 
     private static string GenerateResetCode()

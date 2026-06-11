@@ -72,6 +72,41 @@ public class DirectoryService : IDirectoryService
         }
     }
 
+    public ServiceResponse MoveDirectory(string sourcePath, string destinationPath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
+        {
+            return ServiceResponse.Failure("Η διαδρομή του φακέλου δεν μπορεί να είναι κενή.");
+        }
+
+        var sourceFullPath = GetFullPath(sourcePath);
+        var destinationFullPath = GetFullPath(destinationPath);
+
+        if (!Directory.Exists(sourceFullPath))
+        {
+            return CreateDirectory(destinationPath);
+        }
+
+        if (Directory.Exists(destinationFullPath))
+        {
+            _logger.LogWarning("Cannot move directory {Source} to {Destination}: destination already exists.",
+                sourceFullPath, destinationFullPath);
+            return ServiceResponse.Failure($"Ο φάκελος προορισμού υπάρχει ήδη: {destinationFullPath}");
+        }
+
+        try
+        {
+            Directory.Move(sourceFullPath, destinationFullPath);
+            return ServiceResponse.Successful();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to move directory from {Source} to {Destination}", sourceFullPath,
+                destinationFullPath);
+            return ServiceResponse.Failure($"Αποτυχία μετακίνησης φακέλου: {sourceFullPath}");
+        }
+    }
+
     public async Task<ServiceResponse<string>> SaveFileAsync(IFormFile mediaFile, string storagePath,
         string? desiredFileName = null)
     {
@@ -81,9 +116,19 @@ public class DirectoryService : IDirectoryService
         }
 
         var fileExtension = Path.GetExtension(mediaFile.FileName);
+        var storageDirectory = GetFullPath(storagePath);
+        if (!Directory.Exists(storageDirectory))
+        {
+            var createResult = CreateDirectory(storagePath);
+            if (!createResult.Success)
+            {
+                return ServiceResponse<string>.Failure(createResult.Message);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(desiredFileName))
         {
-            var directoryPath = GetFullPath(storagePath);
+            var directoryPath = storageDirectory;
             try
             {
                 var existingFiles = Directory.GetFiles(directoryPath, $"{desiredFileName}.*");

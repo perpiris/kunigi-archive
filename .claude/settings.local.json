@@ -27,7 +27,9 @@
       "Bash(taskkill /F /PID 408)",
       "Bash(xargs cat:*)",
       "Bash(grep -r \"logger\\\\|Logger\\\\|ILogger\" /c/Repos/KunigiArchive/KunigiArchive.Web/Services/*.cs)",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(git mv *)",
+      "Bash(taskkill //F //IM dotnet.exe)"
     ]
   }
 }

@@ -14,7 +14,7 @@ public interface ITeamService
     Task<ServiceResponse<TeamDetailsViewModel>> GetTeamBySlugAsync(string slug, bool includeFullDetails,
         bool isForPublicView = false);
 
-    Task<ServiceResponse> UpdateTeamAsync(TeamUpdateViewModel viewModel, IFormFile? image,
+    Task<ServiceResponse<string>> UpdateTeamAsync(TeamUpdateViewModel viewModel, IFormFile? image,
         ModelStateDictionary modelState);
 
     Task<ServiceResponse> DeleteTeamAsync(string slug);

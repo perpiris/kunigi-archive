@@ -488,6 +488,20 @@ public class GameService : IGameService
                 return ServiceResponse<string>.Failure();
             }
 
+            if (game.Year != gameUpdateViewModel.Year)
+            {
+                var moveResult = _directoryService.MoveDirectory($"games/{game.Year}",
+                    $"games/{gameUpdateViewModel.Year}");
+                if (!moveResult.Success)
+                {
+                    modelState.AddModelError("Year", "Αποτυχία μετονομασίας του φακέλου πολυμέσων.");
+                    return ServiceResponse<string>.Failure(
+                        "Αποτυχία μετονομασίας του φακέλου πολυμέσων του παιχνιδιού.");
+                }
+
+                await UpdateGameMediaPathsAsync(game, game.Year, gameUpdateViewModel.Year);
+            }
+
             game.Year = gameUpdateViewModel.Year;
             game.Order = gameUpdateViewModel.Order;
             game.HostId = gameUpdateViewModel.HostId;
@@ -783,6 +797,42 @@ public class GameService : IGameService
         await _context.SaveChangesAsync();
 
         return ServiceResponse.Successful("Το αρχείο πολυμέσων διαγράφηκε με επιτυχία.");
+    }
+
+    private async Task UpdateGameMediaPathsAsync(Game game, short oldYear, short newYear)
+    {
+        var oldPrefix = $"media/games/{oldYear}/";
+        var newPrefix = $"media/games/{newYear}/";
+
+        if (game.Image is not null && game.Image.StartsWith(oldPrefix))
+        {
+            game.Image = newPrefix + game.Image[oldPrefix.Length..];
+        }
+
+        var gameMedia = await _context.GameMedia
+            .Where(m => m.GameId == game.GameId)
+            .ToListAsync();
+        var gameDayMedia = await _context.GameDayMedia
+            .Where(m => m.GameDay.GameId == game.GameId)
+            .ToListAsync();
+        var puzzleMedia = await _context.PuzzleMedia
+            .Where(m => m.Puzzle.GameDay.GameId == game.GameId)
+            .ToListAsync();
+
+        foreach (var media in gameMedia.Where(m => m.Path.StartsWith(oldPrefix)))
+        {
+            media.Path = newPrefix + media.Path[oldPrefix.Length..];
+        }
+
+        foreach (var media in gameDayMedia.Where(m => m.Path.StartsWith(oldPrefix)))
+        {
+            media.Path = newPrefix + media.Path[oldPrefix.Length..];
+        }
+
+        foreach (var media in puzzleMedia.Where(m => m.Path.StartsWith(oldPrefix)))
+        {
+            media.Path = newPrefix + media.Path[oldPrefix.Length..];
+        }
     }
 
     private static string FormatGameTitle(Game game)

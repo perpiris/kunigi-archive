@@ -4,10 +4,12 @@ using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace KunigiArchive.Web.Controllers;
 
 [Route("auth")]
+[EnableRateLimiting("fixed")]
 public class AuthenticationController : Controller
 {
     private readonly UserManager<AppUser> _userManager;
@@ -53,7 +55,8 @@ public class AuthenticationController : Controller
             }
         }
 
-        var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false, false);
+        var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false,
+            lockoutOnFailure: true);
         if (result.Succeeded)
         {
             return RedirectToAction("Index", "Home");

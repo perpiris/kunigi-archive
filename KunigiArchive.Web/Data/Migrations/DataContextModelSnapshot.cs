@@ -3,19 +3,16 @@ using System;
 using KunigiArchive.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace KunigiArchive.Web.Data.Mirations
+namespace KunigiArchive.Web.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260318185028_AddPost")]
-    partial class AddPost
+    partial class DataContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
@@ -178,6 +175,9 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Property<long>("GameTypeId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Image")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsEnabled")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -302,12 +302,12 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<long>("GameDayId")
+                    b.Property<long>("GameId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("PostId");
 
-                    b.HasIndex("GameDayId");
+                    b.HasIndex("GameId");
 
                     b.ToTable("Posts");
                 });
@@ -648,13 +648,13 @@ namespace KunigiArchive.Web.Data.Mirations
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.Post", b =>
                 {
-                    b.HasOne("KunigiArchive.Web.Entities.GameDay", "GameDay")
+                    b.HasOne("KunigiArchive.Web.Entities.Game", "Game")
                         .WithMany("Posts")
-                        .HasForeignKey("GameDayId")
+                        .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("GameDay");
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.Puzzle", b =>
@@ -770,13 +770,13 @@ namespace KunigiArchive.Web.Data.Mirations
                     b.Navigation("GameDays");
 
                     b.Navigation("MediaFiles");
+
+                    b.Navigation("Posts");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.GameDay", b =>
                 {
                     b.Navigation("GameDayMedia");
-
-                    b.Navigation("Posts");
 
                     b.Navigation("Puzzles");
                 });

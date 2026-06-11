@@ -66,12 +66,21 @@ public static class DataSeed
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
         if (await context.GameDayTypes.AnyAsync())
         {
+            // One-time correction for databases seeded with the misspelled label.
+            var misspelled = await context.GameDayTypes.FirstOrDefaultAsync(x => x.Label == "Χωρός");
+            if (misspelled != null)
+            {
+                misspelled.Label = "Χορός";
+                await context.SaveChangesAsync();
+                Log.Information("Corrected GameDayType label 'Χωρός' to 'Χορός'");
+            }
+
             return;
         }
 
         var gameDayTypes = new List<GameDayType>
         {
-            new() { Label = "Χωρός", Slug = SlugGenerator.GenerateSlug("Χωρός") },
+            new() { Label = "Χορός", Slug = SlugGenerator.GenerateSlug("Χορός") },
             new() { Label = "Σάββατο", Slug = SlugGenerator.GenerateSlug("Σάββατο") },
             new() { Label = "Κυριακή", Slug = SlugGenerator.GenerateSlug("Κυριακή") },
             new() { Label = "Διαδικτυακό", Slug = SlugGenerator.GenerateSlug("Διαδικτυακό") },
