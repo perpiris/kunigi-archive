@@ -17,9 +17,9 @@
 
 <div class="row g-4">
     <div class="col-md-4">
-        <div class="card">
+        <div class="card action-tile">
             <div class="card-body text-center p-4">
-                <i class="bi bi-pencil display-4 mb-3"></i>
+                <i class="bi bi-pencil display-4 mb-3 text-primary"></i>
                 <h5 class="card-title">Επεξεργασία</h5>
                 <a asp-controller="Game" asp-action="GameDayUpdate"
                    asp-route-slug="@Model.GameSlug" asp-route-gameDayId="@Model.GameDayId"
@@ -29,9 +29,9 @@
     </div>
 
     <div class="col-md-4">
-        <div class="card">
+        <div class="card action-tile">
             <div class="card-body text-center p-4">
-                <i class="bi bi-puzzle display-4 mb-3"></i>
+                <i class="bi bi-puzzle display-4 mb-3 text-primary"></i>
                 <h5 class="card-title">Γρίφοι</h5>
                 <a asp-controller="Game" asp-action="ManagePuzzles"
                    asp-route-slug="@Model.GameSlug" asp-route-gameDayId="@Model.GameDayId"
@@ -41,9 +41,9 @@
     </div>
 
     <div class="col-md-4">
-        <div class="card">
+        <div class="card action-tile">
             <div class="card-body text-center p-4">
-                <i class="bi bi-card-image display-4 mb-3"></i>
+                <i class="bi bi-card-image display-4 mb-3 text-primary"></i>
                 <h5 class="card-title">Υλικό</h5>
                 <a asp-controller="Game" asp-action="GameDayMedia"
                    asp-route-slug="@Model.GameSlug" asp-route-gameDayId="@Model.GameDayId"

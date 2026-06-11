@@ -154,19 +154,31 @@ public class DirectoryService : IDirectoryService
 
         try
         {
-            await using var fileStream = new FileStream(fullPath, FileMode.Create);
-            await mediaFile.CopyToAsync(fileStream);
-
-            await GenerateThumbnailAsync(fullPath);
-
-            var webPath = $"media/{Path.Combine(storagePath, newFileName).Replace(Path.DirectorySeparatorChar, '/')}";
-            return ServiceResponse<string>.Successful(webPath, "Το αρχείο αποθηκεύτηκε επιτυχώς.");
+            // The stream must be fully written and closed before the thumbnail step
+            // reads the file back from disk.
+            await using (var fileStream = new FileStream(fullPath, FileMode.Create))
+            {
+                await mediaFile.CopyToAsync(fileStream);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save media file at: {Path}", fullPath);
             return ServiceResponse<string>.Failure($"Αποτυχία αποθήκευσης αρχείου: {fullPath}");
         }
+
+        try
+        {
+            await GenerateThumbnailAsync(fullPath);
+        }
+        catch (Exception ex)
+        {
+            // A failed thumbnail (corrupt or unsupported image) must not fail the upload.
+            _logger.LogWarning(ex, "Failed to generate thumbnail for: {Path}", fullPath);
+        }
+
+        var webPath = $"media/{Path.Combine(storagePath, newFileName).Replace(Path.DirectorySeparatorChar, '/')}";
+        return ServiceResponse<string>.Successful(webPath, "Το αρχείο αποθηκεύτηκε επιτυχώς.");
     }
 
     public ServiceResponse DeleteFile(string filePath)

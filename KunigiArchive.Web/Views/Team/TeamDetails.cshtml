@@ -9,14 +9,15 @@
         <div class="position-relative">
             @if (string.IsNullOrEmpty(Model.Image))
             {
-                <div
-                    class="ratio ratio-1x1 border border-2 border-dark d-flex align-items-center justify-content-center">
-                    <i class="bi bi-image fs-1 opacity-25"></i>
+                <div class="ratio ratio-1x1 border border-2 border-ink bg-surface">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i class="bi bi-people display-1 opacity-25"></i>
+                    </div>
                 </div>
             }
             else
             {
-                <img src="~/@Model.Image" class="img-fluid w-100 border border-2 border-dark rounded-0"
+                <img src="~/@Model.Image" class="img-fluid w-100 border border-2 border-ink rounded-0"
                      alt="@Model.Name">
             }
         </div>
@@ -25,7 +26,7 @@
     <div class="col-md-7">
         <h1 class="display-2 fw-bold text-uppercase mb-2 text-break">@Model.Name</h1>
 
-        <div class="fs-4 font-monospace mb-4 border-bottom border-2 border-dark pb-3 d-inline-block">
+        <div class="fs-4 font-monospace mb-4 border-bottom border-2 border-ink pb-3 d-inline-block">
             @if (Model.YearFounded.HasValue)
             {
                 <span class="fw-bold">@Model.YearFounded</span>
@@ -34,11 +35,11 @@
 
             @if (Model.IsActive)
             {
-                <span class="text-success fw-bold text-uppercase">Ενεργη</span>
+                <span class="text-success fw-bold text-uppercase">Ενεργή</span>
             }
             else
             {
-                <span class="text-danger fw-bold text-uppercase">Ανενεργη</span>
+                <span class="text-danger fw-bold text-uppercase">Ανενεργή</span>
             }
         </div>
 
@@ -75,11 +76,11 @@
     </div>
 </div>
 
-<hr class="border-2 border-dark opacity-100 mb-5"/>
+<hr class="border-2 border-ink opacity-100 mb-5"/>
 
 <div class="row gy-5">
     <div class="col-12">
-        <h2 class="fw-bold text-uppercase mb-3">Δυο Λογακια</h2>
+        <h2 class="fw-bold text-uppercase mb-3">Δυο Λογάκια</h2>
         @if (!string.IsNullOrEmpty(Model.Description))
         {
             <div class="fs-5 lh-lg">
@@ -99,8 +100,8 @@
                 @if (Model.GamesHosted.Any())
                 {
                     <div class="col-md-6">
-                        <div class="border border-2 border-dark p-4 h-100">
-                            <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-dark">Διοργανώσεις <span
+                        <div class="border border-2 border-ink p-4 h-100">
+                            <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-ink">Διοργανώσεις <span
                                     class="float-end">@Model.GamesHosted.Count</span></h4>
                             <ul class="list-unstyled mb-0 d-grid gap-2">
                                 @foreach (var game in Model.GamesHosted)
@@ -122,8 +123,8 @@
                 @if (Model.GamesWon.Any())
                 {
                     <div class="col-md-6">
-                        <div class="border border-2 border-dark p-4 h-100">
-                            <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-dark">Νίκες <span
+                        <div class="border border-2 border-ink p-4 h-100">
+                            <h4 class="fw-bold text-uppercase mb-4 pb-2 border-bottom border-ink">Νίκες <span
                                     class="float-end">@Model.GamesWon.Count</span></h4>
                             <ul class="list-unstyled mb-0 d-grid gap-2">
                                 @foreach (var game in Model.GamesWon)

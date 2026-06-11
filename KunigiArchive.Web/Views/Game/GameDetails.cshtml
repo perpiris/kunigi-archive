@@ -9,14 +9,15 @@
         <div class="position-relative">
             @if (string.IsNullOrEmpty(Model.Image))
             {
-                <div
-                    class="ratio ratio-1x1 border border-2 border-dark d-flex align-items-center justify-content-center">
-                    <i class="bi bi-image fs-1 opacity-25"></i>
+                <div class="ratio ratio-1x1 border border-2 border-ink bg-surface">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i class="bi bi-compass display-1 opacity-25"></i>
+                    </div>
                 </div>
             }
             else
             {
-                <img src="~/@Model.Image" class="img-fluid w-100 border border-2 border-dark rounded-0"
+                <img src="~/@Model.Image" class="img-fluid w-100 border border-2 border-ink rounded-0"
                      alt="@Model.FormattedTitle()">
             }
         </div>
@@ -25,7 +26,7 @@
     <div class="col-md-7">
         <h1 class="display-2 fw-bold text-uppercase mb-2 text-break">@Model.OrderTitle</h1>
 
-        <div class="fs-4 font-monospace mb-4 border-bottom border-2 border-dark pb-3 d-inline-block">
+        <div class="fs-4 font-monospace mb-4 border-bottom border-2 border-ink pb-3 d-inline-block">
             <span class="fw-bold">@Model.Year</span>
             @if (!string.IsNullOrWhiteSpace(Model.Title))
             {
@@ -59,7 +60,7 @@
     </div>
 </div>
 
-<hr class="border-2 border-dark opacity-100 mb-5"/>
+<hr class="border-2 border-ink opacity-100 mb-5"/>
 
 <div class="row gy-5">
     <div class="col-12">
@@ -101,7 +102,7 @@
                 @foreach (var post in Model.Posts)
                 {
                     var collapseId = $"post-{post.PostId}";
-                    <div class="accordion-item border-2 border-dark">
+                    <div class="accordion-item border-2 border-ink">
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed fw-semibold" type="button"
                                     data-bs-toggle="collapse" data-bs-target="#@collapseId">

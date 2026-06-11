@@ -1,8 +1,13 @@
-﻿﻿@{
-    ViewData["Title"] = "Not Found";
+@{
+    ViewData["Title"] = "Η σελίδα δεν βρέθηκε";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Η σελίδα που αναζητάτε δεν υπάρχει.</h1>
-    <a asp-controller="Home" asp-action="Index" class="btn btn-lg btn-primary mt-4">Πίσω στην Αρχική</a>
+<div class="status-page">
+    <div class="status-code">404</div>
+    <h1 class="fw-bold text-uppercase mt-4">Χαθήκαμε στο κυνήγι</h1>
+    <p class="fs-5 text-muted mb-4">Η σελίδα που αναζητάτε δεν υπάρχει — ίσως ο γρίφος να μην λυνόταν από εδώ.</p>
+    <div class="d-flex justify-content-center gap-2 flex-wrap">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-lg btn-primary">Πίσω στην Αρχική</a>
+        <a asp-controller="Game" asp-action="GameList" class="btn btn-lg btn-warning">Τα Παιχνίδια</a>
+    </div>
 </div>

@@ -4,6 +4,12 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>@ViewData["Title"] - Το Κυνήγι</title>
+    <meta name="description" content="Το αρχείο του Ρεθεμνιώτικου Κυνηγιού Θησαυρού — παιχνίδια, ομάδες, γρίφοι και λύσεις."/>
+    <link rel="icon" href="~/favicon.ico" sizes="any"/>
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg"/>
+    <link rel="icon" type="image/png" sizes="96x96" href="~/favicon-96x96.png"/>
+    <link rel="apple-touch-icon" href="~/apple-touch-icon.png"/>
+    <link rel="manifest" href="~/site.webmanifest"/>
     <script type="importmap"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -24,14 +30,13 @@
         document.documentElement.setAttribute('data-bs-theme', getPreferredTheme());
     </script>
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 
-<div id="global-loader-overlay"
-     style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.7); z-index: 9999; cursor: wait; align-items: center; justify-content: center; flex-direction: column;">
+<div id="global-loader-overlay">
     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-        <span class="visually-hidden">Loading...</span>
+        <span class="visually-hidden">Φόρτωση...</span>
     </div>
-    <div class="mt-2 fw-bold text-primary">Processing...</div>
+    <div class="mt-2 fw-bold text-primary">Επεξεργασία...</div>
 </div>
 
 <nav class="navbar navbar-expand-lg sticky-top">
@@ -117,10 +122,38 @@
     </div>
 </nav>
 
-<main role="main" class="container mt-4">
+<main role="main" class="container mt-4 flex-grow-1">
     <partial name="_Notification"/>
+    @if (ViewData["Banner"] is string banner && !string.IsNullOrWhiteSpace(banner))
+    {
+        <div class="page-banner">
+            <h1 class="display-5">@banner</h1>
+        </div>
+    }
     @RenderBody()
 </main>
+
+<footer class="site-footer">
+    <div class="container px-4 py-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <div class="footer-brand">
+                    ΤΟ<span class="bg-primary px-2 ms-1">ΚΥΝΗΓΙ</span>
+                </div>
+                <div class="small opacity-75 mt-1">Ρεθεμνιώτικο Κυνήγι Θησαυρού</div>
+            </div>
+            <ul class="list-unstyled d-flex gap-4 mb-0">
+                <li>
+                    <a asp-controller="Game" asp-action="GameList">Παιχνίδια</a>
+                </li>
+                <li>
+                    <a asp-controller="Team" asp-action="TeamList">Ομάδες</a>
+                </li>
+            </ul>
+            <div class="small opacity-75">© @DateTime.Now.Year Το Κυνήγι</div>
+        </div>
+    </div>
+</footer>
 
 <button type="button" class="btn btn-warning btn-lg" id="btn-back-to-top">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">

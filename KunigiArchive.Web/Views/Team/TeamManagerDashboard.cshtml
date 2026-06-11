@@ -1,7 +1,8 @@
 ﻿@model IEnumerable<KunigiArchive.Web.ViewModels.Team.TeamDetailsViewModel>
 
 @{
-    ViewData["Title"] = "Διαχείριση";
+    ViewData["Title"] = "Οι Ομάδες μου";
+    ViewData["Banner"] = "Οι Ομάδες μου";
 }
 
 @if (Model.Any())
@@ -31,7 +32,7 @@
 }
 else
 {
-    <div class="text-center py-5 border border-2 border-dark">
+    <div class="text-center py-5 border border-2 border-ink">
         <h3 class="fw-bold text-uppercase">Δεν Βρέθηκαν Αποτελέσματα</h3>
     </div>
 }

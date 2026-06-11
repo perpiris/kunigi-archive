@@ -9,9 +9,9 @@
 
 <div class="row g-4">
     <div class="@columnClass">
-        <div class="card">
+        <div class="card action-tile">
             <div class="card-body text-center p-4">
-                <i class="bi bi-eye-fill display-4 mb-3"></i>
+                <i class="bi bi-eye-fill display-4 mb-3 text-primary"></i>
                 <h5 class="card-title">Προβολή</h5>
                 <a asp-controller="Team" asp-action="TeamDetails" asp-route-slug="@Model.Slug"
                    class="stretched-link"></a>
@@ -20,9 +20,9 @@
     </div>
 
     <div class="@columnClass">
-        <div class="card">
+        <div class="card action-tile">
             <div class="card-body text-center p-4">
-                <i class="bi bi-pencil display-4 mb-3"></i>
+                <i class="bi bi-pencil display-4 mb-3 text-primary"></i>
                 <h5 class="card-title">Επεξεργασία</h5>
                 <a asp-controller="Team" asp-action="TeamUpdate" asp-route-slug="@Model.Slug"
                    class="stretched-link"></a>
@@ -31,9 +31,9 @@
     </div>
 
     <div class="@columnClass">
-        <div class="card">
+        <div class="card action-tile">
             <div class="card-body text-center p-4">
-                <i class="bi bi-card-image display-4 mb-3"></i>
+                <i class="bi bi-card-image display-4 mb-3 text-primary"></i>
                 <h5 class="card-title">Υλικό</h5>
                 <a asp-controller="Team" asp-action="TeamMedia" asp-route-slug="@Model.Slug"
                    class="stretched-link"></a>
@@ -44,10 +44,10 @@
     @if (User.IsInRole("Admin"))
     {
         <div class="@columnClass">
-            <div class="card">
+            <div class="card action-tile">
                 <div class="card-body text-center p-4">
-                    <i class="bi bi-people-fill display-4 mb-3"></i>
-                    <h5 class="card-title">Διαχείριστές</h5>
+                    <i class="bi bi-people-fill display-4 mb-3 text-primary"></i>
+                    <h5 class="card-title">Διαχειριστές</h5>
                     <a asp-controller="Team" asp-action="TeamManagers" asp-route-slug="@Model.Slug"
                        class="stretched-link"></a>
                 </div>
@@ -63,9 +63,9 @@
         @foreach (var game in Model.GamesHosted.OrderByDescending(x => x.Year))
         {
             <div class="col-md-3">
-                <div class="card">
+                <div class="card action-tile">
                     <div class="card-body text-center p-4">
-                        <i class="bi bi-trophy-fill display-4 mb-3"></i>
+                        <i class="bi bi-trophy-fill display-4 mb-3 text-primary"></i>
                         <h5 class="card-title">@game.FormattedTitle()</h5>
                         <a asp-controller="Game" asp-action="GameActions" asp-route-slug="@game.Slug"
                            class="stretched-link"></a>

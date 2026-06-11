@@ -192,6 +192,14 @@ Controllers are thin. They call a service method, check `serviceResponse.Success
 
 ## UI Patterns
 
+**Theme:** Neo-brutalist design system on a custom Bootstrap 5.3 build (`wwwroot/lib/bootstrap/dist/css/style.css`): square corners everywhere, 2px borders, hard offset shadows (`--reth-shadow-color`, black in light mode / white in dark mode), Space Grotesk for headings/buttons, brand colors (primary `#ff4d00` orange, secondary `#2e5cff` blue, warning `#ffd600` yellow). Light/dark theme toggle persisted in localStorage (`data-bs-theme`).
+
+**Dark-mode rule:** never use `border-dark`/`border-black` or hardcoded colors (`#fff`, `#f5f5f5`, `#212529`) in views — use the `.border-ink` utility and CSS variables (`var(--bs-border-color)`, `var(--bs-tertiary-bg)`, `var(--bs-card-bg)`) from `site.css`. Component styles (timeline, media gallery, tiles) live in `site.css`, not inline `<style>` blocks.
+
+**Page headers:** set `ViewData["Banner"]` and the layout renders a standard page banner (uppercase display heading + bottom rule). List pages render their own header row with a `_SearchForm` partial instead.
+
+**Shared partials:** `_Pagination` and `_SearchForm` both take a `PageNavViewModel` (Controller, Action, CurrentPage, TotalPages, PageSize, SearchQuery). `_MediaGallery` (fancybox grid), `_PuzzleContent` (Q/A split), `_Notification` (TempData alerts).
+
 **Forms:** Bootstrap 5 cards with `asp-for` tag helpers, validation spans, Back + Save buttons aligned right.
 
 **Custom dropdowns:** Team select fields use a custom `initCustomSelect(prefix)` JS function with search. The real `<select>` is positioned off-screen; a visible `<input>` + dropdown panel drives UX.

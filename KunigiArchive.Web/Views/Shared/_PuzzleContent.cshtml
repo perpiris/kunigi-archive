@@ -1,7 +1,7 @@
 @model KunigiArchive.Web.ViewModels.Game.PuzzleDetailsViewModel
 
 <div class="row g-0">
-    <div class="col-md-6 pe-md-4 @(Model.AnswerMedia.Any() || !string.IsNullOrEmpty(Model.Answer) ? "border-end border-2 border-dark" : "")">
+    <div class="col-md-6 pe-md-4 @(Model.AnswerMedia.Any() || !string.IsNullOrEmpty(Model.Answer) ? "border-end border-2 border-ink" : "")">
         <h6 class="fw-bold text-uppercase text-muted mb-2">Ερώτηση</h6>
         @if (!string.IsNullOrEmpty(Model.Question))
         {
