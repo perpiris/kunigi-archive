@@ -392,6 +392,15 @@ public class GameController : Controller
         return RedirectToAction(nameof(ManagePuzzles), new { slug, gameDayId });
     }
 
+    [HttpPost("{slug}/day/{gameDayId:long}/puzzles/{puzzleId:long}/media/{puzzleMediaId:long}/delete")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> DeletePuzzleMedia(string slug, long gameDayId, long puzzleId, long puzzleMediaId)
+    {
+        var serviceResponse = await _puzzleService.DeletePuzzleMediaAsync(puzzleId, puzzleMediaId);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(EditPuzzle), new { slug, gameDayId, puzzleId });
+    }
+
     [HttpGet("{slug}/posts")]
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> ManagePosts(string slug)

@@ -11,4 +11,5 @@ public interface IPuzzleService
     Task<ServiceResponse<PuzzleEditViewModel>> GetPuzzleEditAsync(long puzzleId);
     Task<ServiceResponse> UpdatePuzzleAsync(PuzzleEditViewModel viewModel, ModelStateDictionary modelState);
     Task<ServiceResponse> DeletePuzzleAsync(long puzzleId);
+    Task<ServiceResponse> DeletePuzzleMediaAsync(long puzzleId, long puzzleMediaId);
 }

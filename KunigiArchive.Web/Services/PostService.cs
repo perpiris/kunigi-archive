@@ -162,8 +162,12 @@ public class PostService : IPostService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
+        var storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
+        
         _context.Posts.Remove(post);
         await _context.SaveChangesAsync();
+
+        _directoryService.DeleteDirectory(storagePath);
 
         return ServiceResponse.Successful("Η ανάρτηση διαγράφηκε επιτυχώς.");
     }

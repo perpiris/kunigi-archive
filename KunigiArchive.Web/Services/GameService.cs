@@ -819,6 +819,9 @@ public class GameService : IGameService
         var puzzleMedia = await _context.PuzzleMedia
             .Where(m => m.Puzzle.GameDay.GameId == game.GameId)
             .ToListAsync();
+        var postMedia = await _context.PostMedia
+            .Where(m => m.Post.GameId == game.GameId)
+            .ToListAsync();
 
         foreach (var media in gameMedia.Where(m => m.Path.StartsWith(oldPrefix)))
         {
@@ -831,6 +834,11 @@ public class GameService : IGameService
         }
 
         foreach (var media in puzzleMedia.Where(m => m.Path.StartsWith(oldPrefix)))
+        {
+            media.Path = newPrefix + media.Path[oldPrefix.Length..];
+        }
+
+        foreach (var media in postMedia.Where(m => m.Path.StartsWith(oldPrefix)))
         {
             media.Path = newPrefix + media.Path[oldPrefix.Length..];
         }

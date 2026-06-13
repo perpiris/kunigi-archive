@@ -1,3 +1,5 @@
+using KunigiArchive.Web.ViewModels.Common;
+
 namespace KunigiArchive.Web.ViewModels.Game;
 
 public class PuzzleEditViewModel
@@ -9,4 +11,6 @@ public class PuzzleEditViewModel
     public short? Group { get; set; }
     public List<IFormFile> QuestionMediaFiles { get; set; } = [];
     public List<IFormFile> AnswerMediaFiles { get; set; } = [];
+    public List<MediaFileViewModel> QuestionMedia { get; set; } = [];
+    public List<MediaFileViewModel> AnswerMedia { get; set; } = [];
 }

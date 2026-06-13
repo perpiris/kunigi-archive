@@ -5,6 +5,21 @@
     ViewData["Banner"] = "Επεξεργασία Γρίφου";
 }
 
+@functions {
+    static bool IsVideo(string fileName)
+    {
+        if (string.IsNullOrEmpty(fileName)) return false;
+        string[] videoExtensions = [".mp4", ".mov", ".webm", ".mkv", ".avi", ".wmv"];
+        return videoExtensions.Any(ext => fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+    }
+
+    static string GetThumbnailPath(string path)
+    {
+        var lastSlash = path.LastIndexOf('/');
+        if (lastSlash < 0) return path;
+        return $"{path[..(lastSlash + 1)]}thumb_{path[(lastSlash + 1)..]}";
+    }
+}
 <div class="row justify-content-center">
     <div class="col-lg-10">
         <div class="card border-0 mt-2">
@@ -32,6 +47,34 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Αρχεία Ερώτησης</label>
+                                        @if (Model.QuestionMedia.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                @foreach (var item in Model.QuestionMedia)
+                                                {
+                                                    <div class="position-relative border rounded p-1" style="width: 120px;">
+                                                        @if (IsVideo(item.FileName))
+                                                        {
+                                                            <video class="w-100" style="height: 80px; object-fit: cover;">
+                                                                <source src="~/@item.Path" type="video/mp4">
+                                                            </video>
+                                                        }
+                                                        else
+                                                        {
+                                                            <img src="~/@GetThumbnailPath(item.Path)" class="w-100" style="height: 80px; object-fit: cover;" alt="@item.FileName">
+                                                        }
+                                                        <button type="submit" form="delete-media-form" 
+                                                                formaction="/games/@ViewContext.RouteData.Values["slug"]/day/@Model.GameDayId/puzzles/@Model.PuzzleId/media/@item.MediaFileId/delete" 
+                                                                class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 p-0 d-flex align-items-center justify-content-center" 
+                                                                style="width: 24px; height: 24px; z-index: 10;" 
+                                                                onclick="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το αρχείο;');"
+                                                                title="Διαγραφή">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
                                         <input type="file" name="QuestionMediaFiles" class="form-control" multiple/>
                                         <div class="form-text">
                                             Τα νέα αρχεία θα προστεθούν στα υπάρχοντα.
@@ -58,6 +101,34 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Αρχεία Απάντησης</label>
+                                        @if (Model.AnswerMedia.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                @foreach (var item in Model.AnswerMedia)
+                                                {
+                                                    <div class="position-relative border rounded p-1" style="width: 120px;">
+                                                        @if (IsVideo(item.FileName))
+                                                        {
+                                                            <video class="w-100" style="height: 80px; object-fit: cover;">
+                                                                <source src="~/@item.Path" type="video/mp4">
+                                                            </video>
+                                                        }
+                                                        else
+                                                        {
+                                                            <img src="~/@GetThumbnailPath(item.Path)" class="w-100" style="height: 80px; object-fit: cover;" alt="@item.FileName">
+                                                        }
+                                                        <button type="submit" form="delete-media-form" 
+                                                                formaction="/games/@ViewContext.RouteData.Values["slug"]/day/@Model.GameDayId/puzzles/@Model.PuzzleId/media/@item.MediaFileId/delete" 
+                                                                class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 p-0 d-flex align-items-center justify-content-center" 
+                                                                style="width: 24px; height: 24px; z-index: 10;" 
+                                                                onclick="return confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το αρχείο;');"
+                                                                title="Διαγραφή">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
                                         <input type="file" name="AnswerMediaFiles" class="form-control" multiple/>
                                         <div class="form-text">
                                             Τα νέα αρχεία θα προστεθούν στα υπάρχοντα.
@@ -103,6 +174,8 @@
         </div>
     </div>
 </div>
+
+<form id="delete-media-form" method="post" style="display:none;"></form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial"/>

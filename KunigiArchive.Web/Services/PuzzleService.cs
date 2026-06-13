@@ -121,6 +121,7 @@ public class PuzzleService : IPuzzleService
     public async Task<ServiceResponse<PuzzleEditViewModel>> GetPuzzleEditAsync(long puzzleId)
     {
         var puzzle = await _context.Puzzles
+            .Include(p => p.MediaFiles)
             .Include(p => p.GameDay)
             .ThenInclude(gd => gd.Game)
             .ThenInclude(g => g.Host)
@@ -144,7 +145,19 @@ public class PuzzleService : IPuzzleService
             GameDayId = puzzle.GameDayId,
             Question = puzzle.Question,
             Answer = puzzle.Answer,
-            Group = puzzle.Group
+            Group = puzzle.Group,
+            QuestionMedia = puzzle.MediaFiles
+                .Where(m => m.MediaType == "Q")
+                .Select(m => new MediaFileViewModel
+                {
+                    MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path
+                }).ToList(),
+            AnswerMedia = puzzle.MediaFiles
+                .Where(m => m.MediaType == "A")
+                .Select(m => new MediaFileViewModel
+                {
+                    MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path
+                }).ToList()
         };
 
         return ServiceResponse<PuzzleEditViewModel>.Successful(viewModel);
@@ -242,6 +255,46 @@ public class PuzzleService : IPuzzleService
         await _context.SaveChangesAsync();
 
         return ServiceResponse.Successful("Ο γρίφος διαγράφηκε επιτυχώς.");
+    }
+
+    public async Task<ServiceResponse> DeletePuzzleMediaAsync(long puzzleId, long puzzleMediaId)
+    {
+        var puzzle = await _context.Puzzles
+            .Include(p => p.GameDay)
+            .ThenInclude(gd => gd.Game)
+            .ThenInclude(g => g.Host)
+            .ThenInclude(h => h.Managers)
+            .Include(p => p.MediaFiles)
+            .FirstOrDefaultAsync(p => p.PuzzleId == puzzleId);
+
+        if (puzzle == null)
+        {
+            return ServiceResponse.Failure("Ο γρίφος δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(puzzle.GameDay.Game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var media = puzzle.MediaFiles.FirstOrDefault(x => x.PuzzleMediaId == puzzleMediaId);
+        if (media == null)
+        {
+            return ServiceResponse.Failure("Το αρχείο πολυμέσων δεν βρέθηκε.");
+        }
+
+        var deleteResult = _directoryService.DeleteFile(media.Path);
+        if (!deleteResult.Success)
+        {
+            _logger.LogError("Failed to delete physical file {FilePath} for media ID {MediaId}: {Message}", media.Path,
+                media.PuzzleMediaId, deleteResult.Message);
+            return ServiceResponse.Failure("Σφάλμα κατά τη διαγραφή του αρχείου από το δίσκο.");
+        }
+
+        _context.PuzzleMedia.Remove(media);
+        await _context.SaveChangesAsync();
+
+        return ServiceResponse.Successful("Το αρχείο πολυμέσων διαγράφηκε με επιτυχία.");
     }
 
     private async Task<GameDay?> LoadGameDayWithAccess(long gameDayId)
