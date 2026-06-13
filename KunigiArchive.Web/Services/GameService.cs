@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using KunigiArchive.Web.Data;
 using KunigiArchive.Web.Entities;
 using KunigiArchive.Web.Mappings;
@@ -154,6 +154,7 @@ public class GameService : IGameService
                 .ThenInclude(x => x.GameDayType)
                 .Include(x => x.MediaFiles)
                 .Include(x => x.Posts)
+                .ThenInclude(p => p.MediaFiles)
                 .AsSplitQuery();
         }
 

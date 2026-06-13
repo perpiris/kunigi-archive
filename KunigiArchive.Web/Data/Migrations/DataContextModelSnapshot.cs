@@ -15,7 +15,7 @@ namespace KunigiArchive.Web.Data.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.AppRole", b =>
                 {
@@ -305,11 +305,49 @@ namespace KunigiArchive.Web.Data.Migrations
                     b.Property<long>("GameId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Title")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("PostId");
 
                     b.HasIndex("GameId");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("KunigiArchive.Web.Entities.PostMedia", b =>
+                {
+                    b.Property<long>("PostMediaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PostId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("TimeStamp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("PostMediaId");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("PostMedia");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.Puzzle", b =>
@@ -657,6 +695,17 @@ namespace KunigiArchive.Web.Data.Migrations
                     b.Navigation("Game");
                 });
 
+            modelBuilder.Entity("KunigiArchive.Web.Entities.PostMedia", b =>
+                {
+                    b.HasOne("KunigiArchive.Web.Entities.Post", "Post")
+                        .WithMany("MediaFiles")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("KunigiArchive.Web.Entities.Puzzle", b =>
                 {
                     b.HasOne("KunigiArchive.Web.Entities.GameDay", "GameDay")
@@ -779,6 +828,11 @@ namespace KunigiArchive.Web.Data.Migrations
                     b.Navigation("GameDayMedia");
 
                     b.Navigation("Puzzles");
+                });
+
+            modelBuilder.Entity("KunigiArchive.Web.Entities.Post", b =>
+                {
+                    b.Navigation("MediaFiles");
                 });
 
             modelBuilder.Entity("KunigiArchive.Web.Entities.Puzzle", b =>

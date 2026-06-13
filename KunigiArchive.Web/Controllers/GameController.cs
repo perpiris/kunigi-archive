@@ -482,4 +482,36 @@ public class GameController : Controller
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(ManagePosts), new { slug });
     }
+
+    [HttpGet("{slug}/posts/{postId:long}/media")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> PostMedia(string slug, long postId)
+    {
+        var serviceResponse = await _postService.GetPostMediaViewModelAsync(slug, postId);
+        if (serviceResponse.Success)
+        {
+            return View(serviceResponse.Data);
+        }
+
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(ManagePosts), new { slug });
+    }
+
+    [HttpPost("{slug}/posts/{postId:long}/media/upload")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> UploadPostMedia(string slug, long postId, List<IFormFile> files)
+    {
+        var serviceResponse = await _postService.UploadPostMediaAsync(slug, postId, files);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(PostMedia), new { slug, postId });
+    }
+
+    [HttpPost("{slug}/posts/{postId:long}/media/{postMediaId:long}/delete")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> DeletePostMedia(string slug, long postId, long postMediaId)
+    {
+        var serviceResponse = await _postService.DeletePostMediaAsync(slug, postId, postMediaId);
+        AlertMessageHandler.SetMessage(TempData, serviceResponse);
+        return RedirectToAction(nameof(PostMedia), new { slug, postId });
+    }
 }

@@ -1,4 +1,4 @@
-﻿using KunigiArchive.Web.Entities;
+using KunigiArchive.Web.Entities;
 using KunigiArchive.Web.ViewModels.Common;
 using KunigiArchive.Web.ViewModels.Game;
 
@@ -42,7 +42,14 @@ public static class GameMappings
 
             viewModel.Posts = game.Posts
                 .OrderByDescending(p => p.CreatedAt)
-                .Select(p => new PostDetailsViewModel { PostId = p.PostId, GameId = p.GameId, Content = p.Content, CreatedAt = p.CreatedAt }).ToList();
+                .Select(p => new PostDetailsViewModel {
+                    PostId = p.PostId,
+                    GameId = p.GameId,
+                    Title = p.Title,
+                    Content = p.Content,
+                    CreatedAt = p.CreatedAt,
+                    Media = p.MediaFiles.Select(m => new MediaFileViewModel { MediaFileId = m.PostMediaId, FileName = m.FileName, Path = m.Path }).ToList()
+                }).ToList();
         }
 
         return viewModel;

@@ -106,13 +106,23 @@
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed fw-semibold" type="button"
                                     data-bs-toggle="collapse" data-bs-target="#@collapseId">
+                                @if (!string.IsNullOrWhiteSpace(post.Title))
+                                {
+                                    @post.Title <text>-</text>
+                                }
                                 @post.CreatedAt.ToString("dd/MM/yyyy HH:mm")
                             </button>
                         </h2>
                         <div id="@collapseId" class="accordion-collapse collapse"
                              data-bs-parent="#postAccordion">
-                            <div class="accordion-body fs-5 lh-lg">
+                            <div class="accordion-body fs-5 lh-lg ql-editor px-3">
                                 @Html.Raw(post.Content)
+                                @if (post.Media != null && post.Media.Any())
+                                {
+                                    <div class="mt-4">
+                                        @await Html.PartialAsync("_MediaGallery", post.Media)
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -129,3 +139,7 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/lib/quill/quill.snow.css" />
+}

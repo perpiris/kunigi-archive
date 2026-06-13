@@ -11,13 +11,15 @@ public class PostService : IPostService
 {
     private readonly DataContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IDirectoryService _directoryService;
 
     private ClaimsPrincipal User => _httpContextAccessor.HttpContext?.User!;
 
-    public PostService(DataContext context, IHttpContextAccessor httpContextAccessor)
+    public PostService(DataContext context, IHttpContextAccessor httpContextAccessor, IDirectoryService directoryService)
     {
         _context = context;
         _httpContextAccessor = httpContextAccessor;
+        _directoryService = directoryService;
     }
 
     public async Task<ServiceResponse<PostManagementViewModel>> GetPostManagementAsync(string gameSlug)
@@ -44,7 +46,7 @@ public class PostService : IPostService
             GameId = game.GameId,
             GameSlug = gameSlug,
             GameFormattedTitle = FormatGameTitle(game),
-            Posts = posts.Select(p => new PostDetailsViewModel { PostId = p.PostId, GameId = p.GameId, Content = p.Content, CreatedAt = p.CreatedAt })
+            Posts = posts.Select(p => new PostDetailsViewModel { PostId = p.PostId, GameId = p.GameId, Title = p.Title, Content = p.Content, CreatedAt = p.CreatedAt })
                 .ToList()
         };
 
@@ -85,7 +87,7 @@ public class PostService : IPostService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var post = new Post { GameId = viewModel.GameId, Content = viewModel.Content, CreatedAt = DateTime.UtcNow };
+        var post = new Post { GameId = viewModel.GameId, Title = viewModel.Title, Content = viewModel.Content, CreatedAt = DateTime.UtcNow };
 
         _context.Posts.Add(post);
         await _context.SaveChangesAsync();
@@ -112,7 +114,7 @@ public class PostService : IPostService
                 "Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var viewModel = new PostEditViewModel { PostId = post.PostId, GameId = post.GameId, Content = post.Content };
+        var viewModel = new PostEditViewModel { PostId = post.PostId, GameId = post.GameId, Title = post.Title, Content = post.Content };
 
         return ServiceResponse<PostEditViewModel>.Successful(viewModel);
     }
@@ -135,6 +137,7 @@ public class PostService : IPostService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
+        post.Title = viewModel.Title;
         post.Content = viewModel.Content;
         await _context.SaveChangesAsync();
 
@@ -163,6 +166,119 @@ public class PostService : IPostService
         await _context.SaveChangesAsync();
 
         return ServiceResponse.Successful("Η ανάρτηση διαγράφηκε επιτυχώς.");
+    }
+
+    public async Task<ServiceResponse<PostMediaViewModel>> GetPostMediaViewModelAsync(string gameSlug, long postId)
+    {
+        var post = await _context.Posts
+            .Include(p => p.Game)
+            .ThenInclude(g => g.Host)
+            .ThenInclude(h => h.Managers)
+            .Include(p => p.MediaFiles)
+            .FirstOrDefaultAsync(p => p.PostId == postId);
+
+        if (post == null)
+        {
+            return ServiceResponse<PostMediaViewModel>.Failure("Η ανάρτηση δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(post.Game))
+        {
+            return ServiceResponse<PostMediaViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var viewModel = new PostMediaViewModel
+        {
+            PostId = post.PostId,
+            GameId = post.GameId,
+            Slug = post.Game.Slug,
+            PostTitle = post.Title,
+            GameFormattedTitle = FormatGameTitle(post.Game),
+            Media = post.MediaFiles.OrderByDescending(m => m.TimeStamp).Select(m => new PostMediaItemViewModel
+            {
+                PostMediaId = m.PostMediaId,
+                Path = m.Path,
+                OriginalFileName = m.OriginalFileName,
+                FileName = m.FileName,
+                TimeStamp = m.TimeStamp
+            }).ToList()
+        };
+
+        return ServiceResponse<PostMediaViewModel>.Successful(viewModel);
+    }
+
+    public async Task<ServiceResponse> UploadPostMediaAsync(string gameSlug, long postId, List<IFormFile> files)
+    {
+        var post = await _context.Posts
+            .Include(p => p.Game)
+            .ThenInclude(g => g.Host)
+            .ThenInclude(h => h.Managers)
+            .FirstOrDefaultAsync(p => p.PostId == postId);
+
+        if (post == null)
+        {
+            return ServiceResponse.Failure("Η ανάρτηση δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(post.Game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        var storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
+        var uploadedCount = 0;
+
+        foreach (var file in files)
+        {
+            var saveResult = await _directoryService.SaveFileAsync(file, storagePath);
+            if (!saveResult.Success || string.IsNullOrEmpty(saveResult.Data)) continue;
+
+            var fileName = saveResult.Data.Split('/').Last();
+            var postMedia = new PostMedia
+            {
+                PostId = post.PostId,
+                Path = saveResult.Data,
+                OriginalFileName = file.FileName,
+                FileName = fileName,
+                TimeStamp = DateTime.UtcNow
+            };
+
+            _context.PostMedia.Add(postMedia);
+            uploadedCount++;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return uploadedCount > 0
+            ? ServiceResponse.Successful($"Μεταφορτώθηκαν επιτυχώς {uploadedCount} αρχεία.")
+            : ServiceResponse.Failure("Δεν ήταν δυνατή η μεταφόρτωση των αρχείων.");
+    }
+
+    public async Task<ServiceResponse> DeletePostMediaAsync(string gameSlug, long postId, long postMediaId)
+    {
+        var media = await _context.PostMedia
+            .Include(m => m.Post)
+            .ThenInclude(p => p.Game)
+            .ThenInclude(g => g.Host)
+            .ThenInclude(h => h.Managers)
+            .FirstOrDefaultAsync(m => m.PostMediaId == postMediaId && m.PostId == postId);
+
+        if (media == null)
+        {
+            return ServiceResponse.Failure("Το αρχείο δεν βρέθηκε.");
+        }
+
+        if (!HasGameAccess(media.Post.Game))
+        {
+            return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
+        }
+
+        _directoryService.DeleteFile(media.Path);
+
+        _context.PostMedia.Remove(media);
+        await _context.SaveChangesAsync();
+
+        return ServiceResponse.Successful("Το αρχείο διεγράφη επιτυχώς.");
     }
 
     private async Task<Game?> LoadGameWithAccess(string slug)

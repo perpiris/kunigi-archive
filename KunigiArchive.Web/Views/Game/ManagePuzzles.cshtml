@@ -157,7 +157,7 @@ else
 
                     document.getElementById('puzzleOrderText').textContent = 'Γρίφο ' + puzzleOrder;
                     document.getElementById('deleteForm').action =
-                        '@Url.Action("DeletePuzzle", "Game", new { slug = Model.GameSlug, gameDayId = Model.GameDayId, puzzleId = "__ID__" })'.replace('__ID__', puzzleId);
+                        '@Url.Action("DeletePuzzle", "Game", new { slug = Model.GameSlug, gameDayId = Model.GameDayId, puzzleId = 99999999 })'.replace('99999999', puzzleId);
                 });
             }
         });

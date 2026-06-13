@@ -10,6 +10,9 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
     {
         builder.HasKey(x => x.PostId);
 
+        builder.Property(x => x.Title)
+            .HasMaxLength(255);
+
         builder.Property(x => x.Content)
             .IsRequired();
 

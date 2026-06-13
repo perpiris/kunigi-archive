@@ -29,19 +29,31 @@
                     <button class="accordion-button collapsed" type="button"
                             data-bs-toggle="collapse" data-bs-target="#@collapseId"
                             aria-expanded="false" aria-controls="@collapseId">
-                        <span class="fw-semibold">@post.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                        <span class="fw-semibold">
+                            @if (!string.IsNullOrWhiteSpace(post.Title))
+                            {
+                                @post.Title <text>-</text>
+                            }
+                            @post.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                        </span>
                     </button>
                 </h2>
                 <div id="@collapseId" class="accordion-collapse collapse"
                      aria-labelledby="@headingId" data-bs-parent="#postAccordion">
                     <div class="accordion-body">
-                        <div class="text-break">
+                        <div class="text-break ql-editor px-0">
                             @Html.Raw(post.Content)
                         </div>
 
                         <hr/>
 
                         <div class="d-flex justify-content-end gap-2">
+                            <a asp-controller="Game" asp-action="PostMedia"
+                               asp-route-slug="@Model.GameSlug"
+                               asp-route-postId="@post.PostId"
+                               class="btn btn-sm btn-info text-white">
+                                Υλικό
+                            </a>
                             <a asp-controller="Game" asp-action="EditPost"
                                asp-route-slug="@Model.GameSlug"
                                asp-route-postId="@post.PostId"
@@ -91,6 +103,7 @@ else
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="~/lib/quill/quill.snow.css" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const deleteModal = document.getElementById('deleteModal');
@@ -102,7 +115,7 @@ else
 
                     document.getElementById('postDateText').textContent = postDate;
                     document.getElementById('deleteForm').action =
-                        '@Url.Action("DeletePost", "Game", new { slug = Model.GameSlug, postId = "__ID__" })'.replace('__ID__', postId);
+                        '@Url.Action("DeletePost", "Game", new { slug = Model.GameSlug, postId = 99999999 })'.replace('99999999', postId);
                 });
             }
         });
