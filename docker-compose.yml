@@ -22,11 +22,13 @@ services:
     container_name: nginx-acme-companion
     environment:
       - DEFAULT_EMAIL=hello@tokinigi.gr
+      - NGINX_PROXY_CONTAINER=nginx-proxy
     volumes:
       - certs:/etc/nginx/certs:rw
       - vhost:/etc/nginx/vhost.d
       - html:/usr/share/nginx/html
       - acme:/etc/acme.sh
+      - conf:/etc/nginx/conf.d
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - nginx-proxy
