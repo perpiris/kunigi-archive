@@ -64,7 +64,7 @@ builder.Services.AddScoped<IPuzzleService, PuzzleService>();
 builder.Services.AddScoped<IPostService, PostService>();
 
 builder.Services.AddDbContext<DataContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddIdentity<AppUser, AppRole>(options =>
     {
@@ -96,7 +96,11 @@ else
     app.UseDeveloperExceptionPage();
 }
 
-var mediaPath = Path.Combine(builder.Environment.WebRootPath, "media");
+var mediaPath = builder.Configuration["MediaDirectory"];
+if (string.IsNullOrEmpty(mediaPath))
+{
+    mediaPath = Path.Combine(builder.Environment.ContentRootPath, "..", "kunigi_media");
+}
 if (!Directory.Exists(mediaPath))
 {
     Directory.CreateDirectory(mediaPath);
@@ -106,8 +110,19 @@ app.UseMiddleware<RequestCorrelationMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseResponseCompression();
 app.UseWebOptimizer();
+
 app.UseStaticFiles(new StaticFileOptions
 {
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.CacheControl = "public, max-age=2592000";
+    }
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(mediaPath),
+    RequestPath = "/media",
     OnPrepareResponse = ctx =>
     {
         ctx.Context.Response.Headers.CacheControl = "public, max-age=2592000";
@@ -137,8 +152,8 @@ using (var scope = app.Services.CreateScope())
 
     await DataSeed.Seed(app.Services);
 
-    var directoryService = scope.ServiceProvider.GetRequiredService<IDirectoryService>();
-    await directoryService.GenerateMissingThumbnailsAsync();
+    // var directoryService = scope.ServiceProvider.GetRequiredService<IDirectoryService>();
+    // await directoryService.GenerateMissingThumbnailsAsync();
 }
 
 app.Run();

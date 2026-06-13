@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # 1. Reverse Proxy (Nginx)
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - conf:/etc/nginx/conf.d
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - certs:/etc/nginx/certs:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    restart: always
+
+  # 2. Automated SSL Certificates (Let's Encrypt Certbot)
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: nginx-acme-companion
+    environment:
+      - DEFAULT_EMAIL=hello@tokinigi.gr
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - acme:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - nginx-proxy
+    restart: always
+
+  # 3. Database (SQL Server)
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: kunigi_db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Your_Secure_Password123!
+    volumes:
+      - db_data:/var/opt/mssql
+    restart: always
+
+  # 4. Web Application (.NET)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kunigi_web
+    environment:
+      # Nginx Proxy settings
+      - VIRTUAL_HOST=tokinigi.gr,www.tokinigi.gr
+      - LETSENCRYPT_HOST=tokinigi.gr,www.tokinigi.gr
+      - VIRTUAL_PORT=8080
+      # App settings
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=db;Database=KunigiArchive;User Id=sa;Password=Your_Secure_Password123!;TrustServerCertificate=True;
+      - MediaDirectory=/app/media
+    volumes:
+      - ../kunigi_media:/app/media
+    depends_on:
+      - db
+    restart: always
+
+volumes:
+  db_data:
+  conf:
+  vhost:
+  html:
+  certs:
+  acme:
