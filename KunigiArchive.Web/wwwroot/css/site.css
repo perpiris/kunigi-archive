@@ -14,9 +14,9 @@ body {
     background-color: var(--bs-tertiary-bg) !important;
 }
 
-/* Hard shadows must flip to white in dark mode or they disappear. */
+/* Hard shadows stay black in dark mode (white shadows look ugly on buttons). */
 [data-bs-theme="dark"] {
-    --reth-shadow-color: #ffffff;
+    --reth-shadow-color: #000000;
 }
 
 [data-bs-theme="dark"] .btn-outline-dark {
