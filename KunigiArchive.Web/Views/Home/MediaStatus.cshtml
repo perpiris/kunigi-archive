@@ -1,0 +1,95 @@
+@model KunigiArchive.Web.ViewModels.Admin.MediaStatusViewModel
+@{
+    ViewData["Title"] = "Κατάσταση Πολυμέσων";
+    ViewData["Banner"] = "Κατάσταση Πολυμέσων";
+}
+
+@functions {
+    string FormatSize(long bytes)
+    {
+        string[] suffix = { "B", "KB", "MB", "GB", "TB" };
+        int i = 0;
+        double dblSByte = bytes;
+        while (dblSByte >= 1024 && i < suffix.Length - 1)
+        {
+            dblSByte /= 1024;
+            i++;
+        }
+        return $"{dblSByte:0.##} {suffix[i]}";
+    }
+}
+
+<div class="mb-4">
+    <a asp-controller="Home" asp-action="AdminDashboard" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Πίσω
+    </a>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <div class="card p-4 border border-2 border-ink bg-body rounded-0 h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Συνολικό Μέγεθος</h6>
+                    <h2 class="fw-bold mb-0 text-primary">@FormatSize(Model.TotalSizeBytes)</h2>
+                </div>
+                <i class="bi bi-hdd-fill display-5 text-muted opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-4 border border-2 border-ink bg-body rounded-0 h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="text-muted text-uppercase fw-semibold mb-1 small">Συνολικό Πλήθος Αρχείων</h6>
+                    <h2 class="fw-bold mb-0 text-primary">@Model.TotalFileCount</h2>
+                </div>
+                <i class="bi bi-files display-5 text-muted opacity-50"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border border-2 border-ink rounded-0">
+    <div class="card-header bg-dark text-white rounded-0 py-3">
+        <h5 class="fw-bold text-uppercase mb-0">Ανάλυση ανά Φάκελο</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" class="py-3 px-4">Όνομα Φακέλου</th>
+                    <th scope="col" class="py-3 px-4">Διαδρομή (σχετική)</th>
+                    <th scope="col" class="py-3 px-4 text-center">Πλήθος Αρχείων</th>
+                    <th scope="col" class="py-3 px-4 text-center">Υποφάκελοι</th>
+                    <th scope="col" class="py-3 px-4 text-end">Μέγεθος</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Directories.Any())
+                {
+                    foreach (var dir in Model.Directories)
+                    {
+                        <tr>
+                            <td class="fw-bold px-4">
+                                <i class="bi bi-folder-fill text-warning me-2"></i>@dir.Name
+                            </td>
+                            <td class="text-muted px-4">media/@dir.RelativePath</td>
+                            <td class="text-center">@dir.FileCount</td>
+                            <td class="text-center">@dir.SubdirectoryCount</td>
+                            <td class="text-end fw-semibold px-4">@FormatSize(dir.SizeBytes)</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            Δεν βρέθηκαν φάκελοι πολυμέσων.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,10 +1,10 @@
-﻿@{
+@{
     ViewData["Title"] = "Διαχείριση";
     ViewData["Banner"] = "Πίνακας Διαχείρισης";
 }
 
 <div class="row g-4">
-    <div class="col-md-4">
+    <div class="col-md-3 col-sm-6">
         <div class="card action-tile">
             <div class="card-body text-center p-4">
                 <i class="bi bi-people-fill display-4 mb-3 text-primary"></i>
@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3 col-sm-6">
         <div class="card action-tile">
             <div class="card-body text-center p-4">
                 <i class="bi bi-controller display-4 mb-3 text-primary"></i>
@@ -24,12 +24,22 @@
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3 col-sm-6">
         <div class="card action-tile">
             <div class="card-body text-center p-4">
                 <i class="bi bi-person-fill-gear display-4 mb-3 text-primary"></i>
                 <h5 class="card-title">Διαχείριση Χρηστών</h5>
                 <a asp-controller="Account" asp-action="AccountManagement" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card action-tile">
+            <div class="card-body text-center p-4">
+                <i class="bi bi-hdd-fill display-4 mb-3 text-primary"></i>
+                <h5 class="card-title">Κατάσταση Πολυμέσων</h5>
+                <a asp-controller="Home" asp-action="MediaStatus" class="stretched-link"></a>
             </div>
         </div>
     </div>

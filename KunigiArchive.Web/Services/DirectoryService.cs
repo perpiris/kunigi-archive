@@ -1,4 +1,5 @@
 using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.ViewModels.Admin;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using SixLabors.ImageSharp;
@@ -346,5 +347,66 @@ public class DirectoryService : IDirectoryService
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var random = new Random();
         return new string(Enumerable.Repeat(chars, 11).Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    public ServiceResponse<MediaStatusViewModel> GetMediaStatus()
+    {
+        var model = new MediaStatusViewModel();
+
+        if (!Directory.Exists(_basePath))
+        {
+            return ServiceResponse<MediaStatusViewModel>.Successful(model);
+        }
+
+        try
+        {
+            var dirInfo = new DirectoryInfo(_basePath);
+            
+            // Get all files recursively in _basePath to calculate total stats
+            var allFiles = dirInfo.GetFiles("*", SearchOption.AllDirectories);
+            model.TotalFileCount = allFiles.Length;
+            model.TotalSizeBytes = allFiles.Sum(f => f.Length);
+
+            // Get top level directories
+            var topDirs = dirInfo.GetDirectories();
+            foreach (var topDir in topDirs)
+            {
+                var filesInDir = topDir.GetFiles("*", SearchOption.AllDirectories);
+                var subDirs = topDir.GetDirectories("*", SearchOption.AllDirectories);
+
+                model.Directories.Add(new DirectoryStatViewModel
+                {
+                    Name = topDir.Name,
+                    RelativePath = topDir.Name,
+                    FileCount = filesInDir.Length,
+                    SizeBytes = filesInDir.Sum(f => f.Length),
+                    SubdirectoryCount = subDirs.Length
+                });
+            }
+
+            // Also check files directly in the root of _basePath
+            var rootFiles = dirInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+            if (rootFiles.Length > 0)
+            {
+                model.Directories.Add(new DirectoryStatViewModel
+                {
+                    Name = "[Ρίζα / Root]",
+                    RelativePath = "",
+                    FileCount = rootFiles.Length,
+                    SizeBytes = rootFiles.Sum(f => f.Length),
+                    SubdirectoryCount = 0
+                });
+            }
+
+            // Order by directory size descending
+            model.Directories = model.Directories.OrderByDescending(d => d.SizeBytes).ToList();
+
+            return ServiceResponse<MediaStatusViewModel>.Successful(model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get media status.");
+            return ServiceResponse<MediaStatusViewModel>.Failure("Αποτυχία ανάκτησης κατάστασης πολυμέσων.");
+        }
     }
 }

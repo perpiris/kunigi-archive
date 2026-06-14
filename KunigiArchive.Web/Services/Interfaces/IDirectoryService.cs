@@ -1,4 +1,6 @@
-﻿namespace KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.ViewModels.Admin;
+
+namespace KunigiArchive.Web.Services.Interfaces;
 
 public interface IDirectoryService
 {
@@ -12,4 +14,6 @@ public interface IDirectoryService
     ServiceResponse DeleteFile(string filePath);
 
     Task GenerateMissingThumbnailsAsync();
+    
+    ServiceResponse<MediaStatusViewModel> GetMediaStatus();
 }
