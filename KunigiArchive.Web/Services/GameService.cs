@@ -427,7 +427,8 @@ public class GameService : IGameService
             Year = game.Year,
             Order = game.Order,
             HostId = game.Host.TeamId,
-            WinnerId = game.Winner.TeamId,
+            WinnerId = game.Winner?.TeamId,
+            Title = game.Title,
             Description = game.Description,
             Image = game.Image
         };
@@ -510,6 +511,7 @@ public class GameService : IGameService
             game.Slug = newSlug;
         }
 
+        game.Title = gameUpdateViewModel.Title;
         game.Description = gameUpdateViewModel.Description;
 
         if (image is not null)

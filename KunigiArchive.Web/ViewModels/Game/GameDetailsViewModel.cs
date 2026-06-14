@@ -1,4 +1,4 @@
-﻿using KunigiArchive.Web.ViewModels.Common;
+using KunigiArchive.Web.ViewModels.Common;
 
 namespace KunigiArchive.Web.ViewModels.Game;
 
@@ -12,9 +12,9 @@ public class GameDetailsViewModel
     public string? Title { get; set; }
     public string? Description { get; set; }
     public string? Image { get; set; }
-    public long WinnerId { get; set; }
-    public string Winner { get; set; } = string.Empty;
-    public string WinnerSlug { get; set; } = string.Empty;
+    public long? WinnerId { get; set; }
+    public string? Winner { get; set; }
+    public string? WinnerSlug { get; set; }
     public long HostId { get; set; }
     public string Host { get; set; } = string.Empty;
     public string HostSlug { get; set; } = string.Empty;

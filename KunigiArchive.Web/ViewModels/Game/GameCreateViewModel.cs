@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -19,8 +19,7 @@ public class GameCreateViewModel
     public long HostId { get; set; }
 
     [DisplayName("Νικητής")]
-    [Required(ErrorMessage = "Το πεδίο απαιτείται.")]
-    public long WinnerId { get; set; }
+    public long? WinnerId { get; set; }
 
     public SelectList HostSelectList { get; set; } = new(Enumerable.Empty<SelectListItem>());
     public SelectList WinnerSelectList { get; set; } = new(Enumerable.Empty<SelectListItem>());

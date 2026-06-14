@@ -155,7 +155,7 @@ namespace KunigiArchive.Web.Data.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<long>("WinnerId")
+                    b.Property<long?>("WinnerId")
                         .HasColumnType("bigint");
 
                     b.Property<short>("Year")
@@ -672,8 +672,7 @@ namespace KunigiArchive.Web.Data.Migrations
                     b.HasOne("KunigiArchive.Web.Entities.Team", "Winner")
                         .WithMany("WonGames")
                         .HasForeignKey("WinnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Host");
 
