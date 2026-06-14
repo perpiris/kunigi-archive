@@ -1,4 +1,5 @@
-﻿using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.Services.Interfaces;
+using Microsoft.Extensions.Configuration;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 
@@ -11,10 +12,17 @@ public class DirectoryService : IDirectoryService
 
     public DirectoryService(
         IWebHostEnvironment environment,
+        IConfiguration configuration,
         ILogger<DirectoryService> logger)
     {
         _logger = logger;
-        _basePath = Path.Combine(environment.WebRootPath, "media");
+        
+        var mediaPath = configuration["MediaDirectory"];
+        if (string.IsNullOrEmpty(mediaPath))
+        {
+            mediaPath = Path.Combine(environment.ContentRootPath, "..", "kunigi_media");
+        }
+        _basePath = mediaPath;
     }
 
     public ServiceResponse CreateDirectory(string directoryPath)
