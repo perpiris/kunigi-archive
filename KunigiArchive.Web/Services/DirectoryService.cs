@@ -1,7 +1,10 @@
 using KunigiArchive.Web.Services.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
+using PDFtoImage;
 
 namespace KunigiArchive.Web.Services;
 
@@ -123,13 +126,44 @@ public class DirectoryService : IDirectoryService
             return ServiceResponse<string>.Failure("Το μέγεθος του αρχείου δεν μπορεί να υπερβαίνει τα 100 MB.");
         }
 
+        MemoryStream? imageStream = null;
+        IFormFile fileToSave = mediaFile;
         var fileExtension = Path.GetExtension(mediaFile.FileName);
+        var isPdf = fileExtension.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+
+        if (isPdf)
+        {
+            try
+            {
+                using var inputStream = mediaFile.OpenReadStream();
+                using SKBitmap bitmap = Conversion.ToImage(inputStream, page: 0);
+
+                imageStream = new MemoryStream();
+                bitmap.Encode(imageStream, SKEncodedImageFormat.Png, quality: 100);
+                imageStream.Position = 0;
+
+                var pngFileName = Path.ChangeExtension(mediaFile.FileName, ".png");
+                fileToSave = new FormFile(imageStream, 0, imageStream.Length, mediaFile.Name, pngFileName)
+                {
+                    Headers = mediaFile.Headers,
+                    ContentType = "image/png"
+                };
+                fileExtension = ".png";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to convert PDF {FileName} to image", mediaFile.FileName);
+                return ServiceResponse<string>.Failure("Αποτυχία μετατροπής του PDF σε εικόνα.");
+            }
+        }
+
         var storageDirectory = GetFullPath(storagePath);
         if (!Directory.Exists(storageDirectory))
         {
             var createResult = CreateDirectory(storagePath);
             if (!createResult.Success)
             {
+                imageStream?.Dispose();
                 return ServiceResponse<string>.Failure(createResult.Message);
             }
         }
@@ -150,6 +184,7 @@ public class DirectoryService : IDirectoryService
             {
                 _logger.LogError(ex, "Failed to delete existing files for {FileName} in {Path}", desiredFileName,
                     directoryPath);
+                imageStream?.Dispose();
                 return ServiceResponse<string>.Failure($"Αποτυχία διαγραφής υπαρχόντων αρχείων για {desiredFileName}");
             }
         }
@@ -166,12 +201,13 @@ public class DirectoryService : IDirectoryService
             // reads the file back from disk.
             await using (var fileStream = new FileStream(fullPath, FileMode.Create))
             {
-                await mediaFile.CopyToAsync(fileStream);
+                await fileToSave.CopyToAsync(fileStream);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save media file at: {Path}", fullPath);
+            imageStream?.Dispose();
             return ServiceResponse<string>.Failure($"Αποτυχία αποθήκευσης αρχείου: {fullPath}");
         }
 
@@ -183,6 +219,10 @@ public class DirectoryService : IDirectoryService
         {
             // A failed thumbnail (corrupt or unsupported image) must not fail the upload.
             _logger.LogWarning(ex, "Failed to generate thumbnail for: {Path}", fullPath);
+        }
+        finally
+        {
+            imageStream?.Dispose();
         }
 
         var webPath = $"media/{Path.Combine(storagePath, newFileName).Replace(Path.DirectorySeparatorChar, '/')}";
