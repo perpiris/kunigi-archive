@@ -10,33 +10,31 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Find latest backup on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            LATEST=$(ls -t /opt/kunigi-backups/kunigi_backup_*.tar.gz 2>/dev/null | head -1)
-            if [ -z "$LATEST" ]; then
-              echo "No backup found!"
-              exit 1
-            fi
-            echo "Latest backup: $LATEST ($(du -h "$LATEST" | cut -f1))"
-            cp "$LATEST" /tmp/kunigi_latest_backup.tar.gz
-
-      - name: Download backup via SCP
-        uses: nicklasfrahm/scp-action@main
-        with:
-          direction: download
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: /tmp/kunigi_latest_backup.tar.gz
-          target: kunigi_latest_backup.tar.gz
-
-      - name: Rename with date
+      - name: Prepare SSH key
         run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Find and download latest backup
+        run: |
+          SSH_CMD="ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}"
+
+          # Find the latest backup
+          LATEST=$($SSH_CMD "ls -t /opt/kunigi-backups/kunigi_backup_*.tar.gz 2>/dev/null | head -1")
+          if [ -z "$LATEST" ]; then
+            echo "No backup found on VPS!"
+            exit 1
+          fi
+          echo "Latest backup: $LATEST"
+
+          # Download it
+          scp -i ~/.ssh/vps_key -o StrictHostKeyChecking=no \
+            "${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:$LATEST" \
+            ./kunigi_latest_backup.tar.gz
+
+          # Rename with today's date
           DATE=$(date +"%Y-%m-%d")
           mv kunigi_latest_backup.tar.gz "kunigi_backup_${DATE}.tar.gz"
           echo "BACKUP_FILE=kunigi_backup_${DATE}.tar.gz" >> "$GITHUB_ENV"
@@ -65,11 +63,6 @@ jobs:
           rclone delete gdrive: --min-age 30d --include "kunigi_backup_*.tar.gz"
           echo "Uploaded to Google Drive and cleaned backups older than 30 days"
 
-      - name: Clean up VPS staging file
+      - name: Clean up SSH key
         if: always()
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: rm -f /tmp/kunigi_latest_backup.tar.gz
+        run: rm -f ~/.ssh/vps_key
