@@ -22,9 +22,9 @@ public static class GameMappings
 
         if (includeFullDetails)
         {
-            viewModel.Winner = game.Winner.Name;
-            viewModel.WinnerId = game.Winner.TeamId;
-            viewModel.WinnerSlug = game.Winner.Slug;
+            viewModel.Winner = game.Winner?.Name;
+            viewModel.WinnerId = game.WinnerId;
+            viewModel.WinnerSlug = game.Winner?.Slug;
 
             viewModel.Host = game.Host.Name;
             viewModel.HostId = game.Host.TeamId;

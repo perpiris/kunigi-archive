@@ -14,6 +14,7 @@ services:
       - html:/usr/share/nginx/html
       - certs:/etc/nginx/certs:ro
       - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx-limits.conf:/etc/nginx/conf.d/nginx-limits.conf:ro
     restart: always
 
   # 2. Automated SSL Certificates (Let's Encrypt Certbot)

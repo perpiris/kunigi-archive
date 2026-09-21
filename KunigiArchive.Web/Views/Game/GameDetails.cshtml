@@ -46,16 +46,20 @@
                     </a>
                 </div>
             }
-            @if (!string.IsNullOrEmpty(Model.Winner))
-            {
-                <div>
-                    <span class="text-muted">Νικητής:</span>
+            <div>
+                <span class="text-muted">Νικητής:</span>
+                @if (!string.IsNullOrEmpty(Model.Winner) && !string.IsNullOrEmpty(Model.WinnerSlug))
+                {
                     <a asp-controller="Team" asp-action="TeamDetails" asp-route-slug="@Model.WinnerSlug"
                        class="fw-bold text-decoration-none text-body">
                         @Model.Winner
                     </a>
-                </div>
-            }
+                }
+                else
+                {
+                    <span class="fw-bold">??????</span>
+                }
+            </div>
         </div>
     </div>
 </div>

@@ -4,6 +4,7 @@ using KunigiArchive.Web.Entities;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Common;
 using KunigiArchive.Web.ViewModels.Game;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 

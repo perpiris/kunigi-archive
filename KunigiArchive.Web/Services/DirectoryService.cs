@@ -1,6 +1,11 @@
-﻿using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.ViewModels.Admin;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
+using PDFtoImage;
 
 namespace KunigiArchive.Web.Services;
 
@@ -11,10 +16,17 @@ public class DirectoryService : IDirectoryService
 
     public DirectoryService(
         IWebHostEnvironment environment,
+        IConfiguration configuration,
         ILogger<DirectoryService> logger)
     {
         _logger = logger;
-        _basePath = Path.Combine(environment.WebRootPath, "media");
+        
+        var mediaPath = configuration["MediaDirectory"];
+        if (string.IsNullOrEmpty(mediaPath))
+        {
+            mediaPath = Path.Combine(environment.ContentRootPath, "..", "kunigi_media");
+        }
+        _basePath = mediaPath;
     }
 
     public ServiceResponse CreateDirectory(string directoryPath)
@@ -115,13 +127,44 @@ public class DirectoryService : IDirectoryService
             return ServiceResponse<string>.Failure("Το μέγεθος του αρχείου δεν μπορεί να υπερβαίνει τα 100 MB.");
         }
 
+        MemoryStream? imageStream = null;
+        IFormFile fileToSave = mediaFile;
         var fileExtension = Path.GetExtension(mediaFile.FileName);
+        var isPdf = fileExtension.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+
+        if (isPdf)
+        {
+            try
+            {
+                using var inputStream = mediaFile.OpenReadStream();
+                using SKBitmap bitmap = Conversion.ToImage(inputStream, page: 0);
+
+                imageStream = new MemoryStream();
+                bitmap.Encode(imageStream, SKEncodedImageFormat.Png, quality: 100);
+                imageStream.Position = 0;
+
+                var pngFileName = Path.ChangeExtension(mediaFile.FileName, ".png");
+                fileToSave = new FormFile(imageStream, 0, imageStream.Length, mediaFile.Name, pngFileName)
+                {
+                    Headers = mediaFile.Headers,
+                    ContentType = "image/png"
+                };
+                fileExtension = ".png";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to convert PDF {FileName} to image", mediaFile.FileName);
+                return ServiceResponse<string>.Failure("Αποτυχία μετατροπής του PDF σε εικόνα.");
+            }
+        }
+
         var storageDirectory = GetFullPath(storagePath);
         if (!Directory.Exists(storageDirectory))
         {
             var createResult = CreateDirectory(storagePath);
             if (!createResult.Success)
             {
+                imageStream?.Dispose();
                 return ServiceResponse<string>.Failure(createResult.Message);
             }
         }
@@ -142,6 +185,7 @@ public class DirectoryService : IDirectoryService
             {
                 _logger.LogError(ex, "Failed to delete existing files for {FileName} in {Path}", desiredFileName,
                     directoryPath);
+                imageStream?.Dispose();
                 return ServiceResponse<string>.Failure($"Αποτυχία διαγραφής υπαρχόντων αρχείων για {desiredFileName}");
             }
         }
@@ -158,12 +202,13 @@ public class DirectoryService : IDirectoryService
             // reads the file back from disk.
             await using (var fileStream = new FileStream(fullPath, FileMode.Create))
             {
-                await mediaFile.CopyToAsync(fileStream);
+                await fileToSave.CopyToAsync(fileStream);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save media file at: {Path}", fullPath);
+            imageStream?.Dispose();
             return ServiceResponse<string>.Failure($"Αποτυχία αποθήκευσης αρχείου: {fullPath}");
         }
 
@@ -175,6 +220,10 @@ public class DirectoryService : IDirectoryService
         {
             // A failed thumbnail (corrupt or unsupported image) must not fail the upload.
             _logger.LogWarning(ex, "Failed to generate thumbnail for: {Path}", fullPath);
+        }
+        finally
+        {
+            imageStream?.Dispose();
         }
 
         var webPath = $"media/{Path.Combine(storagePath, newFileName).Replace(Path.DirectorySeparatorChar, '/')}";
@@ -298,5 +347,66 @@ public class DirectoryService : IDirectoryService
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         var random = new Random();
         return new string(Enumerable.Repeat(chars, 11).Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    public ServiceResponse<MediaStatusViewModel> GetMediaStatus()
+    {
+        var model = new MediaStatusViewModel();
+
+        if (!Directory.Exists(_basePath))
+        {
+            return ServiceResponse<MediaStatusViewModel>.Successful(model);
+        }
+
+        try
+        {
+            var dirInfo = new DirectoryInfo(_basePath);
+            
+            // Get all files recursively in _basePath to calculate total stats
+            var allFiles = dirInfo.GetFiles("*", SearchOption.AllDirectories);
+            model.TotalFileCount = allFiles.Length;
+            model.TotalSizeBytes = allFiles.Sum(f => f.Length);
+
+            // Get top level directories
+            var topDirs = dirInfo.GetDirectories();
+            foreach (var topDir in topDirs)
+            {
+                var filesInDir = topDir.GetFiles("*", SearchOption.AllDirectories);
+                var subDirs = topDir.GetDirectories("*", SearchOption.AllDirectories);
+
+                model.Directories.Add(new DirectoryStatViewModel
+                {
+                    Name = topDir.Name,
+                    RelativePath = topDir.Name,
+                    FileCount = filesInDir.Length,
+                    SizeBytes = filesInDir.Sum(f => f.Length),
+                    SubdirectoryCount = subDirs.Length
+                });
+            }
+
+            // Also check files directly in the root of _basePath
+            var rootFiles = dirInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+            if (rootFiles.Length > 0)
+            {
+                model.Directories.Add(new DirectoryStatViewModel
+                {
+                    Name = "[Ρίζα / Root]",
+                    RelativePath = "",
+                    FileCount = rootFiles.Length,
+                    SizeBytes = rootFiles.Sum(f => f.Length),
+                    SubdirectoryCount = 0
+                });
+            }
+
+            // Order by directory size descending
+            model.Directories = model.Directories.OrderByDescending(d => d.SizeBytes).ToList();
+
+            return ServiceResponse<MediaStatusViewModel>.Successful(model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get media status.");
+            return ServiceResponse<MediaStatusViewModel>.Failure("Αποτυχία ανάκτησης κατάστασης πολυμέσων.");
+        }
     }
 }
