@@ -1,0 +1,75 @@
+name: Backup to Google Drive
+
+on:
+  schedule:
+    # Every Sunday at 03:00 UTC (after the VPS 02:00 daily backup completes)
+    - cron: '0 3 * * 0'
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find latest backup on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            LATEST=$(ls -t /opt/kunigi-backups/kunigi_backup_*.tar.gz 2>/dev/null | head -1)
+            if [ -z "$LATEST" ]; then
+              echo "No backup found!"
+              exit 1
+            fi
+            echo "Latest backup: $LATEST ($(du -h "$LATEST" | cut -f1))"
+            cp "$LATEST" /tmp/kunigi_latest_backup.tar.gz
+
+      - name: Download backup via SCP
+        uses: nicklasfrahm/scp-action@main
+        with:
+          direction: download
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: /tmp/kunigi_latest_backup.tar.gz
+          target: kunigi_latest_backup.tar.gz
+
+      - name: Rename with date
+        run: |
+          DATE=$(date +"%Y-%m-%d")
+          mv kunigi_latest_backup.tar.gz "kunigi_backup_${DATE}.tar.gz"
+          echo "BACKUP_FILE=kunigi_backup_${DATE}.tar.gz" >> "$GITHUB_ENV"
+          ls -lh kunigi_backup_*.tar.gz
+
+      - name: Save as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kunigi-backup
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
+
+      - name: Upload to Google Drive
+        env:
+          RCLONE_CONFIG_GDRIVE_TYPE: drive
+          RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS: ${{ secrets.RCLONE_GDRIVE_SA_CREDENTIALS }}
+          RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          if [ -z "$RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS" ]; then
+            echo "Google Drive not configured — skipping. Backup saved as GitHub Artifact only."
+            exit 0
+          fi
+
+          curl -sSL https://rclone.org/install.sh | sudo bash
+          rclone copy "$BACKUP_FILE" gdrive: --progress
+          rclone delete gdrive: --min-age 30d --include "kunigi_backup_*.tar.gz"
+          echo "Uploaded to Google Drive and cleaned backups older than 30 days"
+
+      - name: Clean up VPS staging file
+        if: always()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: rm -f /tmp/kunigi_latest_backup.tar.gz
