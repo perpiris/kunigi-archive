@@ -30,7 +30,7 @@ public class EmailService : IEmailService
     {
         try
         {
-            var (subject, body) = GetAccountCreatedEmail(password);
+            (string? subject, string? body) = GetAccountCreatedEmail(password);
             var mailMessage = new MailMessage
             {
                 From = new MailAddress(_settings.SenderEmail, _settings.SenderName),
@@ -55,7 +55,7 @@ public class EmailService : IEmailService
     {
         try
         {
-            var (subject, body) = GetPasswordResetEmail(toEmail, resetCode);
+            (string? subject, string? body) = GetPasswordResetEmail(toEmail, resetCode);
             var mailMessage = new MailMessage
             {
                 From = new MailAddress(_settings.SenderEmail, _settings.SenderName),

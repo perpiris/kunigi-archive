@@ -29,7 +29,7 @@ public class GameUpdateViewModel
     [DisplayName("Περιγραφή")] public string? Description { get; set; }
 
     [DisplayName("Φωτογραφία")] public string? Image { get; set; }
-    
+
     [DisplayName("Προαιρετικός τίτλος")] public string? Title { get; set; }
 
     public SelectList HostSelectList { get; set; } = new(Enumerable.Empty<SelectListItem>());

@@ -45,7 +45,7 @@ public class AuthenticationController : Controller
             return View(model);
         }
 
-        var user = await _userManager.FindByEmailAsync(model.Email);
+        AppUser? user = await _userManager.FindByEmailAsync(model.Email);
         if (user != null)
         {
             if (await _userManager.IsLockedOutAsync(user))
@@ -55,7 +55,7 @@ public class AuthenticationController : Controller
             }
         }
 
-        var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false,
+        Microsoft.AspNetCore.Identity.SignInResult result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false,
             lockoutOnFailure: true);
         if (result.Succeeded)
         {

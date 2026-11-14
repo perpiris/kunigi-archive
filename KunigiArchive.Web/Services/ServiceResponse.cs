@@ -32,7 +32,10 @@ public class ServiceResponse<T> : ServiceResponse
     {
         return new ServiceResponse<T>
         {
-            Success = true, Data = data, Message = message, Severity = ResponseSeverity.Success
+            Success = true,
+            Data = data,
+            Message = message,
+            Severity = ResponseSeverity.Success
         };
     }
 
@@ -40,7 +43,10 @@ public class ServiceResponse<T> : ServiceResponse
     {
         return new ServiceResponse<T>
         {
-            Success = false, Data = default, Message = message, Severity = ResponseSeverity.Error
+            Success = false,
+            Data = default,
+            Message = message,
+            Severity = ResponseSeverity.Error
         };
     }
 
@@ -48,7 +54,10 @@ public class ServiceResponse<T> : ServiceResponse
     {
         return new ServiceResponse<T>
         {
-            Success = true, Data = default, Message = message, Severity = ResponseSeverity.Warning
+            Success = true,
+            Data = default,
+            Message = message,
+            Severity = ResponseSeverity.Warning
         };
     }
 }

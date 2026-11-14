@@ -40,7 +40,7 @@ public class TeamService : ITeamService
     public async Task<ServiceResponse<PaginatedViewModel<TeamDetailsViewModel>>> GetPaginatedTeamsAsync(
         short pageNumber = 1, short pageSize = 8, string? searchQuery = null)
     {
-        var query = _context.Teams.AsNoTracking();
+        IQueryable<Team> query = _context.Teams.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             query = query.Where(x => x.Name.ToLower().Contains(searchQuery.ToLower()));
@@ -49,7 +49,7 @@ public class TeamService : ITeamService
         query = query.OrderBy(x => x.Name);
 
         var totalCount = await query.CountAsync();
-        var items = await query
+        List<Team> items = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -81,7 +81,7 @@ public class TeamService : ITeamService
         _context.Teams.Add(newTeam);
         await _context.SaveChangesAsync();
 
-        var directoryServiceResponse = _directoryService.CreateDirectory($"teams/{slug}");
+        ServiceResponse directoryServiceResponse = _directoryService.CreateDirectory($"teams/{slug}");
         if (!directoryServiceResponse.Success)
         {
             _logger.LogWarning("Failed to create directory for team {TeamSlug}: {Message}", slug,
@@ -95,7 +95,7 @@ public class TeamService : ITeamService
     public async Task<ServiceResponse<TeamDetailsViewModel>> GetTeamBySlugAsync(string slug, bool includeFullDetails,
         bool isForPublicView = false)
     {
-        var query = _context.Teams.AsQueryable();
+        IQueryable<Team> query = _context.Teams.AsQueryable();
         if (includeFullDetails)
         {
             query = query
@@ -108,7 +108,7 @@ public class TeamService : ITeamService
             .Include(x => x.HostedGames)
             .Include(x => x.Managers);
 
-        var team = await query.FirstOrDefaultAsync(x => x.Slug == slug);
+        Team? team = await query.FirstOrDefaultAsync(x => x.Slug == slug);
         if (team == null)
         {
             return ServiceResponse<TeamDetailsViewModel>.Failure("Η ομάδα δεν βρέθηκε.");
@@ -125,7 +125,7 @@ public class TeamService : ITeamService
     public async Task<ServiceResponse<string>> UpdateTeamAsync(TeamUpdateViewModel viewModel, IFormFile? image,
         ModelStateDictionary modelState)
     {
-        var team = await _context.Teams
+        Team? team = await _context.Teams
             .Include(x => x.Managers)
             .Include(x => x.MediaFiles)
             .FirstOrDefaultAsync(x => x.Slug == viewModel.Slug);
@@ -200,7 +200,7 @@ public class TeamService : ITeamService
         if (image is not null)
         {
             var storageDirectory = $"teams/{team.Slug}";
-            var saveResult = await _directoryService.SaveFileAsync(image, storageDirectory, "profile");
+            ServiceResponse<string> saveResult = await _directoryService.SaveFileAsync(image, storageDirectory, "profile");
 
             if (!saveResult.Success)
             {
@@ -216,7 +216,7 @@ public class TeamService : ITeamService
         if (newSlug != team.Slug)
         {
             var oldSlug = team.Slug;
-            var moveResult = _directoryService.MoveDirectory($"teams/{oldSlug}", $"teams/{newSlug}");
+            ServiceResponse moveResult = _directoryService.MoveDirectory($"teams/{oldSlug}", $"teams/{newSlug}");
             if (!moveResult.Success)
             {
                 modelState.AddModelError("UpdatedSlug", "Αποτυχία μετονομασίας του φακέλου πολυμέσων.");
@@ -232,7 +232,7 @@ public class TeamService : ITeamService
                 team.Image = newPrefix + team.Image[oldPrefix.Length..];
             }
 
-            foreach (var media in team.MediaFiles.Where(m => m.Path.StartsWith(oldPrefix)))
+            foreach (TeamMedia? media in team.MediaFiles.Where(m => m.Path.StartsWith(oldPrefix)))
             {
                 media.Path = newPrefix + media.Path[oldPrefix.Length..];
             }
@@ -245,7 +245,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse> DeleteTeamAsync(string slug)
     {
-        var team = await _context.Teams
+        Team? team = await _context.Teams
             .Include(x => x.Managers)
             .Include(x => x.MediaFiles)
             .Include(x => x.HostedGames)
@@ -275,7 +275,7 @@ public class TeamService : ITeamService
         _context.Teams.Remove(team);
         await _context.SaveChangesAsync();
 
-        var deleteDirectoryResult = _directoryService.DeleteDirectory($"teams/{slug}");
+        ServiceResponse deleteDirectoryResult = _directoryService.DeleteDirectory($"teams/{slug}");
         if (!deleteDirectoryResult.Success)
         {
             _logger.LogWarning("Team deleted from database but failed to delete directory: {Message}",
@@ -289,7 +289,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse<TeamManagersViewModel>> GetTeamManagerViewModelAsync(string slug)
     {
-        var teamWithManagers = await _context.Teams
+        Team? teamWithManagers = await _context.Teams
             .Include(x => x.Managers)
             .ThenInclude(x => x.AppUser)
             .FirstOrDefaultAsync(x => x.Slug == slug);
@@ -300,7 +300,7 @@ public class TeamService : ITeamService
         }
 
         var currentManagerIds = teamWithManagers.Managers.Select(x => x.AppUserId).ToHashSet();
-        var availableUsersServiceResponse = await _accountService.GetAvailableManagersAsync();
+        ServiceResponse<IEnumerable<AccountDetailsViewModel>> availableUsersServiceResponse = await _accountService.GetAvailableManagersAsync();
         if (!availableUsersServiceResponse.Success)
         {
             return ServiceResponse<TeamManagersViewModel>.Failure("Αποτυχία λήψης διαθέσιμων χρηστών.");
@@ -321,7 +321,8 @@ public class TeamService : ITeamService
             AvailableUsers = new SelectList(availableUserSelectList, "Value", "Text"),
             CurrentManagers = teamWithManagers.Managers.Select(x => new AccountDetailsViewModel
             {
-                AppUserId = x.AppUserId, Email = x.AppUser.Email!
+                AppUserId = x.AppUserId,
+                Email = x.AppUser.Email!
             }).ToList()
         };
 
@@ -330,7 +331,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse> AddTeamManagerAsync(string slug, long appUserId)
     {
-        var team = await _context.Teams
+        Team? team = await _context.Teams
             .Include(x => x.Managers)
             .FirstOrDefaultAsync(x => x.Slug == slug);
 
@@ -361,7 +362,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse> RemoveTeamManagerAsync(string slug, long appUserId)
     {
-        var team = await _context.Teams
+        Team? team = await _context.Teams
             .Include(x => x.Managers)
             .FirstOrDefaultAsync(x => x.Slug == slug);
 
@@ -370,7 +371,7 @@ public class TeamService : ITeamService
             return ServiceResponse.Failure("Η ομάδα δεν βρέθηκε.");
         }
 
-        var teamManager = team.Managers.FirstOrDefault(x => x.AppUserId == appUserId);
+        TeamManager? teamManager = team.Managers.FirstOrDefault(x => x.AppUserId == appUserId);
         if (teamManager is null)
         {
             return ServiceResponse.Failure("Ο διαχειριστής δεν βρέθηκε.");
@@ -385,7 +386,7 @@ public class TeamService : ITeamService
     public async Task<ServiceResponse<IEnumerable<TeamDetailsViewModel>>> GetAllUserManagedTeams()
     {
         var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var userManagedTeams = await _context.Teams
+        List<Team> userManagedTeams = await _context.Teams
             .Include(x => x.Managers)
             .Where(x => x.Managers.Any(y => y.AppUserId == userId))
             .ToListAsync();
@@ -396,7 +397,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse<TeamMediaViewModel>> GetTeamMediaViewModelAsync(string slug)
     {
-        var team = await _context.Teams
+        Team? team = await _context.Teams
             .Include(x => x.Managers)
             .Include(x => x.MediaFiles)
             .FirstOrDefaultAsync(x => x.Slug == slug);
@@ -425,7 +426,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse> UploadTeamMediaAsync(string slug, List<IFormFile> files)
     {
-        var team = await _context.Teams
+        Team? team = await _context.Teams
             .Include(x => x.Managers)
             .FirstOrDefaultAsync(x => x.Slug == slug);
 
@@ -446,9 +447,9 @@ public class TeamService : ITeamService
 
         var storageDirectory = $"teams/{team.Slug}";
 
-        foreach (var file in files)
+        foreach (IFormFile file in files)
         {
-            var saveResult = await _directoryService.SaveFileAsync(file, storageDirectory);
+            ServiceResponse<string> saveResult = await _directoryService.SaveFileAsync(file, storageDirectory);
 
             if (!saveResult.Success)
             {
@@ -473,7 +474,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse> DeleteTeamMediaAsync(string slug, long teamMediaId)
     {
-        var team = await _context.Teams
+        Team? team = await _context.Teams
             .Include(x => x.Managers)
             .Include(x => x.MediaFiles)
             .FirstOrDefaultAsync(x => x.Slug == slug);
@@ -488,13 +489,13 @@ public class TeamService : ITeamService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
         }
 
-        var media = team.MediaFiles.FirstOrDefault(media => media.TeamMediaId == teamMediaId);
+        TeamMedia? media = team.MediaFiles.FirstOrDefault(media => media.TeamMediaId == teamMediaId);
         if (media is null)
         {
             return ServiceResponse.Failure("Το αρχείο πολυμέσων δεν βρέθηκε.");
         }
 
-        var deleteResult = _directoryService.DeleteFile(media.Path);
+        ServiceResponse deleteResult = _directoryService.DeleteFile(media.Path);
         if (!deleteResult.Success)
         {
             _logger.LogError("Failed to delete physical file {FilePath} for media ID {MediaId}: {Message}", media.Path,

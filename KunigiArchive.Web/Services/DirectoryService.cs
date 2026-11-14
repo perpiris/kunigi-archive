@@ -2,10 +2,10 @@ using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Admin;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using PDFtoImage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SkiaSharp;
-using PDFtoImage;
 
 namespace KunigiArchive.Web.Services;
 
@@ -20,7 +20,7 @@ public class DirectoryService : IDirectoryService
         ILogger<DirectoryService> logger)
     {
         _logger = logger;
-        
+
         var mediaPath = configuration["MediaDirectory"];
         if (string.IsNullOrEmpty(mediaPath))
         {
@@ -136,7 +136,7 @@ public class DirectoryService : IDirectoryService
         {
             try
             {
-                using var inputStream = mediaFile.OpenReadStream();
+                using Stream inputStream = mediaFile.OpenReadStream();
                 using SKBitmap bitmap = Conversion.ToImage(inputStream, page: 0);
 
                 imageStream = new MemoryStream();
@@ -161,7 +161,7 @@ public class DirectoryService : IDirectoryService
         var storageDirectory = GetFullPath(storagePath);
         if (!Directory.Exists(storageDirectory))
         {
-            var createResult = CreateDirectory(storagePath);
+            ServiceResponse createResult = CreateDirectory(storagePath);
             if (!createResult.Success)
             {
                 imageStream?.Dispose();
@@ -273,7 +273,7 @@ public class DirectoryService : IDirectoryService
             return;
         }
 
-        var imageFiles = Directory.EnumerateFiles(_basePath, "*.*", SearchOption.AllDirectories)
+        IEnumerable<string> imageFiles = Directory.EnumerateFiles(_basePath, "*.*", SearchOption.AllDirectories)
             .Where(f => IsImageFile(f) && !Path.GetFileName(f).StartsWith("thumb_"));
 
         var count = 0;
@@ -312,7 +312,7 @@ public class DirectoryService : IDirectoryService
 
         var thumbPath = GetThumbnailPath(filePath);
 
-        using var image = await Image.LoadAsync(filePath);
+        using Image image = await Image.LoadAsync(filePath);
 
         const int maxWidth = 400;
         if (image.Width > maxWidth)
@@ -361,18 +361,18 @@ public class DirectoryService : IDirectoryService
         try
         {
             var dirInfo = new DirectoryInfo(_basePath);
-            
+
             // Get all files recursively in _basePath to calculate total stats
-            var allFiles = dirInfo.GetFiles("*", SearchOption.AllDirectories);
+            FileInfo[] allFiles = dirInfo.GetFiles("*", SearchOption.AllDirectories);
             model.TotalFileCount = allFiles.Length;
             model.TotalSizeBytes = allFiles.Sum(f => f.Length);
 
             // Get top level directories
-            var topDirs = dirInfo.GetDirectories();
-            foreach (var topDir in topDirs)
+            DirectoryInfo[] topDirs = dirInfo.GetDirectories();
+            foreach (DirectoryInfo topDir in topDirs)
             {
-                var filesInDir = topDir.GetFiles("*", SearchOption.AllDirectories);
-                var subDirs = topDir.GetDirectories("*", SearchOption.AllDirectories);
+                FileInfo[] filesInDir = topDir.GetFiles("*", SearchOption.AllDirectories);
+                DirectoryInfo[] subDirs = topDir.GetDirectories("*", SearchOption.AllDirectories);
 
                 model.Directories.Add(new DirectoryStatViewModel
                 {
@@ -385,7 +385,7 @@ public class DirectoryService : IDirectoryService
             }
 
             // Also check files directly in the root of _basePath
-            var rootFiles = dirInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+            FileInfo[] rootFiles = dirInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
             if (rootFiles.Length > 0)
             {
                 model.Directories.Add(new DirectoryStatViewModel

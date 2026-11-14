@@ -1,5 +1,7 @@
 ﻿using KunigiArchive.Web.Mappings;
+using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.ViewModels.Common;
 using KunigiArchive.Web.ViewModels.Team;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +21,7 @@ public class TeamController : Controller
     [HttpGet]
     public async Task<IActionResult> TeamList(short pageNumber = 1, short pageSize = 8, string? searchQuery = null)
     {
-        var serviceResponse = await _teamService.GetPaginatedTeamsAsync(pageNumber, pageSize, searchQuery);
+        ServiceResponse<PaginatedViewModel<TeamDetailsViewModel>> serviceResponse = await _teamService.GetPaginatedTeamsAsync(pageNumber, pageSize, searchQuery);
         ViewBag.SearchQuery = searchQuery;
         return View(serviceResponse.Data);
     }
@@ -29,7 +31,7 @@ public class TeamController : Controller
     public async Task<IActionResult> TeamManagement(short pageNumber = 1, short pageSize = 8,
         string? searchQuery = null)
     {
-        var serviceResponse = await _teamService.GetPaginatedTeamsAsync(pageNumber, pageSize, searchQuery);
+        ServiceResponse<PaginatedViewModel<TeamDetailsViewModel>> serviceResponse = await _teamService.GetPaginatedTeamsAsync(pageNumber, pageSize, searchQuery);
         ViewBag.SearchQuery = searchQuery;
         return View(serviceResponse.Data);
     }
@@ -50,7 +52,7 @@ public class TeamController : Controller
             return View(viewModel);
         }
 
-        var serviceResponse = await _teamService.CreateTeamAsync(viewModel, ModelState);
+        ServiceResponse serviceResponse = await _teamService.CreateTeamAsync(viewModel, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -65,7 +67,7 @@ public class TeamController : Controller
     [HttpGet("{slug}/actions")]
     public async Task<IActionResult> TeamActions(string slug)
     {
-        var serviceResponse = await _teamService.GetTeamBySlugAsync(slug, false);
+        ServiceResponse<TeamDetailsViewModel> serviceResponse = await _teamService.GetTeamBySlugAsync(slug, false);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -78,7 +80,7 @@ public class TeamController : Controller
     [HttpGet("{slug}")]
     public async Task<IActionResult> TeamDetails(string slug)
     {
-        var serviceResponse = await _teamService.GetTeamBySlugAsync(slug, true, true);
+        ServiceResponse<TeamDetailsViewModel> serviceResponse = await _teamService.GetTeamBySlugAsync(slug, true, true);
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -92,7 +94,7 @@ public class TeamController : Controller
     [HttpGet("{slug}/update")]
     public async Task<IActionResult> TeamUpdate(string slug)
     {
-        var serviceResponse = await _teamService.GetTeamBySlugAsync(slug, false);
+        ServiceResponse<TeamDetailsViewModel> serviceResponse = await _teamService.GetTeamBySlugAsync(slug, false);
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -111,7 +113,7 @@ public class TeamController : Controller
             return View(viewModel);
         }
 
-        var serviceResponse = await _teamService.UpdateTeamAsync(viewModel, image, ModelState);
+        ServiceResponse<string> serviceResponse = await _teamService.UpdateTeamAsync(viewModel, image, ModelState);
         if (!serviceResponse.Success)
         {
             if (!ModelState.IsValid)
@@ -131,7 +133,7 @@ public class TeamController : Controller
     [HttpPost("{slug}/delete")]
     public async Task<IActionResult> DeleteTeam(string slug)
     {
-        var serviceResponse = await _teamService.DeleteTeamAsync(slug);
+        ServiceResponse serviceResponse = await _teamService.DeleteTeamAsync(slug);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(TeamManagement));
     }
@@ -140,7 +142,7 @@ public class TeamController : Controller
     [HttpGet("{slug}/managers")]
     public async Task<IActionResult> TeamManagers(string slug)
     {
-        var serviceResponse = await _teamService.GetTeamManagerViewModelAsync(slug);
+        ServiceResponse<TeamManagersViewModel> serviceResponse = await _teamService.GetTeamManagerViewModelAsync(slug);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return View(serviceResponse.Data);
     }
@@ -149,7 +151,7 @@ public class TeamController : Controller
     [HttpPost("{slug}/managers/add")]
     public async Task<IActionResult> AddTeamManager(string slug, long selectedUserId)
     {
-        var serviceResponse = await _teamService.AddTeamManagerAsync(slug, selectedUserId);
+        ServiceResponse serviceResponse = await _teamService.AddTeamManagerAsync(slug, selectedUserId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(TeamManagers), new { slug });
     }
@@ -158,7 +160,7 @@ public class TeamController : Controller
     [HttpPost("{slug}/managers/remove")]
     public async Task<IActionResult> RemoveTeamManager(string slug, long userId)
     {
-        var serviceResponse = await _teamService.RemoveTeamManagerAsync(slug, userId);
+        ServiceResponse serviceResponse = await _teamService.RemoveTeamManagerAsync(slug, userId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(TeamManagers), new { slug });
     }
@@ -167,7 +169,7 @@ public class TeamController : Controller
     [HttpGet("team-manager-dashboard")]
     public async Task<IActionResult> TeamManagerDashboard()
     {
-        var serviceResponse = await _teamService.GetAllUserManagedTeams();
+        ServiceResponse<IEnumerable<TeamDetailsViewModel>> serviceResponse = await _teamService.GetAllUserManagedTeams();
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -181,7 +183,7 @@ public class TeamController : Controller
     [HttpGet("{slug}/media")]
     public async Task<IActionResult> TeamMedia(string slug)
     {
-        var serviceResponse = await _teamService.GetTeamMediaViewModelAsync(slug);
+        ServiceResponse<TeamMediaViewModel> serviceResponse = await _teamService.GetTeamMediaViewModelAsync(slug);
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -195,7 +197,7 @@ public class TeamController : Controller
     [HttpPost("{slug}/media/upload")]
     public async Task<IActionResult> UploadTeamMedia(string slug, List<IFormFile> files)
     {
-        var serviceResponse = await _teamService.UploadTeamMediaAsync(slug, files);
+        ServiceResponse serviceResponse = await _teamService.UploadTeamMediaAsync(slug, files);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(TeamMedia), new { slug });
     }
@@ -204,7 +206,7 @@ public class TeamController : Controller
     [HttpPost("{slug}/media/{teamMediaId:long}/delete")]
     public async Task<IActionResult> DeleteTeamMedia(string slug, long teamMediaId)
     {
-        var serviceResponse = await _teamService.DeleteTeamMediaAsync(slug, teamMediaId);
+        ServiceResponse serviceResponse = await _teamService.DeleteTeamMediaAsync(slug, teamMediaId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(TeamMedia), new { slug });
     }

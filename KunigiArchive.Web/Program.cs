@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -74,8 +74,17 @@ builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IPuzzleService, PuzzleService>();
 builder.Services.AddScoped<IPostService, PostService>();
 
-builder.Services.AddDbContext<DataContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// In production the connection string comes from the environment
+// (ConnectionStrings__DefaultConnection in /opt/kunigi/app.env on the VPS).
+string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionStrings:DefaultConnection is not configured. " +
+        "Set the ConnectionStrings__DefaultConnection environment variable.");
+}
+
+builder.Services.AddDbContext<DataContext>(options => options.UseSqlServer(connectionString));
 
 builder.Services.AddIdentity<AppUser, AppRole>(options =>
     {
@@ -95,7 +104,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/auth/login";
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -152,9 +161,9 @@ app.MapControllerRoute(
         "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-using (var scope = app.Services.CreateScope())
+using (IServiceScope scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+    DataContext context = scope.ServiceProvider.GetRequiredService<DataContext>();
 
     if (context.Database.GetPendingMigrations().Any())
     {
@@ -162,9 +171,6 @@ using (var scope = app.Services.CreateScope())
     }
 
     await DataSeed.Seed(app.Services);
-
-    // var directoryService = scope.ServiceProvider.GetRequiredService<IDirectoryService>();
-    // await directoryService.GenerateMissingThumbnailsAsync();
 }
 
 app.Run();

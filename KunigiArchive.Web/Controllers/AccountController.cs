@@ -1,5 +1,7 @@
-﻿using KunigiArchive.Web.Services.Interfaces;
+﻿using KunigiArchive.Web.Services;
+using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Account;
+using KunigiArchive.Web.ViewModels.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -22,7 +24,7 @@ public class AccountController : Controller
     public async Task<IActionResult> AccountManagement(short pageNumber = 1, short pageSize = 8,
         string? searchQuery = null)
     {
-        var serviceResponse = await _accountService.GetPaginatedAccountsAsync(pageNumber, pageSize, searchQuery);
+        ServiceResponse<PaginatedViewModel<AccountDetailsViewModel>> serviceResponse = await _accountService.GetPaginatedAccountsAsync(pageNumber, pageSize, searchQuery);
         ViewBag.SearchQuery = searchQuery;
         return View(serviceResponse.Data);
     }
@@ -46,7 +48,7 @@ public class AccountController : Controller
             return View(accountCreateViewModel);
         }
 
-        var serviceResponse = await _accountService.CreateAccountAsync(accountCreateViewModel, ModelState);
+        ServiceResponse serviceResponse = await _accountService.CreateAccountAsync(accountCreateViewModel, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -61,7 +63,7 @@ public class AccountController : Controller
     [HttpGet("details/{id:long}")]
     public async Task<IActionResult> AccountDetails(long id)
     {
-        var serviceResponse = await _accountService.GetAccountByIdAsync(id);
+        ServiceResponse<AccountEditViewModel> serviceResponse = await _accountService.GetAccountByIdAsync(id);
         if (!serviceResponse.Success || serviceResponse.Data == null)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -76,7 +78,7 @@ public class AccountController : Controller
     [HttpPost("details/{id:long}/change-role")]
     public async Task<IActionResult> ChangeRole(long id, AccountEditViewModel viewModel)
     {
-        var serviceResponse = await _accountService.ChangeRoleAsync(id, viewModel.SelectedRole);
+        ServiceResponse serviceResponse = await _accountService.ChangeRoleAsync(id, viewModel.SelectedRole);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(AccountDetails), new { id });
     }
@@ -84,7 +86,7 @@ public class AccountController : Controller
     [HttpGet("settings")]
     public async Task<IActionResult> AccountSettings()
     {
-        var serviceResponse = await _accountService.GetAccountDetailsAsync();
+        ServiceResponse<AccountDetailsViewModel> serviceResponse = await _accountService.GetAccountDetailsAsync();
         if (!serviceResponse.Success || serviceResponse.Data == null)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -107,7 +109,7 @@ public class AccountController : Controller
             return View(nameof(AccountSettings), viewModel);
         }
 
-        var serviceResponse = await _accountService.ChangeEmailAsync(viewModel, ModelState);
+        ServiceResponse serviceResponse = await _accountService.ChangeEmailAsync(viewModel, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -131,7 +133,7 @@ public class AccountController : Controller
             return View(nameof(AccountSettings), viewModel);
         }
 
-        var serviceResponse = await _accountService.ChangePasswordAsync(viewModel, ModelState);
+        ServiceResponse serviceResponse = await _accountService.ChangePasswordAsync(viewModel, ModelState);
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);

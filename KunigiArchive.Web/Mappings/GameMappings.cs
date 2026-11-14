@@ -34,7 +34,9 @@ public static class GameMappings
                 .Where(gd => gd.IsEnabled)
                 .Select(gd => new GameDayViewModel
                 {
-                    GameDayId = gd.GameDayId, Name = gd.GameDayType.Label, IsEnabled = gd.IsEnabled
+                    GameDayId = gd.GameDayId,
+                    Name = gd.GameDayType.Label,
+                    IsEnabled = gd.IsEnabled
                 }).ToList();
 
             viewModel.Media = game.MediaFiles.Select(m => new MediaFileViewModel { MediaFileId = m.GameMediaId, FileName = m.FileName, Path = m.Path })
@@ -42,7 +44,8 @@ public static class GameMappings
 
             viewModel.Posts = game.Posts
                 .OrderByDescending(p => p.CreatedAt)
-                .Select(p => new PostDetailsViewModel {
+                .Select(p => new PostDetailsViewModel
+                {
                     PostId = p.PostId,
                     GameId = p.GameId,
                     Title = p.Title,

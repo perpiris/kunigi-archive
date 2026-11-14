@@ -1,4 +1,6 @@
+using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.ViewModels.Admin;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,7 +45,7 @@ public class HomeController : Controller
     [HttpGet("admin-dashboard/media-status")]
     public IActionResult MediaStatus()
     {
-        var response = _directoryService.GetMediaStatus();
+        ServiceResponse<MediaStatusViewModel> response = _directoryService.GetMediaStatus();
         if (!response.Success)
         {
             TempData["Error"] = response.Message;

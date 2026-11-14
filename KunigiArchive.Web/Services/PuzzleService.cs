@@ -34,7 +34,7 @@ public class PuzzleService : IPuzzleService
     public async Task<ServiceResponse<PuzzleManagementViewModel>> GetPuzzleManagementAsync(string gameSlug,
         long gameDayId)
     {
-        var gameDay = await LoadGameDayWithAccess(gameDayId);
+        GameDay? gameDay = await LoadGameDayWithAccess(gameDayId);
         if (gameDay == null)
         {
             return ServiceResponse<PuzzleManagementViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
@@ -46,7 +46,7 @@ public class PuzzleService : IPuzzleService
                 "Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var puzzles = await _context.Puzzles
+        List<Puzzle> puzzles = await _context.Puzzles
             .Where(p => p.GameDayId == gameDayId)
             .Include(p => p.MediaFiles)
             .OrderBy(p => p.Order)
@@ -67,7 +67,7 @@ public class PuzzleService : IPuzzleService
     public async Task<ServiceResponse<PuzzleCreateViewModel>> PrepareCreateViewModelAsync(string gameSlug,
         long gameDayId)
     {
-        var gameDay = await LoadGameDayWithAccess(gameDayId);
+        GameDay? gameDay = await LoadGameDayWithAccess(gameDayId);
         if (gameDay == null)
         {
             return ServiceResponse<PuzzleCreateViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
@@ -85,7 +85,7 @@ public class PuzzleService : IPuzzleService
     public async Task<ServiceResponse> CreatePuzzleAsync(PuzzleCreateViewModel viewModel,
         ModelStateDictionary modelState)
     {
-        var gameDay = await LoadGameDayWithAccess(viewModel.GameDayId);
+        GameDay? gameDay = await LoadGameDayWithAccess(viewModel.GameDayId);
         if (gameDay == null)
         {
             return ServiceResponse.Failure("Η ημέρα δεν βρέθηκε.");
@@ -121,7 +121,7 @@ public class PuzzleService : IPuzzleService
 
     public async Task<ServiceResponse<PuzzleEditViewModel>> GetPuzzleEditAsync(long puzzleId)
     {
-        var puzzle = await _context.Puzzles
+        Puzzle? puzzle = await _context.Puzzles
             .Include(p => p.MediaFiles)
             .Include(p => p.GameDay)
             .ThenInclude(gd => gd.Game)
@@ -151,13 +151,17 @@ public class PuzzleService : IPuzzleService
                 .Where(m => m.MediaType == "Q")
                 .Select(m => new MediaFileViewModel
                 {
-                    MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path
+                    MediaFileId = m.PuzzleMediaId,
+                    FileName = m.FileName,
+                    Path = m.Path
                 }).ToList(),
             AnswerMedia = puzzle.MediaFiles
                 .Where(m => m.MediaType == "A")
                 .Select(m => new MediaFileViewModel
                 {
-                    MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path
+                    MediaFileId = m.PuzzleMediaId,
+                    FileName = m.FileName,
+                    Path = m.Path
                 }).ToList()
         };
 
@@ -167,7 +171,7 @@ public class PuzzleService : IPuzzleService
     public async Task<ServiceResponse> UpdatePuzzleAsync(PuzzleEditViewModel viewModel,
         ModelStateDictionary modelState)
     {
-        var puzzle = await _context.Puzzles
+        Puzzle? puzzle = await _context.Puzzles
             .Include(p => p.GameDay)
             .ThenInclude(gd => gd.Game)
             .ThenInclude(g => g.Host)
@@ -199,7 +203,7 @@ public class PuzzleService : IPuzzleService
 
     public async Task<ServiceResponse> DeletePuzzleAsync(long puzzleId)
     {
-        var puzzle = await _context.Puzzles
+        Puzzle? puzzle = await _context.Puzzles
             .Include(p => p.MediaFiles)
             .Include(p => p.GameDay)
             .ThenInclude(gd => gd.Game)
@@ -217,7 +221,7 @@ public class PuzzleService : IPuzzleService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        foreach (var media in puzzle.MediaFiles)
+        foreach (PuzzleMedia media in puzzle.MediaFiles)
         {
             _directoryService.DeleteFile(media.Path);
         }
@@ -230,12 +234,12 @@ public class PuzzleService : IPuzzleService
         await _context.SaveChangesAsync();
 
         // Re-order remaining puzzles
-        var puzzlesToReorder = await _context.Puzzles
+        List<Puzzle> puzzlesToReorder = await _context.Puzzles
             .Where(p => p.GameDayId == gameDayId && p.Order > deletedOrder)
             .OrderBy(p => p.Order)
             .ToListAsync();
 
-        foreach (var p in puzzlesToReorder)
+        foreach (Puzzle? p in puzzlesToReorder)
         {
             p.Order--;
         }
@@ -243,7 +247,7 @@ public class PuzzleService : IPuzzleService
         // Dissolve single-member groups
         if (deletedGroup.HasValue)
         {
-            var remainingInGroup = await _context.Puzzles
+            List<Puzzle> remainingInGroup = await _context.Puzzles
                 .Where(p => p.GameDayId == gameDayId && p.Group == deletedGroup)
                 .ToListAsync();
 
@@ -260,7 +264,7 @@ public class PuzzleService : IPuzzleService
 
     public async Task<ServiceResponse> DeletePuzzleMediaAsync(long puzzleId, long puzzleMediaId)
     {
-        var puzzle = await _context.Puzzles
+        Puzzle? puzzle = await _context.Puzzles
             .Include(p => p.GameDay)
             .ThenInclude(gd => gd.Game)
             .ThenInclude(g => g.Host)
@@ -278,13 +282,13 @@ public class PuzzleService : IPuzzleService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var media = puzzle.MediaFiles.FirstOrDefault(x => x.PuzzleMediaId == puzzleMediaId);
+        PuzzleMedia? media = puzzle.MediaFiles.FirstOrDefault(x => x.PuzzleMediaId == puzzleMediaId);
         if (media == null)
         {
             return ServiceResponse.Failure("Το αρχείο πολυμέσων δεν βρέθηκε.");
         }
 
-        var deleteResult = _directoryService.DeleteFile(media.Path);
+        ServiceResponse deleteResult = _directoryService.DeleteFile(media.Path);
         if (!deleteResult.Success)
         {
             _logger.LogError("Failed to delete physical file {FilePath} for media ID {MediaId}: {Message}", media.Path,
@@ -321,9 +325,9 @@ public class PuzzleService : IPuzzleService
 
     private async Task SavePuzzleMediaAsync(long puzzleId, string storagePath, List<IFormFile> files, string mediaType)
     {
-        foreach (var file in files)
+        foreach (IFormFile file in files)
         {
-            var saveResult = await _directoryService.SaveFileAsync(file, storagePath);
+            ServiceResponse<string> saveResult = await _directoryService.SaveFileAsync(file, storagePath);
             if (!saveResult.Success || saveResult.Data == null)
             {
                 _logger.LogWarning("Failed to save puzzle media file: {FileName}", file.FileName);
@@ -362,13 +366,17 @@ public class PuzzleService : IPuzzleService
                 .Where(m => m.MediaType == "Q")
                 .Select(m => new MediaFileViewModel
                 {
-                    MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path
+                    MediaFileId = m.PuzzleMediaId,
+                    FileName = m.FileName,
+                    Path = m.Path
                 }).ToList(),
             AnswerMedia = puzzle.MediaFiles
                 .Where(m => m.MediaType == "A")
                 .Select(m => new MediaFileViewModel
                 {
-                    MediaFileId = m.PuzzleMediaId, FileName = m.FileName, Path = m.Path
+                    MediaFileId = m.PuzzleMediaId,
+                    FileName = m.FileName,
+                    Path = m.Path
                 }).ToList()
         };
     }

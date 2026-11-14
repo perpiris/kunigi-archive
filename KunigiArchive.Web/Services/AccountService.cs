@@ -44,7 +44,7 @@ public class AccountService : IAccountService
     public async Task<ServiceResponse<PaginatedViewModel<AccountDetailsViewModel>>> GetPaginatedAccountsAsync(
         short pageNumber = 1, short pageSize = 8, string? searchQuery = null)
     {
-        var query = _userManager.Users.AsNoTracking();
+        IQueryable<AppUser> query = _userManager.Users.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             query = query.Where(user => user.Email!.Contains(searchQuery));
@@ -52,7 +52,7 @@ public class AccountService : IAccountService
 
         var totalCount = await query.CountAsync();
 
-        var accounts = await query
+        List<AppUser> accounts = await query
             .OrderBy(account => account.Id)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -92,7 +92,7 @@ public class AccountService : IAccountService
     public async Task<ServiceResponse> CreateAccountAsync(AccountCreateViewModel viewModel,
         ModelStateDictionary modelState)
     {
-        var existingUser = await _userManager.FindByEmailAsync(viewModel.Email);
+        AppUser? existingUser = await _userManager.FindByEmailAsync(viewModel.Email);
         if (existingUser is not null)
         {
             modelState.AddModelError(nameof(viewModel.Email), "Υπάρχει ήδη ένας χρήστης με αυτό το email.");
@@ -102,12 +102,12 @@ public class AccountService : IAccountService
         var user = new AppUser { UserName = viewModel.Email, Email = viewModel.Email };
 
         var password = GenerateTemporaryPassword();
-        var identityResult = await _userManager.CreateAsync(user, password);
+        IdentityResult identityResult = await _userManager.CreateAsync(user, password);
         if (!identityResult.Succeeded)
         {
             _logger.LogWarning("User creation failed for email {Email}. Errors: {Errors}", viewModel.Email,
                 string.Join(", ", identityResult.Errors.Select(e => e.Description)));
-            foreach (var error in identityResult.Errors)
+            foreach (IdentityError error in identityResult.Errors)
             {
                 modelState.AddModelError(string.Empty, error.Description);
             }
@@ -115,12 +115,12 @@ public class AccountService : IAccountService
             return ServiceResponse.Failure("Αποτυχία δημιουργίας χρήστη.");
         }
 
-        var roleResult = await _userManager.AddToRoleAsync(user, viewModel.SelectedRole);
+        IdentityResult roleResult = await _userManager.AddToRoleAsync(user, viewModel.SelectedRole);
         if (!roleResult.Succeeded)
         {
             _logger.LogWarning("Failed to add role {Role} to user {Email}. Errors: {Errors}", viewModel.SelectedRole,
                 user.Email, string.Join(", ", roleResult.Errors.Select(e => e.Description)));
-            foreach (var error in roleResult.Errors)
+            foreach (IdentityError error in roleResult.Errors)
             {
                 modelState.AddModelError(string.Empty, error.Description);
             }
@@ -129,7 +129,7 @@ public class AccountService : IAccountService
             return ServiceResponse.Failure("Αποτυχία ανάθεσης ρόλου στον χρήστη.");
         }
 
-        var emailServiceResponse = await _emailService.SendAccountCreationEmailAsync(user.Email, password);
+        ServiceResponse emailServiceResponse = await _emailService.SendAccountCreationEmailAsync(user.Email, password);
         if (!emailServiceResponse.Success)
         {
             _logger.LogWarning("Failed to send account creation email to {Email}", user.Email);
@@ -142,16 +142,18 @@ public class AccountService : IAccountService
 
     public async Task<ServiceResponse<AccountDetailsViewModel>> GetAccountDetailsAsync()
     {
-        var user = await _userManager.GetUserAsync(User);
+        AppUser? user = await _userManager.GetUserAsync(User);
         if (user is null)
         {
             return ServiceResponse<AccountDetailsViewModel>.Failure("Ο χρήστης δεν βρέθηκε.");
         }
 
-        var roles = await _userManager.GetRolesAsync(user);
+        IList<string> roles = await _userManager.GetRolesAsync(user);
         var viewModel = new AccountDetailsViewModel
         {
-            AppUserId = user.Id, Email = user.Email!, Role = roles.FirstOrDefault()
+            AppUserId = user.Id,
+            Email = user.Email!,
+            Role = roles.FirstOrDefault()
         };
 
         return ServiceResponse<AccountDetailsViewModel>.Successful(viewModel);
@@ -160,7 +162,7 @@ public class AccountService : IAccountService
     public async Task<ServiceResponse> ChangeEmailAsync(AccountSettingsViewModel viewModel,
         ModelStateDictionary modelState)
     {
-        var appUser = await _userManager.GetUserAsync(User);
+        AppUser? appUser = await _userManager.GetUserAsync(User);
         if (appUser is null)
         {
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
@@ -172,7 +174,7 @@ public class AccountService : IAccountService
             return ServiceResponse.Warning("Το καινούργιο email πρέπει να είναι διαφορετικό απο το παλιό.");
         }
 
-        var existingUser = await _userManager.FindByEmailAsync(viewModel.Email);
+        AppUser? existingUser = await _userManager.FindByEmailAsync(viewModel.Email);
         if (existingUser is not null && existingUser.Id != appUser.Id)
         {
             modelState.AddModelError("Email", "Αυτό το email χρησιμοποιείται ήδη από άλλο χρήστη.");
@@ -182,7 +184,7 @@ public class AccountService : IAccountService
         appUser.Email = viewModel.Email;
         appUser.UserName = viewModel.Email;
 
-        var result = await _userManager.UpdateAsync(appUser);
+        IdentityResult result = await _userManager.UpdateAsync(appUser);
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(error => error.Description));
@@ -196,7 +198,7 @@ public class AccountService : IAccountService
     public async Task<ServiceResponse> ChangePasswordAsync(AccountSettingsViewModel viewModel,
         ModelStateDictionary modelState)
     {
-        var appUser = await _userManager.GetUserAsync(User);
+        AppUser? appUser = await _userManager.GetUserAsync(User);
         if (appUser is null)
         {
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
@@ -214,11 +216,11 @@ public class AccountService : IAccountService
             return ServiceResponse.Warning("Ο τρέχων κωδικός είναι λάθος.");
         }
 
-        var result = await _userManager.ChangePasswordAsync(appUser, viewModel.OldPassword, viewModel.NewPassword);
+        IdentityResult result = await _userManager.ChangePasswordAsync(appUser, viewModel.OldPassword, viewModel.NewPassword);
         if (!result.Succeeded)
         {
             var errors = string.Join(", ", result.Errors.Select(error => error.Description));
-            foreach (var error in result.Errors)
+            foreach (IdentityError error in result.Errors)
             {
                 modelState.AddModelError(string.Empty, error.Description);
             }
@@ -231,27 +233,33 @@ public class AccountService : IAccountService
 
     public async Task<ServiceResponse<AccountEditViewModel>> GetAccountByIdAsync(long userId)
     {
-        var user = await _userManager.FindByIdAsync(userId.ToString());
+        AppUser? user = await _userManager.FindByIdAsync(userId.ToString());
         if (user is null)
         {
             return ServiceResponse<AccountEditViewModel>.Failure("Ο χρήστης δεν βρέθηκε.");
         }
 
-        var roles = await _userManager.GetRolesAsync(user);
+        IList<string> roles = await _userManager.GetRolesAsync(user);
         var currentRole = roles.FirstOrDefault() ?? string.Empty;
 
-        var managedTeams = await _context.TeamManagers
+        List<TeamDetailsViewModel> managedTeams = await _context.TeamManagers
             .Where(tm => tm.AppUserId == userId)
             .Include(tm => tm.Team)
             .Select(tm => new TeamDetailsViewModel
             {
-                TeamId = tm.Team.TeamId, Name = tm.Team.Name, Slug = tm.Team.Slug, IsActive = tm.Team.IsActive
+                TeamId = tm.Team.TeamId,
+                Name = tm.Team.Name,
+                Slug = tm.Team.Slug,
+                IsActive = tm.Team.IsActive
             })
             .ToListAsync();
 
         var viewModel = new AccountEditViewModel
         {
-            AppUserId = user.Id, Email = user.Email!, SelectedRole = currentRole, ManagedTeams = managedTeams
+            AppUserId = user.Id,
+            Email = user.Email!,
+            SelectedRole = currentRole,
+            ManagedTeams = managedTeams
         };
 
         return ServiceResponse<AccountEditViewModel>.Successful(viewModel);
@@ -265,13 +273,13 @@ public class AccountService : IAccountService
             return ServiceResponse.Failure("Δεν μπορείτε να αλλάξετε τον ρόλο του δικού σας λογαριασμού.");
         }
 
-        var user = await _userManager.FindByIdAsync(userId.ToString());
+        AppUser? user = await _userManager.FindByIdAsync(userId.ToString());
         if (user is null)
         {
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
         }
 
-        var currentRoles = await _userManager.GetRolesAsync(user);
+        IList<string> currentRoles = await _userManager.GetRolesAsync(user);
         var currentRole = currentRoles.FirstOrDefault() ?? string.Empty;
 
         if (currentRole == newRole)
@@ -281,7 +289,7 @@ public class AccountService : IAccountService
 
         if (currentRole == "Manager")
         {
-            var teamManagerRecords = await _context.TeamManagers
+            List<TeamManager> teamManagerRecords = await _context.TeamManagers
                 .Where(tm => tm.AppUserId == userId)
                 .ToListAsync();
 
@@ -294,7 +302,7 @@ public class AccountService : IAccountService
 
         if (!string.IsNullOrEmpty(currentRole))
         {
-            var removeResult = await _userManager.RemoveFromRoleAsync(user, currentRole);
+            IdentityResult removeResult = await _userManager.RemoveFromRoleAsync(user, currentRole);
             if (!removeResult.Succeeded)
             {
                 _logger.LogWarning("Failed to remove role {Role} from user {Email}", currentRole, user.Email);
@@ -304,7 +312,7 @@ public class AccountService : IAccountService
 
         if (!string.IsNullOrEmpty(newRole))
         {
-            var addResult = await _userManager.AddToRoleAsync(user, newRole);
+            IdentityResult addResult = await _userManager.AddToRoleAsync(user, newRole);
             if (!addResult.Succeeded)
             {
                 _logger.LogWarning("Failed to add role {Role} to user {Email}", newRole, user.Email);
@@ -322,7 +330,7 @@ public class AccountService : IAccountService
 
     public async Task<ServiceResponse<IEnumerable<AccountDetailsViewModel>>> GetAvailableManagersAsync()
     {
-        var accounts = await _userManager.GetUsersInRoleAsync("Manager");
+        IList<AppUser> accounts = await _userManager.GetUsersInRoleAsync("Manager");
 
         var mappedAccounts = accounts.Select(x => new AccountDetailsViewModel { AppUserId = x.Id, Email = x.Email! })
             .ToList();
@@ -332,7 +340,7 @@ public class AccountService : IAccountService
 
     public async Task<ServiceResponse> InitiatePasswordResetAsync(string email)
     {
-        var user = await _userManager.FindByEmailAsync(email);
+        AppUser? user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
@@ -351,7 +359,7 @@ public class AccountService : IAccountService
 
     public async Task<ServiceResponse> ResetPasswordAsync(string email, string token, string newPassword)
     {
-        var user = await _userManager.FindByEmailAsync(email);
+        AppUser? user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
@@ -362,14 +370,14 @@ public class AccountService : IAccountService
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
         }
 
-        var removePasswordResult = await _userManager.RemovePasswordAsync(user);
+        IdentityResult removePasswordResult = await _userManager.RemovePasswordAsync(user);
         if (!removePasswordResult.Succeeded)
         {
             var errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
             return ServiceResponse.Failure($"Σφάλμα κατά την αφαίρεση του παλιού κωδικού: {errors}");
         }
 
-        var addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
+        IdentityResult addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
         if (!addPasswordResult.Succeeded)
         {
             var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));

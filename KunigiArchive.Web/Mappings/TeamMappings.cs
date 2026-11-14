@@ -25,6 +25,18 @@ public static class TeamMappings
         };
 
         viewModel.GamesHosted = team.HostedGames.Select(x => new GameDetailsViewModel
+        {
+            GameId = x.GameId,
+            Slug = x.Slug,
+            OrderTitle = x.OrderTitle,
+            Title = x.Title,
+            Year = x.Year
+        })
+            .ToList();
+
+        if (includeFullDetails)
+        {
+            viewModel.GamesWon = team.WonGames.Select(x => new GameDetailsViewModel
             {
                 GameId = x.GameId,
                 Slug = x.Slug,
@@ -32,24 +44,14 @@ public static class TeamMappings
                 Title = x.Title,
                 Year = x.Year
             })
-            .ToList();
-
-        if (includeFullDetails)
-        {
-            viewModel.GamesWon = team.WonGames.Select(x => new GameDetailsViewModel
-                {
-                    GameId = x.GameId,
-                    Slug = x.Slug,
-                    OrderTitle = x.OrderTitle,
-                    Title = x.Title,
-                    Year = x.Year
-                })
                 .ToList();
 
             viewModel.Media = team.MediaFiles.Select(x => new MediaFileViewModel
-                {
-                    MediaFileId = x.TeamMediaId, FileName = x.FileName, Path = x.Path
-                })
+            {
+                MediaFileId = x.TeamMediaId,
+                FileName = x.FileName,
+                Path = x.Path
+            })
                 .ToList();
         }
 

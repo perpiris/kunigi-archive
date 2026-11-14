@@ -14,6 +14,6 @@ public interface IDirectoryService
     ServiceResponse DeleteFile(string filePath);
 
     Task GenerateMissingThumbnailsAsync();
-    
+
     ServiceResponse<MediaStatusViewModel> GetMediaStatus();
 }
