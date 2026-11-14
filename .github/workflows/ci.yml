@@ -32,7 +32,7 @@ jobs:
         run: dotnet restore KunigiArchive.slnx
 
       # Warnings fail the build, except:
-      # - NU1901-NU1904: vulnerable packages (reported separately below, tracked in #15)
+      # - NU1901-NU1904: vulnerable-package warnings (package updates are done locally, #15)
       # - CA1416: platform check on PDFtoImage call in DirectoryService (tracked in #28)
       - name: Build
         run: >
@@ -41,19 +41,6 @@ jobs:
 
       - name: Test
         run: dotnet test KunigiArchive.slnx -c Release --no-build
-
-      - name: Vulnerable packages
-        run: |
-          dotnet list KunigiArchive.slnx package --vulnerable --include-transitive | tee vulnerable.txt
-          if grep -q "has the following vulnerable packages" vulnerable.txt; then
-            echo "::warning title=Vulnerable packages::Vulnerable NuGet packages found (see job summary)"
-            {
-              echo "## Vulnerable NuGet packages"
-              echo '```'
-              cat vulnerable.txt
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
 
   docker:
     name: Docker image
