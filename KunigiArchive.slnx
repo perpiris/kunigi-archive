@@ -10,7 +10,7 @@
     <File Path="global.json" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/KunigiArchive.Blazor/KunigiArchive.Blazor.csproj" />
+    <Project Path="src/KunigiArchive.Web2/KunigiArchive.Web2.csproj" />
     <Project Path="src/KunigiArchive.Application/KunigiArchive.Application.csproj" />
     <Project Path="src/KunigiArchive.Domain/KunigiArchive.Domain.csproj" />
     <Project Path="src/KunigiArchive.Infrastructure/KunigiArchive.Infrastructure.csproj" />

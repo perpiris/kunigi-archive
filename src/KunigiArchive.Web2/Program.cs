@@ -1,4 +1,4 @@
-using KunigiArchive.Blazor.Components;
+using KunigiArchive.Web2.Components;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
