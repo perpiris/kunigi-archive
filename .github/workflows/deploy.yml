@@ -1,36 +1,55 @@
 name: Deploy to VPS
 
+# Manual only: Actions → "Deploy to VPS" → Run workflow (from master).
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Copy files via SSH
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "."
           target: "~/kunigi-archive"
-          # Exclude git directory and local IDE files to save bandwidth
-          exclude: ".git,.idea,bin,obj,kunigi_archive.db"
+          exclude: ".git,.github,.idea,bin,obj,kunigi_archive.db,docker-compose.override.yml"
 
-      - name: Execute deployment script over SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Rebuild and restart containers
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
             cd ~/kunigi-archive
-            
-            # Restart containers using Docker Compose
             docker compose up -d --build
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://tokinigi.gr/ || true)
+            if [ "$code" = "200" ]; then
+              echo "Site is up (HTTP 200)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $code, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Site did not return HTTP 200 within 5 minutes after deploy"
+          exit 1

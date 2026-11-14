@@ -490,3 +490,8 @@ $RECYCLE.BIN/
 *.sqlite
 
 KunigiArchive.Web/wwwroot/media/
+kunigi_media/
+
+# Local-only files
+docker-compose.override.yml
+.claude/settings.local.json
