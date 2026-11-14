@@ -6,8 +6,8 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
     {
         IHeaderDictionary headers = context.Response.Headers;
 
-        headers["X-Content-Type-Options"] = "nosniff";
-        headers["X-Frame-Options"] = "DENY";
+        headers.XContentTypeOptions = "nosniff";
+        headers.XFrameOptions = "DENY";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         headers["X-Permitted-Cross-Domain-Policies"] = "none";
         headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";

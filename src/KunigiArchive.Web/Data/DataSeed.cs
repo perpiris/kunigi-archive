@@ -26,8 +26,6 @@ public static class DataSeed
             }
         }
 
-        // The initial admin comes from configuration (AdminSeed:Email / AdminSeed:Password),
-        // set via environment variables in production. It is only created if it doesn't exist.
         string? adminEmail = configuration["AdminSeed:Email"];
         string? adminPassword = configuration["AdminSeed:Password"];
         if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))

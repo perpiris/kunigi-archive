@@ -22,4 +22,6 @@
 **/values.dev.yaml
 .github/workflows
 kunigi_archive.db
-Logs/
+**/Logs/
+kunigi_media/
+**/wwwroot/media/

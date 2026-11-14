@@ -94,8 +94,8 @@ fi
 if [ ! -f "$SECRETS_DIR/app.env" ]; then
     log "Creating app.env"
     SMTP="${SMTP_PASSWORD:-}"
-    if [ -z "$SMTP" ] && [ -f "$DEPLOY_DIR/KunigiArchive.Web/appsettings.json" ]; then
-        SMTP=$(grep -oP '"Password": "\K[^"]+' "$DEPLOY_DIR/KunigiArchive.Web/appsettings.json" | head -1 || true)
+    if [ -z "$SMTP" ] && [ -f "$DEPLOY_DIR/src/KunigiArchive.Web/appsettings.json" ]; then
+        SMTP=$(grep -oP '"Password": "\K[^"]+' "$DEPLOY_DIR/src/KunigiArchive.Web/appsettings.json" | head -1 || true)
     fi
     [ -z "$SMTP" ] && echo "WARNING: no SMTP password found; set EmailSettings__Password in app.env" >&2
     cat > "$SECRETS_DIR/app.env" <<EOF

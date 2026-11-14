@@ -1,5 +1,6 @@
 ﻿using KunigiArchive.Web.Entities;
 using KunigiArchive.Web.Enums;
+using KunigiArchive.Web.Extensions;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +10,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace KunigiArchive.Web.Controllers;
 
 [Route("auth")]
-[EnableRateLimiting("fixed")]
+[EnableRateLimiting(RateLimitPolicies.Auth)]
 public class AuthenticationController : Controller
 {
     private readonly UserManager<AppUser> _userManager;
