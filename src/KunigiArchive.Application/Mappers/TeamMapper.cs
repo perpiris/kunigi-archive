@@ -18,6 +18,17 @@ public static class TeamMapper
             team.Instagram,
             team.Youtube,
             team.Website,
-            team.Image);
+            team.Image,
+            team.Media.OrderByDescending(m => m.UploadedAt).Select(ToDetails).ToList());
+    }
+
+    public static TeamMediaDetails ToDetails(this TeamMedia media)
+    {
+        return new TeamMediaDetails(media.Id, media.Path, media.OriginalFileName, media.UploadedAt);
+    }
+
+    public static TeamSummary ToSummary(this Team team)
+    {
+        return new TeamSummary(team.Id, team.Name, team.Slug.Value, team.IsActive, team.Image);
     }
 }

@@ -1,4 +1,5 @@
 using KunigiArchive.Web2.ErrorHandling;
+using Microsoft.AspNetCore.Identity;
 using Serilog;
 
 namespace KunigiArchive.Web2.Extensions;
@@ -11,6 +12,23 @@ public static class ServiceCollectionExtensions
             .ReadFrom.Configuration(configuration)
             .ReadFrom.Services(serviceProvider)
             .Enrich.FromLogContext());
+
+        return services;
+    }
+
+    public static IServiceCollection AddWebAuthentication(this IServiceCollection services)
+    {
+        services.AddAuthentication(IdentityConstants.ApplicationScheme)
+            .AddIdentityCookies();
+
+        services.ConfigureApplicationCookie(options =>
+        {
+            options.LoginPath = "/auth/login";
+            options.AccessDeniedPath = "/";
+        });
+
+        services.AddAuthorization();
+        services.AddCascadingAuthenticationState();
 
         return services;
     }

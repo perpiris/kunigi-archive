@@ -1,4 +1,4 @@
-﻿using KunigiArchive.Domain.Common;
+using KunigiArchive.Domain.Common;
 using KunigiArchive.Domain.Teams;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +20,11 @@ internal sealed class TeamRepository : ITeamRepository
 
     public async Task<Team?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _dbContext.Teams.FindAsync([id], cancellationToken);
+        return await _dbContext.Teams
+            .Include(t => t.Managers)
+            .Include(t => t.Media)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
     }
 
     public void Add(Team team)

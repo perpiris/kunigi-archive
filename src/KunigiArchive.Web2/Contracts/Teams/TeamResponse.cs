@@ -11,4 +11,5 @@ public sealed record TeamResponse(
     string? Instagram,
     string? Youtube,
     string? Website,
-    string? Image);
+    string? Image,
+    IReadOnlyList<TeamMediaResponse> Media);

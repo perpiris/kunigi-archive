@@ -16,6 +16,7 @@ try
         .AddSerilogLogging(builder.Configuration)
         .AddApplication()
         .AddInfrastructure(builder.Configuration)
+        .AddWebAuthentication()
         .AddApi();
 
     builder.Services.AddRazorComponents()
@@ -41,6 +42,8 @@ try
         pages.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 
     app.UseHttpsRedirection();
+    app.UseAuthentication();
+    app.UseAuthorization();
     app.UseAntiforgery();
 
     if (app.Environment.IsDevelopment())
@@ -54,7 +57,7 @@ try
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();
 
-    await app.Services.MigrateDatabaseAsync();
+    await app.Services.InitializeDatabaseAsync();
     await app.RunAsync();
 }
 catch (Exception exception) when (exception is not HostAbortedException)

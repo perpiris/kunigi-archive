@@ -1,0 +1,61 @@
+@page "/teams"
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.GetTeams
+@inject GetTeamsHandler GetTeamsHandler
+
+<PageTitle>Ομάδες</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Ομάδες</h1>
+    <a class="btn btn-primary" href="teams/create">Νέα ομάδα</a>
+</div>
+
+@if (_page is not null)
+{
+    @if (_page.Items.Count == 0)
+    {
+        <p class="text-body-secondary">Δεν υπάρχουν ομάδες.</p>
+    }
+    else
+    {
+        <div class="list-group mb-3">
+            @foreach (TeamSummary team in _page.Items)
+            {
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                   href="teams/@team.Slug">
+                    @team.Name
+                    @if (!team.IsActive)
+                    {
+                        <span class="badge text-bg-secondary">Ανενεργή</span>
+                    }
+                </a>
+            }
+        </div>
+    }
+
+    <nav class="d-flex gap-2" aria-label="Σελίδες">
+        @if (_after is not null)
+        {
+            <a class="btn btn-outline-secondary" href="teams">Αρχή</a>
+        }
+        @if (_page.NextCursor is not null)
+        {
+            <a class="btn btn-outline-secondary" href="teams?after=@_page.NextCursor">Επόμενες</a>
+        }
+    </nav>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? After { get; set; }
+
+    private TeamsCursor? _after;
+    private TeamsPage? _page;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // An invalid or tampered cursor just starts from the beginning.
+        _after = TeamsCursor.TryDecode(After, out TeamsCursor? after) ? after : null;
+        _page = await GetTeamsHandler.HandleAsync(new GetTeamsQuery(_after), CancellationToken.None);
+    }
+}
