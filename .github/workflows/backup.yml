@@ -1,15 +1,43 @@
-name: Backup to Google Drive
+name: Off-site backup
 
+# Manual only: Actions → "Off-site backup" → Run workflow.
+#
+# Copies the newest nightly backup from the VPS (/opt/kunigi-backups, created by
+# vps-backup.sh at 02:00), checks that it contains the database and media,
+# encrypts it, stores it as a workflow artifact, and only then deletes the
+# previous backup artifacts, so exactly one off-site copy is kept.
+#
+# Required secrets: VPS_HOST, VPS_USERNAME, VPS_SSH_KEY, BACKUP_PASSPHRASE.
+# Keep BACKUP_PASSPHRASE in a password manager too: without it the backup
+# cannot be decrypted.
+#
+# Restore: download the artifact, then
+#   gpg --decrypt kunigi_backup_<date>.tar.gz.gpg > kunigi_backup_<date>.tar.gz
+#   tar -xzf kunigi_backup_<date>.tar.gz   # → backup_<ts>/database.bak + backup_<ts>/media/
 on:
-  schedule:
-    # Every Sunday at 03:00 UTC (after the VPS 02:00 daily backup completes)
-    - cron: '0 3 * * 0'
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # needed to delete previous backup artifacts
+
+concurrency:
+  group: offsite-backup
+  cancel-in-progress: false
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
+      - name: Check secrets
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::error::BACKUP_PASSPHRASE secret is not set"
+            exit 1
+          fi
+
       - name: Prepare SSH key
         run: |
           mkdir -p ~/.ssh
@@ -17,52 +45,79 @@ jobs:
           chmod 600 ~/.ssh/vps_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Find and download latest backup
+      - name: Download latest backup from VPS
         run: |
-          SSH_CMD="ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}"
+          SSH_CMD="ssh -i ~/.ssh/vps_key ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}"
 
-          # Find the latest backup
           LATEST=$($SSH_CMD "ls -t /opt/kunigi-backups/kunigi_backup_*.tar.gz 2>/dev/null | head -1")
           if [ -z "$LATEST" ]; then
-            echo "No backup found on VPS!"
+            echo "::error::No backup found on VPS"
             exit 1
           fi
-          echo "Latest backup: $LATEST"
+          echo "Latest backup on VPS: $LATEST"
 
-          # Download it
-          scp -i ~/.ssh/vps_key -o StrictHostKeyChecking=no \
-            "${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:$LATEST" \
-            ./kunigi_latest_backup.tar.gz
+          NAME=$(basename "$LATEST")
+          scp -i ~/.ssh/vps_key "${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_HOST }}:$LATEST" "./$NAME"
+          echo "BACKUP_FILE=$NAME" >> "$GITHUB_ENV"
+          ls -lh "$NAME"
 
-          # Rename with today's date
-          DATE=$(date +"%Y-%m-%d")
-          mv kunigi_latest_backup.tar.gz "kunigi_backup_${DATE}.tar.gz"
-          echo "BACKUP_FILE=kunigi_backup_${DATE}.tar.gz" >> "$GITHUB_ENV"
-          ls -lh kunigi_backup_*.tar.gz
-
-      - name: Save as GitHub Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kunigi-backup
-          path: ${{ env.BACKUP_FILE }}
-          retention-days: 30
-
-      - name: Upload to Google Drive
-        env:
-          RCLONE_CONFIG_GDRIVE_TYPE: drive
-          RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS: ${{ secrets.RCLONE_GDRIVE_SA_CREDENTIALS }}
-          RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+      - name: Verify backup contents
         run: |
-          if [ -z "$RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS" ]; then
-            echo "Google Drive not configured — skipping. Backup saved as GitHub Artifact only."
-            exit 0
+          tar -tzvf "$BACKUP_FILE" > listing.txt
+
+          DB_SIZE=$(awk '$NF ~ /\/database\.bak$/ {print $3}' listing.txt | head -1)
+          MEDIA_FILES=$(awk '$1 !~ /^d/ && $NF ~ /\/media\// {n++} END {print n+0}' listing.txt)
+
+          echo "database.bak size: ${DB_SIZE:-missing}"
+          echo "media files: $MEDIA_FILES"
+
+          if [ -z "$DB_SIZE" ] || [ "$DB_SIZE" -lt 1048576 ]; then
+            echo "::error::database.bak is missing or smaller than 1 MB, refusing to replace the previous off-site backup"
+            exit 1
+          fi
+          if [ "$MEDIA_FILES" -lt 1 ]; then
+            echo "::error::No media files in backup, refusing to replace the previous off-site backup"
+            exit 1
           fi
 
-          curl -sSL https://rclone.org/install.sh | sudo bash
-          rclone copy "$BACKUP_FILE" gdrive: --progress
-          rclone delete gdrive: --min-age 30d --include "kunigi_backup_*.tar.gz"
-          echo "Uploaded to Google Drive and cleaned backups older than 30 days"
+          {
+            echo "## Backup"
+            echo "- File: \`$BACKUP_FILE\` ($(du -h "$BACKUP_FILE" | cut -f1))"
+            echo "- database.bak: $DB_SIZE bytes"
+            echo "- media files: $MEDIA_FILES"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Clean up SSH key
+      - name: Encrypt backup
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-fd 0 --symmetric --cipher-algo AES256 \
+            --output "$BACKUP_FILE.gpg" "$BACKUP_FILE"
+          rm -f "$BACKUP_FILE"
+          ls -lh "$BACKUP_FILE.gpg"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: kunigi-backup-${{ github.run_id }}
+          path: ${{ env.BACKUP_FILE }}.gpg
+          retention-days: 90
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Delete previous backup artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name | startswith("kunigi-backup")) | select(.workflow_run.id != ${{ github.run_id }}) | .id' \
+            > old_artifacts.txt
+          echo "Deleting $(wc -l < old_artifacts.txt) previous backup artifact(s)"
+          while read -r id; do
+            [ -n "$id" ] && gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id"
+          done < old_artifacts.txt
+
+      - name: Clean up
         if: always()
-        run: rm -f ~/.ssh/vps_key
+        run: rm -f ~/.ssh/vps_key kunigi_backup_*
