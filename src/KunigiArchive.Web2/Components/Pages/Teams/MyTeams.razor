@@ -1,0 +1,48 @@
+@page "/my-teams"
+@attribute [Authorize(Roles = Roles.Manager)]
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.GetMyTeams
+@inject GetMyTeamsHandler GetMyTeamsHandler
+
+<PageTitle>Οι ομάδες μου</PageTitle>
+
+<h1 class="mb-3">Οι ομάδες μου</h1>
+
+@if (_teams is not null)
+{
+    @if (_teams.Count == 0)
+    {
+        <p class="text-body-secondary">Δεν διαχειρίζεστε καμία ομάδα ακόμα.</p>
+    }
+    else
+    {
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Όνομα</th>
+                    <th class="text-end">Ενέργειες</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (TeamSummary team in _teams)
+                {
+                    <tr>
+                        <td><a href="teams/@team.Slug">@team.Name</a></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="teams/@team.Slug/actions">Ενέργειες</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private IReadOnlyList<TeamSummary>? _teams;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _teams = await GetMyTeamsHandler.HandleAsync(CancellationToken.None);
+    }
+}

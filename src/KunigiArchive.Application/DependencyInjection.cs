@@ -1,7 +1,12 @@
-﻿using KunigiArchive.Application.Teams.CreateTeam;
+using KunigiArchive.Application.Teams.AssignTeamManager;
+using KunigiArchive.Application.Teams.CreateTeam;
+using KunigiArchive.Application.Teams.GetMyTeams;
 using KunigiArchive.Application.Teams.GetTeamById;
-using KunigiArchive.Application.Teams.GetTeams;
 using KunigiArchive.Application.Teams.GetTeamBySlug;
+using KunigiArchive.Application.Teams.GetTeamForEdit;
+using KunigiArchive.Application.Teams.GetTeamManagers;
+using KunigiArchive.Application.Teams.GetTeams;
+using KunigiArchive.Application.Teams.RemoveTeamManager;
 using KunigiArchive.Application.Teams.UpdateTeam;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,8 +19,14 @@ public static class DependencyInjection
         services.AddScoped<CreateTeamHandler>();
         services.AddScoped<GetTeamByIdHandler>();
         services.AddScoped<GetTeamBySlugHandler>();
+        services.AddScoped<GetTeamForEditHandler>();
         services.AddScoped<GetTeamsHandler>();
+        services.AddScoped<GetMyTeamsHandler>();
         services.AddScoped<UpdateTeamHandler>();
+
+        services.AddScoped<GetTeamManagersHandler>();
+        services.AddScoped<AssignTeamManagerHandler>();
+        services.AddScoped<RemoveTeamManagerHandler>();
 
         return services;
     }

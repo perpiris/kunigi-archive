@@ -1,4 +1,5 @@
 using KunigiArchive.Application.Teams;
+using KunigiArchive.Application.Teams.AssignTeamManager;
 using KunigiArchive.Application.Teams.CreateTeam;
 using KunigiArchive.Application.Teams.GetTeams;
 using KunigiArchive.Application.Teams.UpdateTeam;
@@ -18,6 +19,7 @@ public static class TeamMapper
         return new UpdateTeamCommand(
             id,
             request.Name,
+            request.Slug,
             request.IsActive,
             request.YearFounded,
             request.Description,
@@ -25,6 +27,11 @@ public static class TeamMapper
             request.Instagram,
             request.Youtube,
             request.Website);
+    }
+
+    public static AssignTeamManagerCommand ToCommand(this AssignTeamManagerRequest request, Guid teamId)
+    {
+        return new AssignTeamManagerCommand(teamId, request.UserId);
     }
 
     public static GetTeamsQuery ToQuery(this GetTeamsRequest request)

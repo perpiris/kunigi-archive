@@ -1,12 +1,13 @@
 @page "/teams/{Slug}/edit"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
 @using KunigiArchive.Application.Abstractions.Exceptions
 @using KunigiArchive.Application.Teams
-@using KunigiArchive.Application.Teams.GetTeamBySlug
+@using KunigiArchive.Application.Teams.GetTeamForEdit
 @using KunigiArchive.Application.Teams.UpdateTeam
 @using KunigiArchive.Domain.Common
 @using KunigiArchive.Web2.Forms.Teams
 @using KunigiArchive.Web2.Mappers
-@inject GetTeamBySlugHandler GetTeamBySlugHandler
+@inject GetTeamForEditHandler GetTeamForEditHandler
 @inject UpdateTeamHandler UpdateTeamHandler
 @inject NavigationManager Navigation
 
@@ -30,6 +31,17 @@
             <InputText id="name" class="form-control" @bind-Value="Form.Name" />
             <ValidationMessage For="() => Form.Name" />
         </div>
+
+        <AuthorizeView Roles="@Roles.Admin" Context="auth">
+            <div class="mb-3">
+                <label for="slug" class="form-label">Διεύθυνση (slug)</label>
+                <div class="input-group">
+                    <span class="input-group-text">/teams/</span>
+                    <InputText id="slug" class="form-control" @bind-Value="Form.Slug" />
+                </div>
+                <div class="form-text">Αλλάζοντάς τη, οι παλιοί σύνδεσμοι προς την ομάδα παύουν να λειτουργούν.</div>
+            </div>
+        </AuthorizeView>
 
         <div class="form-check mb-3">
             <InputCheckbox id="is-active" class="form-check-input" @bind-Value="Form.IsActive" />
@@ -69,7 +81,7 @@
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">Αποθήκευση</button>
-            <a class="btn btn-outline-secondary" href="teams/@Slug">Ακύρωση</a>
+            <a class="btn btn-outline-secondary" href="teams/@Slug/actions">Ακύρωση</a>
         </div>
     </EditForm>
 }
@@ -93,12 +105,16 @@
 
         try
         {
-            TeamDetails team = await GetTeamBySlugHandler.HandleAsync(Slug, CancellationToken.None);
+            TeamDetails team = await GetTeamForEditHandler.HandleAsync(Slug, CancellationToken.None);
             Form = team.ToEditForm();
         }
         catch (TeamNotFoundException)
         {
             Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
         }
     }
 
@@ -117,6 +133,11 @@
         catch (TeamNotFoundException)
         {
             Navigation.NotFound();
+            return;
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
             return;
         }
 

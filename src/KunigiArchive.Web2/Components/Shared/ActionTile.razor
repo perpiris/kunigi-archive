@@ -1,0 +1,19 @@
+<div class="col-sm-6 col-lg-3">
+    <a class="card action-tile h-100" href="@Href">
+        <div class="card-body">
+            <h2 class="h5 card-title">@Title</h2>
+            <p class="card-text text-body-secondary">@Description</p>
+        </div>
+    </a>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Href { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Description { get; set; }
+}

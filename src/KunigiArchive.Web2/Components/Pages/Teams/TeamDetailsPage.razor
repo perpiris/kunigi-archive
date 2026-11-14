@@ -15,7 +15,9 @@
                 @(_team.IsActive ? "Ενεργή" : "Ανενεργή")
             </span>
         </div>
-        <a class="btn btn-outline-primary" href="teams/@_team.Slug/edit">Επεξεργασία</a>
+        <AuthorizeView Roles="@($"{Roles.Admin},{Roles.Manager}")">
+            <a class="btn btn-outline-primary" href="teams/@_team.Slug/actions">Ενέργειες</a>
+        </AuthorizeView>
     </div>
 
     @if (_team.Image is not null)

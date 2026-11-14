@@ -1,5 +1,6 @@
-﻿using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Teams;
+using KunigiArchive.Application.Users;
 using KunigiArchive.Domain.Teams;
 using KunigiArchive.Infrastructure.Identity;
 using KunigiArchive.Infrastructure.Persistence;
@@ -29,6 +30,7 @@ public static class DependencyInjection
 
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ITeamQueries, TeamQueries>();
+        services.AddScoped<IUserQueries, UserQueries>();
 
         services.AddIdentity(configuration);
 

@@ -1,4 +1,4 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Κυνήγι Θησαυρού</a>
     </div>
@@ -15,9 +15,42 @@
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="teams">
+            <NavLink class="nav-link" href="teams" Match="NavLinkMatch.All">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Ομάδες
             </NavLink>
         </div>
+
+        @* Each user has exactly one role, so at most one of these shows. *@
+        <AuthorizeView Roles="@Roles.Admin">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Διαχείριση
+                </NavLink>
+            </div>
+        </AuthorizeView>
+        <AuthorizeView Roles="@Roles.Manager">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="my-teams">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Οι ομάδες μου
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3 text-white-50 small mt-3">@context.User.Identity?.Name</div>
+                <div class="nav-item px-3">
+                    <form action="auth/logout" method="post">
+                        <AntiforgeryToken />
+                        <button type="submit" class="nav-link btn btn-link text-start">Αποσύνδεση</button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auth/login">Σύνδεση</NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>

@@ -1,4 +1,5 @@
 using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Application.Authorization;
 using KunigiArchive.Application.Mappers;
 using KunigiArchive.Domain.Common;
 using KunigiArchive.Domain.Teams;
@@ -10,12 +11,18 @@ public sealed class UpdateTeamHandler
 {
     private readonly ITeamRepository _teamRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUser _currentUser;
     private readonly ILogger<UpdateTeamHandler> _logger;
 
-    public UpdateTeamHandler(ITeamRepository teamRepository, IUnitOfWork unitOfWork, ILogger<UpdateTeamHandler> logger)
+    public UpdateTeamHandler(
+        ITeamRepository teamRepository,
+        IUnitOfWork unitOfWork,
+        ICurrentUser currentUser,
+        ILogger<UpdateTeamHandler> logger)
     {
         _teamRepository = teamRepository;
         _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
         _logger = logger;
     }
 
@@ -24,7 +31,9 @@ public sealed class UpdateTeamHandler
         Team team = await _teamRepository.GetByIdAsync(command.Id, cancellationToken)
             ?? throw new TeamNotFoundException(command.Id.ToString());
 
-        Slug previousSlug = team.Slug;
+        _currentUser.EnsureCanEdit(team);
+
+        string previousName = team.Name;
 
         team.Update(
             command.Name,
@@ -36,9 +45,14 @@ public sealed class UpdateTeamHandler
             command.Youtube,
             command.Website);
 
-        if (team.Slug != previousSlug && await _teamRepository.SlugExistsAsync(team.Slug, cancellationToken))
+        if (team.Name != previousName && await _teamRepository.NameExistsAsync(team.Name, team.Id, cancellationToken))
         {
             throw new TeamNameAlreadyTakenException(team.Name);
+        }
+
+        if (command.Slug is not null)
+        {
+            await ChangeSlugAsync(team, Slug.FromName(command.Slug), cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -46,5 +60,22 @@ public sealed class UpdateTeamHandler
         _logger.LogInformation("Team {TeamId} updated", team.Id);
 
         return team.ToDetails();
+    }
+
+    private async Task ChangeSlugAsync(Team team, Slug slug, CancellationToken cancellationToken)
+    {
+        if (slug == team.Slug)
+        {
+            return;
+        }
+
+        _currentUser.EnsureAdmin();
+
+        if (await _teamRepository.SlugExistsAsync(slug, cancellationToken))
+        {
+            throw new SlugAlreadyTakenException(slug);
+        }
+
+        team.ChangeSlug(slug);
     }
 }
