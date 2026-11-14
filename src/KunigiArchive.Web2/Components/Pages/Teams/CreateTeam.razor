@@ -1,0 +1,72 @@
+@page "/teams/create"
+@using System.ComponentModel.DataAnnotations
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.CreateTeam
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Domain.Teams
+@inject CreateTeamHandler CreateTeamHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Νέα ομάδα</PageTitle>
+
+<h1>Νέα ομάδα</h1>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
+
+<EditForm Model="Form" FormName="create-team" OnValidSubmit="CreateAsync" Enhance>
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label for="name" class="form-label">Όνομα ομάδας</label>
+        <InputText id="name" class="form-control" @bind-Value="Form.Name" />
+        <ValidationMessage For="() => Form.Name" />
+    </div>
+
+    <div class="form-check mb-3">
+        <InputCheckbox id="is-active" class="form-check-input" @bind-Value="Form.IsActive" />
+        <label for="is-active" class="form-check-label">Ενεργή</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+</EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    private CreateTeamForm Form { get; set; } = null!;
+
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        Form ??= new CreateTeamForm();
+    }
+
+    private async Task CreateAsync()
+    {
+        TeamDetails team;
+        try
+        {
+            team = await CreateTeamHandler.HandleAsync(new CreateTeamCommand(Form.Name, Form.IsActive), CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is DomainException or ConflictException)
+        {
+            _error = exception.Message;
+            return;
+        }
+
+        Navigation.NavigateTo($"/teams/{team.Slug}");
+    }
+
+    private sealed record CreateTeamForm
+    {
+        [Required(ErrorMessage = "Το όνομα της ομάδας είναι υποχρεωτικό.")]
+        [StringLength(Team.NameMaxLength, ErrorMessage = "Το όνομα δεν μπορεί να ξεπερνά τους {1} χαρακτήρες.")]
+        public string Name { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; } = true;
+    }
+}

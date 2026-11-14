@@ -16,8 +16,8 @@ public static class DataSeed
         IWebHostEnvironment environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
         IConfiguration configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
-        var roles = new[] { "Admin", "Manager" };
-        foreach (var role in roles)
+        string[] roles = new[] { "Admin", "Manager" };
+        foreach (string? role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
             {

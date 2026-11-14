@@ -162,7 +162,7 @@ public class PostService : IPostService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
+        string storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
 
         _context.Posts.Remove(post);
         await _context.SaveChangesAsync();
@@ -229,15 +229,15 @@ public class PostService : IPostService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
-        var uploadedCount = 0;
+        string storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
+        int uploadedCount = 0;
 
         foreach (IFormFile file in files)
         {
             ServiceResponse<string> saveResult = await _directoryService.SaveFileAsync(file, storagePath);
             if (!saveResult.Success || string.IsNullOrEmpty(saveResult.Data)) continue;
 
-            var fileName = saveResult.Data.Split('/').Last();
+            string fileName = saveResult.Data.Split('/').Last();
             var postMedia = new PostMedia
             {
                 PostId = post.PostId,
@@ -300,13 +300,13 @@ public class PostService : IPostService
             return true;
         }
 
-        var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        long userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         return game.Host.Managers.Any(m => m.AppUserId == userId);
     }
 
     private static string FormatGameTitle(Game game)
     {
-        var result = $"{game.OrderTitle} {game.Year}";
+        string result = $"{game.OrderTitle} {game.Year}";
         if (!string.IsNullOrWhiteSpace(game.Title))
         {
             result += $" - {game.Title}";

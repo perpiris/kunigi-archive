@@ -62,7 +62,9 @@ public static class ServiceCollectionExtensions
                     httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+                        PermitLimit = 60,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
                     }));
         });
 

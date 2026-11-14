@@ -106,9 +106,9 @@ public static class SlugGenerator
     private static string TransliterateGreekToLatin(string input)
     {
         var result = new StringBuilder(input.Length);
-        foreach (var c in input)
+        foreach (char c in input)
         {
-            if (TransliterationMap.TryGetValue(c, out var value))
+            if (TransliterationMap.TryGetValue(c, out string? value))
             {
                 result.Append(value);
             }
@@ -123,9 +123,9 @@ public static class SlugGenerator
 
     private static string RemoveDiacritics(string input)
     {
-        var normalizedString = input.Normalize(NormalizationForm.FormD);
+        string normalizedString = input.Normalize(NormalizationForm.FormD);
         var stringBuilder = new StringBuilder(normalizedString.Length);
-        foreach (var c in normalizedString.Where(c =>
+        foreach (char c in normalizedString.Where(c =>
                      CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark))
         {
             stringBuilder.Append(c);
