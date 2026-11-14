@@ -11,17 +11,17 @@ COPY ["global.json", "Directory.Build.props", "Directory.Packages.props", "./"]
 COPY ["src/KunigiArchive.Domain/KunigiArchive.Domain.csproj", "src/KunigiArchive.Domain/"]
 COPY ["src/KunigiArchive.Application/KunigiArchive.Application.csproj", "src/KunigiArchive.Application/"]
 COPY ["src/KunigiArchive.Infrastructure/KunigiArchive.Infrastructure.csproj", "src/KunigiArchive.Infrastructure/"]
-COPY ["src/KunigiArchive.Blazor/KunigiArchive.Blazor.csproj", "src/KunigiArchive.Blazor/"]
-RUN dotnet restore "src/KunigiArchive.Blazor/KunigiArchive.Blazor.csproj"
+COPY ["src/KunigiArchive.Web2/KunigiArchive.Web2.csproj", "src/KunigiArchive.Web2/"]
+RUN dotnet restore "src/KunigiArchive.Web2/KunigiArchive.Web2.csproj"
 
 COPY ["src/KunigiArchive.Domain/", "src/KunigiArchive.Domain/"]
 COPY ["src/KunigiArchive.Application/", "src/KunigiArchive.Application/"]
 COPY ["src/KunigiArchive.Infrastructure/", "src/KunigiArchive.Infrastructure/"]
-COPY ["src/KunigiArchive.Blazor/", "src/KunigiArchive.Blazor/"]
-RUN dotnet publish "src/KunigiArchive.Blazor/KunigiArchive.Blazor.csproj" \
+COPY ["src/KunigiArchive.Web2/", "src/KunigiArchive.Web2/"]
+RUN dotnet publish "src/KunigiArchive.Web2/KunigiArchive.Web2.csproj" \
     -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "KunigiArchive.Blazor.dll"]
+ENTRYPOINT ["dotnet", "KunigiArchive.Web2.dll"]

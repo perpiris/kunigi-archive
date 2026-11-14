@@ -5,7 +5,7 @@ services:
   beta:
     build:
       context: .
-      dockerfile: src/KunigiArchive.Blazor/Dockerfile
+      dockerfile: src/KunigiArchive.Web2/Dockerfile
     container_name: kunigi_beta
     env_file:
       - path: /opt/kunigi/beta.env

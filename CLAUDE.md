@@ -27,7 +27,7 @@ src/KunigiArchive.Web/             current MVC site, live at tokinigi.gr (own Do
 src/KunigiArchive.Domain/          new: domain model (empty for now)
 src/KunigiArchive.Application/     new: use cases → Domain
 src/KunigiArchive.Infrastructure/  new: EF Core, files, email → Application, Domain
-src/KunigiArchive.Blazor/          new: Blazor Web App + REST API, beta.tokinigi.gr (own Dockerfile) → Application, Infrastructure
+src/KunigiArchive.Web2/            new: Blazor Web App + REST API, beta.tokinigi.gr (own Dockerfile) → Application, Infrastructure
 ops/vps/                           server scripts + README
 docker-compose.yml                 live stack (proxy, db, web)
 docker-compose.beta.yml            beta stack (own compose project, joins the live network)
