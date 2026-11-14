@@ -4,7 +4,7 @@ namespace KunigiArchive.Web.ViewModels.Authentication;
 
 public class ResetPasswordViewModel
 {
-    [Required] [EmailAddress] public string Email { get; set; } = null!;
+    [Required][EmailAddress] public string Email { get; set; } = null!;
 
     [Required] public string Token { get; set; } = null!;
 

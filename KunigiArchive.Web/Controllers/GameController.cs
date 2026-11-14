@@ -1,4 +1,6 @@
+using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.ViewModels.Common;
 using KunigiArchive.Web.ViewModels.Game;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +24,7 @@ public class GameController : Controller
     [HttpGet]
     public async Task<IActionResult> GameList(short pageNumber = 1, short pageSize = 8, string? searchQuery = null)
     {
-        var serviceResponse = await _gameService.GetPaginatedGamesAsync(pageNumber, pageSize, searchQuery);
+        ServiceResponse<PaginatedViewModel<GameDetailsViewModel>> serviceResponse = await _gameService.GetPaginatedGamesAsync(pageNumber, pageSize, searchQuery);
         ViewBag.SearchQuery = searchQuery;
         return View(serviceResponse.Data);
     }
@@ -32,7 +34,7 @@ public class GameController : Controller
     public async Task<IActionResult> GameManagement(short pageNumber = 1, short pageSize = 8,
         string? searchQuery = null)
     {
-        var serviceResponse = await _gameService.GetPaginatedGamesAsync(pageNumber, pageSize, searchQuery);
+        ServiceResponse<PaginatedViewModel<GameDetailsViewModel>> serviceResponse = await _gameService.GetPaginatedGamesAsync(pageNumber, pageSize, searchQuery);
         ViewBag.SearchQuery = searchQuery;
         return View(serviceResponse.Data);
     }
@@ -41,7 +43,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GameCreate()
     {
-        var serviceResponse = await _gameService.PrepareGameCreateViewModelViewModel();
+        ServiceResponse<GameCreateViewModel> serviceResponse = await _gameService.PrepareGameCreateViewModelViewModel();
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -57,7 +59,7 @@ public class GameController : Controller
     {
         if (!ModelState.IsValid)
         {
-            var prepareResponse = await _gameService.PrepareGameCreateViewModelViewModel(gameCreateViewModel);
+            ServiceResponse<GameCreateViewModel> prepareResponse = await _gameService.PrepareGameCreateViewModelViewModel(gameCreateViewModel);
             if (!prepareResponse.Success)
             {
                 AlertMessageHandler.SetMessage(TempData, prepareResponse);
@@ -67,14 +69,14 @@ public class GameController : Controller
             return View(prepareResponse.Data);
         }
 
-        var serviceResponse = await _gameService.CreateGameAsync(gameCreateViewModel, ModelState);
+        ServiceResponse serviceResponse = await _gameService.CreateGameAsync(gameCreateViewModel, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
             return RedirectToAction(nameof(GameManagement));
         }
 
-        var prepareAgainResponse = await _gameService.PrepareGameCreateViewModelViewModel(gameCreateViewModel);
+        ServiceResponse<GameCreateViewModel> prepareAgainResponse = await _gameService.PrepareGameCreateViewModelViewModel(gameCreateViewModel);
         if (!prepareAgainResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -88,7 +90,7 @@ public class GameController : Controller
     [HttpGet("{slug}")]
     public async Task<IActionResult> GameDetails(string slug)
     {
-        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, true, true);
+        ServiceResponse<GameDetailsViewModel> serviceResponse = await _gameService.GetGameBySlugAsync(slug, true, true);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -101,7 +103,7 @@ public class GameController : Controller
     [HttpGet("{slug}/day/{id:long}")]
     public async Task<IActionResult> GameDayDetails(string slug, long id)
     {
-        var serviceResponse = await _gameService.GetGameDayDetailsForPublicViewAsync(slug, id);
+        ServiceResponse<GameDayDetailsViewModel> serviceResponse = await _gameService.GetGameDayDetailsForPublicViewAsync(slug, id);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -115,7 +117,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameUpdate(string slug)
     {
-        var serviceResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug);
+        ServiceResponse<GameUpdateViewModel> serviceResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug);
         if (!serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -131,7 +133,7 @@ public class GameController : Controller
     {
         if (!ModelState.IsValid)
         {
-            var prepareResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug, gameUpdateViewModel);
+            ServiceResponse<GameUpdateViewModel> prepareResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug, gameUpdateViewModel);
             if (!prepareResponse.Success)
             {
                 AlertMessageHandler.SetMessage(TempData, prepareResponse);
@@ -141,14 +143,14 @@ public class GameController : Controller
             return View(prepareResponse.Data);
         }
 
-        var serviceResponse = await _gameService.UpdateGameAsync(gameUpdateViewModel, image, ModelState);
+        ServiceResponse<string> serviceResponse = await _gameService.UpdateGameAsync(gameUpdateViewModel, image, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
             return RedirectToAction(nameof(GameActions), new { slug = serviceResponse.Data });
         }
 
-        var prepareAgainResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug, gameUpdateViewModel);
+        ServiceResponse<GameUpdateViewModel> prepareAgainResponse = await _gameService.PrepareGameUpdateViewModelAsync(slug, gameUpdateViewModel);
         if (!prepareAgainResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -163,7 +165,7 @@ public class GameController : Controller
     [HttpGet("{slug}/actions")]
     public async Task<IActionResult> GameActions(string slug)
     {
-        var serviceResponse = await _gameService.GetGameBySlugAsync(slug, true);
+        ServiceResponse<GameDetailsViewModel> serviceResponse = await _gameService.GetGameBySlugAsync(slug, true);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -177,7 +179,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameDays(string slug)
     {
-        var serviceResponse = await _gameService.GetGameDaysViewModelAsync(slug);
+        ServiceResponse<GameDaysViewModel> serviceResponse = await _gameService.GetGameDaysViewModelAsync(slug);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -191,7 +193,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> UpdateGameDays(string slug, List<long> enabledDayIds)
     {
-        var serviceResponse = await _gameService.UpdateGameDaysAsync(slug, enabledDayIds);
+        ServiceResponse serviceResponse = await _gameService.UpdateGameDaysAsync(slug, enabledDayIds);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(GameActions), new { slug });
     }
@@ -200,7 +202,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameMedia(string slug)
     {
-        var serviceResponse = await _gameService.GetGameMediaViewModelAsync(slug);
+        ServiceResponse<GameMediaViewModel> serviceResponse = await _gameService.GetGameMediaViewModelAsync(slug);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -214,7 +216,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> UploadGameMedia(string slug, List<IFormFile> files)
     {
-        var serviceResponse = await _gameService.UploadGameMediaAsync(slug, files);
+        ServiceResponse serviceResponse = await _gameService.UploadGameMediaAsync(slug, files);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(GameMedia), new { slug });
     }
@@ -223,7 +225,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> DeleteGameMedia(string slug, long gameMediaId)
     {
-        var serviceResponse = await _gameService.DeleteGameMediaAsync(slug, gameMediaId);
+        ServiceResponse serviceResponse = await _gameService.DeleteGameMediaAsync(slug, gameMediaId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(GameMedia), new { slug });
     }
@@ -232,7 +234,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameDayUpdate(string slug, long gameDayId)
     {
-        var serviceResponse = await _gameService.PrepareGameDayUpdateAsync(slug, gameDayId);
+        ServiceResponse<GameDayUpdateViewModel> serviceResponse = await _gameService.PrepareGameDayUpdateAsync(slug, gameDayId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -252,7 +254,7 @@ public class GameController : Controller
             return View(viewModel);
         }
 
-        var serviceResponse = await _gameService.UpdateGameDayAsync(viewModel);
+        ServiceResponse serviceResponse = await _gameService.UpdateGameDayAsync(viewModel);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
 
         if (serviceResponse.Success)
@@ -267,7 +269,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameDayActions(string slug, long gameDayId)
     {
-        var serviceResponse = await _gameService.GetGameDayActionsAsync(slug, gameDayId);
+        ServiceResponse<GameDayActionsViewModel> serviceResponse = await _gameService.GetGameDayActionsAsync(slug, gameDayId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -281,7 +283,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GameDayMedia(string slug, long gameDayId)
     {
-        var serviceResponse = await _gameService.GetGameDayMediaViewModelAsync(slug, gameDayId);
+        ServiceResponse<GameDayMediaViewModel> serviceResponse = await _gameService.GetGameDayMediaViewModelAsync(slug, gameDayId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -295,7 +297,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> UploadGameDayMedia(string slug, long gameDayId, List<IFormFile> files)
     {
-        var serviceResponse = await _gameService.UploadGameDayMediaAsync(slug, gameDayId, files);
+        ServiceResponse serviceResponse = await _gameService.UploadGameDayMediaAsync(slug, gameDayId, files);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(GameDayMedia), new { slug, gameDayId });
     }
@@ -304,7 +306,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> DeleteGameDayMedia(string slug, long gameDayId, long gameDayMediaId)
     {
-        var serviceResponse = await _gameService.DeleteGameDayMediaAsync(slug, gameDayId, gameDayMediaId);
+        ServiceResponse serviceResponse = await _gameService.DeleteGameDayMediaAsync(slug, gameDayId, gameDayMediaId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(GameDayMedia), new { slug, gameDayId });
     }
@@ -313,7 +315,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> ManagePuzzles(string slug, long gameDayId)
     {
-        var serviceResponse = await _puzzleService.GetPuzzleManagementAsync(slug, gameDayId);
+        ServiceResponse<PuzzleManagementViewModel> serviceResponse = await _puzzleService.GetPuzzleManagementAsync(slug, gameDayId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -327,7 +329,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> CreatePuzzle(string slug, long gameDayId)
     {
-        var serviceResponse = await _puzzleService.PrepareCreateViewModelAsync(slug, gameDayId);
+        ServiceResponse<PuzzleCreateViewModel> serviceResponse = await _puzzleService.PrepareCreateViewModelAsync(slug, gameDayId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -342,7 +344,7 @@ public class GameController : Controller
     public async Task<IActionResult> CreatePuzzle(string slug, long gameDayId,
         PuzzleCreateViewModel viewModel)
     {
-        var serviceResponse = await _puzzleService.CreatePuzzleAsync(viewModel, ModelState);
+        ServiceResponse serviceResponse = await _puzzleService.CreatePuzzleAsync(viewModel, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -357,7 +359,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> EditPuzzle(string slug, long gameDayId, long puzzleId)
     {
-        var serviceResponse = await _puzzleService.GetPuzzleEditAsync(puzzleId);
+        ServiceResponse<PuzzleEditViewModel> serviceResponse = await _puzzleService.GetPuzzleEditAsync(puzzleId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -372,7 +374,7 @@ public class GameController : Controller
     public async Task<IActionResult> EditPuzzle(string slug, long gameDayId, long puzzleId,
         PuzzleEditViewModel viewModel)
     {
-        var serviceResponse = await _puzzleService.UpdatePuzzleAsync(viewModel, ModelState);
+        ServiceResponse serviceResponse = await _puzzleService.UpdatePuzzleAsync(viewModel, ModelState);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -387,7 +389,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> DeletePuzzle(string slug, long gameDayId, long puzzleId)
     {
-        var serviceResponse = await _puzzleService.DeletePuzzleAsync(puzzleId);
+        ServiceResponse serviceResponse = await _puzzleService.DeletePuzzleAsync(puzzleId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(ManagePuzzles), new { slug, gameDayId });
     }
@@ -396,7 +398,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> DeletePuzzleMedia(string slug, long gameDayId, long puzzleId, long puzzleMediaId)
     {
-        var serviceResponse = await _puzzleService.DeletePuzzleMediaAsync(puzzleId, puzzleMediaId);
+        ServiceResponse serviceResponse = await _puzzleService.DeletePuzzleMediaAsync(puzzleId, puzzleMediaId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(EditPuzzle), new { slug, gameDayId, puzzleId });
     }
@@ -405,7 +407,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> ManagePosts(string slug)
     {
-        var serviceResponse = await _postService.GetPostManagementAsync(slug);
+        ServiceResponse<PostManagementViewModel> serviceResponse = await _postService.GetPostManagementAsync(slug);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -419,7 +421,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> CreatePost(string slug)
     {
-        var serviceResponse = await _postService.PrepareCreateViewModelAsync(slug);
+        ServiceResponse<PostCreateViewModel> serviceResponse = await _postService.PrepareCreateViewModelAsync(slug);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -438,7 +440,7 @@ public class GameController : Controller
             return View(viewModel);
         }
 
-        var serviceResponse = await _postService.CreatePostAsync(viewModel);
+        ServiceResponse serviceResponse = await _postService.CreatePostAsync(viewModel);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -453,7 +455,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> EditPost(string slug, long postId)
     {
-        var serviceResponse = await _postService.GetPostEditAsync(postId);
+        ServiceResponse<PostEditViewModel> serviceResponse = await _postService.GetPostEditAsync(postId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -472,7 +474,7 @@ public class GameController : Controller
             return View(viewModel);
         }
 
-        var serviceResponse = await _postService.UpdatePostAsync(viewModel);
+        ServiceResponse serviceResponse = await _postService.UpdatePostAsync(viewModel);
         if (serviceResponse.Success)
         {
             AlertMessageHandler.SetMessage(TempData, serviceResponse);
@@ -487,7 +489,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> DeletePost(string slug, long postId)
     {
-        var serviceResponse = await _postService.DeletePostAsync(postId);
+        ServiceResponse serviceResponse = await _postService.DeletePostAsync(postId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(ManagePosts), new { slug });
     }
@@ -496,7 +498,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> PostMedia(string slug, long postId)
     {
-        var serviceResponse = await _postService.GetPostMediaViewModelAsync(slug, postId);
+        ServiceResponse<PostMediaViewModel> serviceResponse = await _postService.GetPostMediaViewModelAsync(slug, postId);
         if (serviceResponse.Success)
         {
             return View(serviceResponse.Data);
@@ -510,7 +512,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> UploadPostMedia(string slug, long postId, List<IFormFile> files)
     {
-        var serviceResponse = await _postService.UploadPostMediaAsync(slug, postId, files);
+        ServiceResponse serviceResponse = await _postService.UploadPostMediaAsync(slug, postId, files);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(PostMedia), new { slug, postId });
     }
@@ -519,7 +521,7 @@ public class GameController : Controller
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> DeletePostMedia(string slug, long postId, long postMediaId)
     {
-        var serviceResponse = await _postService.DeletePostMediaAsync(slug, postId, postMediaId);
+        ServiceResponse serviceResponse = await _postService.DeletePostMediaAsync(slug, postId, postMediaId);
         AlertMessageHandler.SetMessage(TempData, serviceResponse);
         return RedirectToAction(nameof(PostMedia), new { slug, postId });
     }

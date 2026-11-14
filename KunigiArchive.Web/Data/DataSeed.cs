@@ -10,10 +10,11 @@ public static class DataSeed
 {
     public static async Task Seed(IServiceProvider serviceProvider)
     {
-        using var scope = serviceProvider.CreateScope();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<AppRole>>();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
-        var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        RoleManager<AppRole> roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<AppRole>>();
+        UserManager<AppUser> userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        IWebHostEnvironment environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+        IConfiguration configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
         var roles = new[] { "Admin", "Manager" };
         foreach (var role in roles)
@@ -25,31 +26,42 @@ public static class DataSeed
             }
         }
 
-        const string adminEmail = "iperpirakis@gmail.com";
-        var adminUser = await userManager.FindByEmailAsync(adminEmail);
-        if (adminUser == null)
+        // The initial admin comes from configuration (AdminSeed:Email / AdminSeed:Password),
+        // set via environment variables in production. It is only created if it doesn't exist.
+        string? adminEmail = configuration["AdminSeed:Email"];
+        string? adminPassword = configuration["AdminSeed:Password"];
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
         {
-            adminUser = new AppUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
-            var result = await userManager.CreateAsync(adminUser, "Admin@123!");
-            if (result.Succeeded)
+            Log.Warning("AdminSeed:Email / AdminSeed:Password not configured, skipping admin seed");
+        }
+        else
+        {
+            AppUser? adminUser = await userManager.FindByEmailAsync(adminEmail);
+            if (adminUser == null)
             {
-                await userManager.AddToRoleAsync(adminUser, "Admin");
-                Log.Information("Admin user created successfully");
-            }
-            else
-            {
-                Log.Error($"Failed to create admin: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                adminUser = new AppUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
+                IdentityResult result = await userManager.CreateAsync(adminUser, adminPassword);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                    Log.Information("Admin user created successfully");
+                }
+                else
+                {
+                    Log.Error(
+                        $"Failed to create admin: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                }
             }
         }
 
         if (environment.IsDevelopment())
         {
             const string managerEmail = "manager@test.com";
-            var managerUser = await userManager.FindByEmailAsync(managerEmail);
+            AppUser? managerUser = await userManager.FindByEmailAsync(managerEmail);
             if (managerUser == null)
             {
                 managerUser = new AppUser { UserName = managerEmail, Email = managerEmail, EmailConfirmed = true };
-                var result = await userManager.CreateAsync(managerUser, "Manager@123!");
+                IdentityResult result = await userManager.CreateAsync(managerUser, "Manager@123!");
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(managerUser, "Manager");
@@ -63,11 +75,11 @@ public static class DataSeed
             }
         }
 
-        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+        DataContext context = scope.ServiceProvider.GetRequiredService<DataContext>();
         if (await context.GameDayTypes.AnyAsync())
         {
             // One-time correction for databases seeded with the misspelled label.
-            var misspelled = await context.GameDayTypes.FirstOrDefaultAsync(x => x.Label == "Χωρός");
+            GameDayType? misspelled = await context.GameDayTypes.FirstOrDefaultAsync(x => x.Label == "Χωρός");
             if (misspelled != null)
             {
                 misspelled.Label = "Χορός";
@@ -88,7 +100,7 @@ public static class DataSeed
             new() { Label = "Εφηβικό", Slug = SlugGenerator.GenerateSlug("Εφηβικό") }
         };
 
-        foreach (var gameDayType in gameDayTypes)
+        foreach (GameDayType gameDayType in gameDayTypes)
         {
             context.GameDayTypes.Add(gameDayType);
         }

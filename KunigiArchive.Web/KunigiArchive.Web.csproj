@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -8,7 +8,8 @@
         <AssemblyTitle>KunigiArchive</AssemblyTitle>
         <Product>KunigiArchive</Product>
         <Copyright>© $([System.DateTime]::Now.Year) KunigiArchive</Copyright>
-    </PropertyGroup>
+      <UserSecretsId>b48e09fb-27c2-4157-81bf-07d12f153e72</UserSecretsId>
+  </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="LigerShark.WebOptimizer.Core" Version="3.0.477" />

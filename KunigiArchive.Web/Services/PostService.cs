@@ -24,7 +24,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse<PostManagementViewModel>> GetPostManagementAsync(string gameSlug)
     {
-        var game = await LoadGameWithAccess(gameSlug);
+        Game? game = await LoadGameWithAccess(gameSlug);
         if (game == null)
         {
             return ServiceResponse<PostManagementViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
@@ -36,7 +36,7 @@ public class PostService : IPostService
                 "Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var posts = await _context.Posts
+        List<Post> posts = await _context.Posts
             .Where(p => p.GameId == game.GameId)
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
@@ -55,7 +55,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse<PostCreateViewModel>> PrepareCreateViewModelAsync(string gameSlug)
     {
-        var game = await LoadGameWithAccess(gameSlug);
+        Game? game = await LoadGameWithAccess(gameSlug);
         if (game == null)
         {
             return ServiceResponse<PostCreateViewModel>.Failure("Το παιχνίδι δεν βρέθηκε.");
@@ -72,7 +72,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse> CreatePostAsync(PostCreateViewModel viewModel)
     {
-        var game = await _context.Games
+        Game? game = await _context.Games
             .Include(g => g.Host)
             .ThenInclude(h => h.Managers)
             .FirstOrDefaultAsync(g => g.GameId == viewModel.GameId);
@@ -97,7 +97,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse<PostEditViewModel>> GetPostEditAsync(long postId)
     {
-        var post = await _context.Posts
+        Post? post = await _context.Posts
             .Include(p => p.Game)
             .ThenInclude(g => g.Host)
             .ThenInclude(h => h.Managers)
@@ -121,7 +121,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse> UpdatePostAsync(PostEditViewModel viewModel)
     {
-        var post = await _context.Posts
+        Post? post = await _context.Posts
             .Include(p => p.Game)
             .ThenInclude(g => g.Host)
             .ThenInclude(h => h.Managers)
@@ -146,7 +146,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse> DeletePostAsync(long postId)
     {
-        var post = await _context.Posts
+        Post? post = await _context.Posts
             .Include(p => p.Game)
             .ThenInclude(g => g.Host)
             .ThenInclude(h => h.Managers)
@@ -163,7 +163,7 @@ public class PostService : IPostService
         }
 
         var storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
-        
+
         _context.Posts.Remove(post);
         await _context.SaveChangesAsync();
 
@@ -174,7 +174,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse<PostMediaViewModel>> GetPostMediaViewModelAsync(string gameSlug, long postId)
     {
-        var post = await _context.Posts
+        Post? post = await _context.Posts
             .Include(p => p.Game)
             .ThenInclude(g => g.Host)
             .ThenInclude(h => h.Managers)
@@ -213,7 +213,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse> UploadPostMediaAsync(string gameSlug, long postId, List<IFormFile> files)
     {
-        var post = await _context.Posts
+        Post? post = await _context.Posts
             .Include(p => p.Game)
             .ThenInclude(g => g.Host)
             .ThenInclude(h => h.Managers)
@@ -232,9 +232,9 @@ public class PostService : IPostService
         var storagePath = $"games/{post.Game.Year}/posts/{post.PostId}";
         var uploadedCount = 0;
 
-        foreach (var file in files)
+        foreach (IFormFile file in files)
         {
-            var saveResult = await _directoryService.SaveFileAsync(file, storagePath);
+            ServiceResponse<string> saveResult = await _directoryService.SaveFileAsync(file, storagePath);
             if (!saveResult.Success || string.IsNullOrEmpty(saveResult.Data)) continue;
 
             var fileName = saveResult.Data.Split('/').Last();
@@ -260,7 +260,7 @@ public class PostService : IPostService
 
     public async Task<ServiceResponse> DeletePostMediaAsync(string gameSlug, long postId, long postMediaId)
     {
-        var media = await _context.PostMedia
+        PostMedia? media = await _context.PostMedia
             .Include(m => m.Post)
             .ThenInclude(p => p.Game)
             .ThenInclude(g => g.Host)
