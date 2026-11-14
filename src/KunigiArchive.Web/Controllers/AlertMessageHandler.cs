@@ -31,6 +31,8 @@ public static class AlertMessageHandler
             case ResponseSeverity.Error:
                 tempData[ErrorKey] = message;
                 break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
     }
 
