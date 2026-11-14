@@ -16,7 +16,7 @@ COPY ["global.json", "Directory.Build.props", "Directory.Packages.props", "./"]
 COPY ["src/KunigiArchive.Web/KunigiArchive.Web.csproj", "src/KunigiArchive.Web/"]
 RUN dotnet restore "src/KunigiArchive.Web/KunigiArchive.Web.csproj"
 
-COPY ["src/", "src/"]
+COPY ["src/KunigiArchive.Web/", "src/KunigiArchive.Web/"]
 RUN dotnet publish "src/KunigiArchive.Web/KunigiArchive.Web.csproj" \
     -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false
 

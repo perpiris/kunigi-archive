@@ -26,6 +26,7 @@ ssh kunigi-vps 'sudo ~iperp/kunigi-archive/ops/vps/setup.sh --sql'
 | What | Where |
 |---|---|
 | Deployed repo / compose project | `/home/iperp/kunigi-archive` (compose project `kunigi-archive`) |
+| Beta site | `/home/iperp/kunigi-beta`, compose project `kunigi-beta` (`docker-compose.beta.yml`), container `kunigi_beta`, https://beta.tokinigi.gr. Optional secrets in `/opt/kunigi/beta.env`. Joins the `kunigi-archive_default` network. |
 | Containers | `kunigi_web` (.NET app, :8080), `kunigi_db` (SQL Server 2022), `nginx-proxy`, `nginx-acme-companion` |
 | **Uploaded media** | `/home/iperp/kunigi_media` → mounted in `kunigi_web` at `/app/media` |
 | **Database** | Docker volume `kunigi-archive_db_data` (`/var/lib/docker/volumes/kunigi-archive_db_data/_data`), DB `KunigiArchive` |

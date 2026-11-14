@@ -1,0 +1,24 @@
+# Own compose project (kunigi-beta), so beta deploys never touch the live stack.
+name: kunigi-beta
+
+services:
+  beta:
+    build:
+      context: .
+      dockerfile: src/KunigiArchive.Blazor/Dockerfile
+    container_name: kunigi_beta
+    env_file:
+      - path: /opt/kunigi/beta.env
+        required: false
+    environment:
+      - VIRTUAL_HOST=beta.tokinigi.gr
+      - LETSENCRYPT_HOST=beta.tokinigi.gr
+      - VIRTUAL_PORT=8080
+      - ASPNETCORE_URLS=http://+:8080
+    restart: always
+
+# The live stack's network: reach nginx-proxy (routing/TLS) and later the db service.
+networks:
+  default:
+    name: kunigi-archive_default
+    external: true
