@@ -8,13 +8,61 @@
 {
     <PageTitle>@_team.Name</PageTitle>
 
-    <h1>@_team.Name</h1>
-    <p>
-        <span class="badge @(_team.IsActive ? "text-bg-success" : "text-bg-secondary")">
-            @(_team.IsActive ? "Ενεργή" : "Ανενεργή")
-        </span>
-    </p>
-    <p class="text-body-secondary">/teams/@_team.Slug</p>
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1>@_team.Name</h1>
+            <span class="badge @(_team.IsActive ? "text-bg-success" : "text-bg-secondary")">
+                @(_team.IsActive ? "Ενεργή" : "Ανενεργή")
+            </span>
+        </div>
+        <a class="btn btn-outline-primary" href="teams/@_team.Slug/edit">Επεξεργασία</a>
+    </div>
+
+    @if (_team.Image is not null)
+    {
+        <img class="team-image mb-3" src="/@_team.Image" alt="@_team.Name" />
+    }
+
+    @if (_team.YearFounded is not null)
+    {
+        <p><strong>Έτος ίδρυσης:</strong> @_team.YearFounded</p>
+    }
+
+    @if (_team.Description is not null)
+    {
+        <p class="team-description">@_team.Description</p>
+    }
+
+    @if (_links.Count > 0)
+    {
+        <ul class="list-inline">
+            @foreach ((string label, string url) in _links)
+            {
+                <li class="list-inline-item">
+                    <a href="@url" target="_blank" rel="noopener noreferrer">@label</a>
+                </li>
+            }
+        </ul>
+    }
+
+    <h2 class="h4 mt-4">Αρχεία</h2>
+    @if (_team.Media.Count == 0)
+    {
+        <p class="text-body-secondary">Δεν υπάρχουν αρχεία.</p>
+    }
+    else
+    {
+        <div class="media-grid">
+            @foreach (TeamMediaDetails media in _team.Media)
+            {
+                <a href="/@media.Path" target="_blank" rel="noopener">
+                    <img src="/@media.Path" alt="@media.OriginalFileName" loading="lazy" />
+                </a>
+            }
+        </div>
+    }
+
+    <p class="mt-4"><a href="teams">← Όλες οι ομάδες</a></p>
 }
 
 @code {
@@ -22,6 +70,7 @@
     public string Slug { get; set; } = string.Empty;
 
     private TeamDetails? _team;
+    private List<(string Label, string Url)> _links = [];
 
     protected override async Task OnParametersSetAsync()
     {
@@ -33,6 +82,18 @@
         {
             _team = null;
             Navigation.NotFound();
+            return;
         }
+
+        _links = new List<(string Label, string? Url)>
+            {
+                ("Facebook", _team.Facebook),
+                ("Instagram", _team.Instagram),
+                ("YouTube", _team.Youtube),
+                ("Ιστοσελίδα", _team.Website)
+            }
+            .Where(link => link.Url is not null)
+            .Select(link => (link.Label, link.Url!))
+            .ToList();
     }
 }

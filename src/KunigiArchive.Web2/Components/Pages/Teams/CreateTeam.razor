@@ -1,10 +1,10 @@
 @page "/teams/create"
-@using System.ComponentModel.DataAnnotations
 @using KunigiArchive.Application.Abstractions.Exceptions
 @using KunigiArchive.Application.Teams
 @using KunigiArchive.Application.Teams.CreateTeam
 @using KunigiArchive.Domain.Common
-@using KunigiArchive.Domain.Teams
+@using KunigiArchive.Web2.Forms.Teams
+@using KunigiArchive.Web2.Mappers
 @inject CreateTeamHandler CreateTeamHandler
 @inject NavigationManager Navigation
 
@@ -31,7 +31,10 @@
         <label for="is-active" class="form-check-label">Ενεργή</label>
     </div>
 
-    <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+        <a class="btn btn-outline-secondary" href="teams">Ακύρωση</a>
+    </div>
 </EditForm>
 
 @code {
@@ -50,7 +53,7 @@
         TeamDetails team;
         try
         {
-            team = await CreateTeamHandler.HandleAsync(new CreateTeamCommand(Form.Name, Form.IsActive), CancellationToken.None);
+            team = await CreateTeamHandler.HandleAsync(Form.ToCommand(), CancellationToken.None);
         }
         catch (Exception exception) when (exception is DomainException or ConflictException)
         {
@@ -59,14 +62,5 @@
         }
 
         Navigation.NavigateTo($"/teams/{team.Slug}");
-    }
-
-    private sealed record CreateTeamForm
-    {
-        [Required(ErrorMessage = "Το όνομα της ομάδας είναι υποχρεωτικό.")]
-        [StringLength(Team.NameMaxLength, ErrorMessage = "Το όνομα δεν μπορεί να ξεπερνά τους {1} χαρακτήρες.")]
-        public string Name { get; set; } = string.Empty;
-
-        public bool IsActive { get; set; } = true;
     }
 }

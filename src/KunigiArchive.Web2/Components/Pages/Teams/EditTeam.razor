@@ -1,0 +1,125 @@
+@page "/teams/{Slug}/edit"
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.GetTeamBySlug
+@using KunigiArchive.Application.Teams.UpdateTeam
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Web2.Forms.Teams
+@using KunigiArchive.Web2.Mappers
+@inject GetTeamBySlugHandler GetTeamBySlugHandler
+@inject UpdateTeamHandler UpdateTeamHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Επεξεργασία ομάδας</PageTitle>
+
+@if (Form is not null)
+{
+    <h1>Επεξεργασία ομάδας</h1>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">@_error</div>
+    }
+
+    <EditForm Model="Form" FormName="edit-team" OnValidSubmit="SaveAsync" Enhance>
+        <DataAnnotationsValidator />
+        <input type="hidden" name="Form.Id" value="@Form.Id" />
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Όνομα ομάδας</label>
+            <InputText id="name" class="form-control" @bind-Value="Form.Name" />
+            <ValidationMessage For="() => Form.Name" />
+        </div>
+
+        <div class="form-check mb-3">
+            <InputCheckbox id="is-active" class="form-check-input" @bind-Value="Form.IsActive" />
+            <label for="is-active" class="form-check-label">Ενεργή</label>
+        </div>
+
+        <div class="mb-3">
+            <label for="year-founded" class="form-label">Έτος ίδρυσης</label>
+            <InputNumber id="year-founded" class="form-control" @bind-Value="Form.YearFounded" />
+            <ValidationMessage For="() => Form.YearFounded" />
+        </div>
+
+        <div class="mb-3">
+            <label for="description" class="form-label">Περιγραφή</label>
+            <InputTextArea id="description" class="form-control" rows="6" @bind-Value="Form.Description" />
+        </div>
+
+        <div class="mb-3">
+            <label for="facebook" class="form-label">Facebook</label>
+            <InputText id="facebook" type="url" class="form-control" @bind-Value="Form.Facebook" />
+        </div>
+
+        <div class="mb-3">
+            <label for="instagram" class="form-label">Instagram</label>
+            <InputText id="instagram" type="url" class="form-control" @bind-Value="Form.Instagram" />
+        </div>
+
+        <div class="mb-3">
+            <label for="youtube" class="form-label">YouTube</label>
+            <InputText id="youtube" type="url" class="form-control" @bind-Value="Form.Youtube" />
+        </div>
+
+        <div class="mb-3">
+            <label for="website" class="form-label">Ιστοσελίδα</label>
+            <InputText id="website" type="url" class="form-control" @bind-Value="Form.Website" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+            <a class="btn btn-outline-secondary" href="teams/@Slug">Ακύρωση</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm]
+    private EditTeamForm? Form { get; set; }
+
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // On a POST the form comes from the submitted fields; only a GET loads the team.
+        if (Form is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            TeamDetails team = await GetTeamBySlugHandler.HandleAsync(Slug, CancellationToken.None);
+            Form = team.ToEditForm();
+        }
+        catch (TeamNotFoundException)
+        {
+            Navigation.NotFound();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        TeamDetails team;
+        try
+        {
+            team = await UpdateTeamHandler.HandleAsync(Form!.ToCommand(), CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is DomainException or ConflictException)
+        {
+            _error = exception.Message;
+            return;
+        }
+        catch (TeamNotFoundException)
+        {
+            Navigation.NotFound();
+            return;
+        }
+
+        Navigation.NavigateTo($"/teams/{team.Slug}");
+    }
+}
