@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- The SDK infers this from .razor files, which aren't there yet when the Dockerfile restores
+         from the csproj alone. Without it, _framework/blazor.web.js is missing from the image. -->
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
 
   <ItemGroup>
