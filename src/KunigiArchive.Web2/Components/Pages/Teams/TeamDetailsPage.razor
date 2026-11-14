@@ -58,7 +58,8 @@
             @foreach (TeamMediaDetails media in _team.Media)
             {
                 <a href="/@media.Path" target="_blank" rel="noopener">
-                    <img src="/@media.Path" alt="@media.OriginalFileName" loading="lazy" />
+                    <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
+                         onerror="this.onerror=null;this.src='/@media.Path'" />
                 </a>
             }
         </div>

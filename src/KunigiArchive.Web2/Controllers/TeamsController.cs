@@ -1,12 +1,15 @@
 using KunigiArchive.Application.Authorization;
+using KunigiArchive.Application.Media;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Application.Teams.AssignTeamManager;
 using KunigiArchive.Application.Teams.CreateTeam;
+using KunigiArchive.Application.Teams.DeleteTeamMedia;
 using KunigiArchive.Application.Teams.GetTeamById;
 using KunigiArchive.Application.Teams.GetTeamBySlug;
 using KunigiArchive.Application.Teams.GetTeams;
 using KunigiArchive.Application.Teams.RemoveTeamManager;
 using KunigiArchive.Application.Teams.UpdateTeam;
+using KunigiArchive.Application.Teams.UploadTeamMedia;
 using KunigiArchive.Web2.Contracts.Teams;
 using KunigiArchive.Web2.Mappers;
 using Microsoft.AspNetCore.Authorization;
@@ -101,6 +104,49 @@ public sealed class TeamsController : ControllerBase
         CancellationToken cancellationToken)
     {
         await handler.HandleAsync(new RemoveTeamManagerCommand(id, userId), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/media")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType<IReadOnlyList<TeamMediaResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<IActionResult> UploadTeamMedia(
+        Guid id,
+        IFormFileCollection files,
+        [FromServices] UploadTeamMediaHandler handler,
+        CancellationToken cancellationToken)
+    {
+        List<MediaUpload> uploads = files.ToUploads();
+        try
+        {
+            IReadOnlyList<TeamMediaDetails> added =
+                await handler.HandleAsync(new UploadTeamMediaCommand(id, uploads), cancellationToken);
+            return Ok(added.Select(media => media.ToResponse()).ToList());
+        }
+        finally
+        {
+            foreach (MediaUpload upload in uploads)
+            {
+                await upload.Content.DisposeAsync();
+            }
+        }
+    }
+
+    [HttpDelete("{id:guid}/media/{mediaId:guid}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<IActionResult> DeleteTeamMedia(
+        Guid id,
+        Guid mediaId,
+        [FromServices] DeleteTeamMediaHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(new DeleteTeamMediaCommand(id, mediaId), cancellationToken);
         return NoContent();
     }
 

@@ -15,6 +15,7 @@
     <div class="row g-3">
         <ActionTile Href="@($"teams/{_team.Slug}")" Title="Προβολή" Description="Η δημόσια σελίδα της ομάδας." />
         <ActionTile Href="@($"teams/{_team.Slug}/edit")" Title="Επεξεργασία" Description="Όνομα, περιγραφή, σύνδεσμοι." />
+        <ActionTile Href="@($"teams/{_team.Slug}/media")" Title="Υλικό" Description="Φωτογραφίες και αρχεία της ομάδας." />
         <AuthorizeView Roles="@Roles.Admin">
             <ActionTile Href="@($"teams/{_team.Slug}/managers")" Title="Διαχειριστές"
                         Description="Ποιοι χρήστες διαχειρίζονται την ομάδα." />

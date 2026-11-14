@@ -1,8 +1,10 @@
 using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Application.Media;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Application.Users;
 using KunigiArchive.Domain.Teams;
 using KunigiArchive.Infrastructure.Identity;
+using KunigiArchive.Infrastructure.Media;
 using KunigiArchive.Infrastructure.Persistence;
 using KunigiArchive.Infrastructure.Persistence.Queries;
 using KunigiArchive.Infrastructure.Persistence.Repositories;
@@ -10,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace KunigiArchive.Infrastructure;
 
@@ -33,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IUserQueries, UserQueries>();
 
         services.AddIdentity(configuration);
+        services.AddMediaStorage(configuration);
 
         return services;
     }
@@ -46,6 +50,26 @@ public static class DependencyInjection
 
         IdentitySeeder seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
         await seeder.SeedAsync();
+    }
+
+    private static void AddMediaStorage(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<MediaStorageOptions>()
+            .Bind(configuration.GetSection(MediaStorageOptions.SectionName))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.RootPath),
+                $"{MediaStorageOptions.SectionName}:RootPath is not configured.")
+            .ValidateOnStart();
+
+        services.AddOptions<MediaStorageOptions>()
+            .PostConfigure<IHostEnvironment>((options, environment) =>
+            {
+                if (!string.IsNullOrWhiteSpace(options.RootPath))
+                {
+                    options.RootPath = Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.RootPath));
+                }
+            });
+
+        services.AddSingleton<IMediaStorage, LocalMediaStorage>();
     }
 
     private static void AddIdentity(this IServiceCollection services, IConfiguration configuration)
