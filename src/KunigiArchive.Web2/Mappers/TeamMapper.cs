@@ -59,7 +59,7 @@ public static class TeamMapper
 
     public static TeamMediaResponse ToResponse(this TeamMediaDetails media)
     {
-        return new TeamMediaResponse(media.Id, media.Path, media.OriginalFileName, media.UploadedAt);
+        return new TeamMediaResponse(media.Id, media.Path, media.ThumbnailPath, media.OriginalFileName, media.UploadedAt);
     }
 
     public static TeamsPageResponse ToResponse(this TeamsPage page)

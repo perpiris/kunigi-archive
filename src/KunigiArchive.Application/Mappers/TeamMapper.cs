@@ -1,3 +1,4 @@
+using KunigiArchive.Application.Media;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Application.Users;
 using KunigiArchive.Domain.Teams;
@@ -25,7 +26,12 @@ public static class TeamMapper
 
     public static TeamMediaDetails ToDetails(this TeamMedia media)
     {
-        return new TeamMediaDetails(media.Id, media.Path, media.OriginalFileName, media.UploadedAt);
+        return new TeamMediaDetails(
+            media.Id,
+            media.Path,
+            MediaRules.ThumbnailFor(media.Path),
+            media.OriginalFileName,
+            media.UploadedAt);
     }
 
     public static TeamManagersDetails ToManagersDetails(

@@ -491,6 +491,7 @@ $RECYCLE.BIN/
 
 src/KunigiArchive.Web/wwwroot/media/
 kunigi_media/
+kunigi_media_v2/
 
 # Local-only files
 docker-compose.override.yml

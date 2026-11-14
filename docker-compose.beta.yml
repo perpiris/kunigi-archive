@@ -15,6 +15,10 @@ services:
       - LETSENCRYPT_HOST=beta.tokinigi.gr
       - VIRTUAL_PORT=8080
       - ASPNETCORE_URLS=http://+:8080
+    volumes:
+      # Beta's own uploads (/home/iperp/kunigi_beta_media), never the live site's media.
+      # The container runs as uid 1654 (APP_UID), so the folder must be writable by it.
+      - ../kunigi_beta_media:/app/media
     restart: always
 
 # The live stack's network: reach nginx-proxy (routing/TLS) and later the db service.

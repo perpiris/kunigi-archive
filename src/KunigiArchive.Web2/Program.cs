@@ -1,4 +1,5 @@
 using KunigiArchive.Application;
+using KunigiArchive.Application.Media;
 using KunigiArchive.Infrastructure;
 using KunigiArchive.Web2.Authentication;
 using KunigiArchive.Web2.Components;
@@ -12,6 +13,8 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+    builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = MediaRules.MaxRequestBytes);
 
     builder.Services
         .AddSerilogLogging(builder.Configuration)
@@ -43,6 +46,7 @@ try
         pages.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 
     app.UseHttpsRedirection();
+    app.UseMediaFiles();
 
     // Explicit, so routing runs after the status code pages: a re-executed /not-found has to be routed again,
     // otherwise unknown URLs get an empty 404.

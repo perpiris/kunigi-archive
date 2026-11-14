@@ -1,8 +1,10 @@
 using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Application.Media;
 using KunigiArchive.Web2.Authentication;
 using KunigiArchive.Web2.ErrorHandling;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -60,6 +62,8 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
+        services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MediaRules.MaxRequestBytes);
+
         services.AddControllers();
         services.AddOpenApi();
 
