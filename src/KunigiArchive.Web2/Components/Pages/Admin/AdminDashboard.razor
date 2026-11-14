@@ -1,0 +1,11 @@
+@page "/admin"
+@attribute [Authorize(Roles = Roles.Admin)]
+
+<PageTitle>Πίνακας διαχείρισης</PageTitle>
+
+<h1 class="mb-4">Πίνακας διαχείρισης</h1>
+
+@* Games, users and media status get their tiles as those features move over from the old app. *@
+<div class="row g-3">
+    <ActionTile Href="teams/manage" Title="Διαχείριση ομάδων" Description="Δημιουργία, επεξεργασία, διαχειριστές." />
+</div>

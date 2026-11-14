@@ -1,4 +1,4 @@
-﻿using KunigiArchive.Domain.Common;
+using KunigiArchive.Domain.Common;
 
 namespace KunigiArchive.Domain.Teams;
 
@@ -61,7 +61,6 @@ public sealed class Team
         }
 
         Name = trimmedName;
-        Slug = Slug.FromName(trimmedName);
         IsActive = isActive;
         YearFounded = yearFounded;
         Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
@@ -69,6 +68,12 @@ public sealed class Team
         Instagram = ValidateUrl(instagram, "Instagram");
         Youtube = ValidateUrl(youtube, "YouTube");
         Website = ValidateUrl(website, "ιστοσελίδα");
+    }
+
+    // The slug is the public URL, so it only changes on purpose, never as a side effect of renaming.
+    public void ChangeSlug(Slug slug)
+    {
+        Slug = slug;
     }
 
     public TeamMedia AddMedia(string path, string fileName, string originalFileName, DateTimeOffset uploadedAt)

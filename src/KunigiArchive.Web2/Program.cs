@@ -1,5 +1,6 @@
 using KunigiArchive.Application;
 using KunigiArchive.Infrastructure;
+using KunigiArchive.Web2.Authentication;
 using KunigiArchive.Web2.Components;
 using KunigiArchive.Web2.Extensions;
 using Serilog;
@@ -42,6 +43,11 @@ try
         pages.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 
     app.UseHttpsRedirection();
+
+    // Explicit, so routing runs after the status code pages: a re-executed /not-found has to be routed again,
+    // otherwise unknown URLs get an empty 404.
+    app.UseRouting();
+
     app.UseAuthentication();
     app.UseAuthorization();
     app.UseAntiforgery();
@@ -54,6 +60,7 @@ try
 
     app.MapStaticAssets();
     app.MapControllers();
+    app.MapAuthEndpoints();
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();
 

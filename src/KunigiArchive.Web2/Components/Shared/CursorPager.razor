@@ -1,0 +1,22 @@
+@* Keyset paging only moves forward: "Αρχή" goes back to the first page, "Επόμενες" continues after the cursor. *@
+<nav class="d-flex gap-2" aria-label="Σελίδες">
+    @if (IsFirstPage is false)
+    {
+        <a class="btn btn-outline-secondary" href="@BaseUrl">Αρχή</a>
+    }
+    @if (NextCursor is not null)
+    {
+        <a class="btn btn-outline-secondary" href="@($"{BaseUrl}?after={NextCursor}")">Επόμενες</a>
+    }
+</nav>
+
+@code {
+    [Parameter, EditorRequired]
+    public string BaseUrl { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsFirstPage { get; set; }
+
+    [Parameter]
+    public string? NextCursor { get; set; }
+}

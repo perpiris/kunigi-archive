@@ -1,4 +1,4 @@
-﻿using KunigiArchive.Application.Mappers;
+using KunigiArchive.Application.Mappers;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Domain.Common;
 using KunigiArchive.Domain.Teams;
@@ -33,6 +33,17 @@ internal sealed class TeamQueries : ITeamQueries
             .FirstOrDefaultAsync(t => t.Slug == slug, cancellationToken);
 
         return team?.ToDetails();
+    }
+
+    public async Task<IReadOnlyList<TeamSummary>> GetManagedByAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        List<Team> teams = await _dbContext.Teams
+            .AsNoTracking()
+            .Where(t => t.Managers.Any(m => m.UserId == userId))
+            .OrderBy(t => t.Name)
+            .ToListAsync(cancellationToken);
+
+        return teams.Select(t => t.ToSummary()).ToList();
     }
 
     public async Task<TeamsPage> GetPageAsync(TeamsCursor? after, int pageSize, CancellationToken cancellationToken)

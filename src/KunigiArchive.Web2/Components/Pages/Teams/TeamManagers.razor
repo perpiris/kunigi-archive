@@ -1,0 +1,141 @@
+@page "/teams/{Slug}/managers"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.AssignTeamManager
+@using KunigiArchive.Application.Teams.GetTeamManagers
+@using KunigiArchive.Application.Teams.RemoveTeamManager
+@using KunigiArchive.Application.Users
+@using KunigiArchive.Domain.Common
+@inject GetTeamManagersHandler GetTeamManagersHandler
+@inject AssignTeamManagerHandler AssignTeamManagerHandler
+@inject RemoveTeamManagerHandler RemoveTeamManagerHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Διαχειριστές ομάδας</PageTitle>
+
+@if (_team is not null)
+{
+    <h1>Διαχειριστές: @_team.TeamName</h1>
+
+    @if (_message is not null)
+    {
+        <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+    }
+
+    <h2 class="h5 mt-4">Τρέχοντες διαχειριστές</h2>
+    @if (_team.Managers.Count == 0)
+    {
+        <p class="text-body-secondary">Η ομάδα δεν έχει διαχειριστές.</p>
+    }
+    else
+    {
+        <form method="post" @formname="remove-manager" @onsubmit="RemoveAsync">
+            <AntiforgeryToken />
+            <ul class="list-group mb-3">
+                @foreach (UserSummary manager in _team.Managers)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        @manager.Email
+                        <button type="submit" name="RemoveUserId" value="@manager.Id" class="btn btn-sm btn-outline-danger">
+                            Αφαίρεση
+                        </button>
+                    </li>
+                }
+            </ul>
+        </form>
+    }
+
+    <h2 class="h5 mt-4">Προσθήκη διαχειριστή</h2>
+    @if (_team.AvailableManagers.Count == 0)
+    {
+        <p class="text-body-secondary">Δεν υπάρχουν άλλοι χρήστες με ρόλο διαχειριστή ομάδας.</p>
+    }
+    else
+    {
+        <form method="post" @formname="add-manager" @onsubmit="AddAsync" class="d-flex gap-2">
+            <AntiforgeryToken />
+            <select name="AddUserId" class="form-select" aria-label="Χρήστης">
+                @foreach (UserSummary user in _team.AvailableManagers)
+                {
+                    <option value="@user.Id">@user.Email</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-primary">Προσθήκη</button>
+        </form>
+    }
+
+    <p class="mt-4"><a href="teams/@_team.Slug/actions">← Ενέργειες ομάδας</a></p>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "add-manager")]
+    private Guid? AddUserId { get; set; }
+
+    [SupplyParameterFromForm(FormName = "remove-manager")]
+    private Guid? RemoveUserId { get; set; }
+
+    private TeamManagersDetails? _team;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task AddAsync()
+    {
+        if (_team is null || AddUserId is null)
+        {
+            return;
+        }
+
+        await RunAsync(
+            () => AssignTeamManagerHandler.HandleAsync(new AssignTeamManagerCommand(_team.TeamId, AddUserId.Value), CancellationToken.None),
+            "Ο διαχειριστής προστέθηκε.");
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (_team is null || RemoveUserId is null)
+        {
+            return;
+        }
+
+        await RunAsync(
+            () => RemoveTeamManagerHandler.HandleAsync(new RemoveTeamManagerCommand(_team.TeamId, RemoveUserId.Value), CancellationToken.None),
+            "Ο διαχειριστής αφαιρέθηκε.");
+    }
+
+    private async Task RunAsync(Func<Task> action, string successMessage)
+    {
+        try
+        {
+            await action();
+            (_message, _isError) = (successMessage, false);
+        }
+        catch (Exception exception) when (exception is DomainException or ConflictException)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _team = await GetTeamManagersHandler.HandleAsync(Slug, CancellationToken.None);
+        }
+        catch (TeamNotFoundException)
+        {
+            _team = null;
+            Navigation.NotFound();
+        }
+    }
+}

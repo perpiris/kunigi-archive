@@ -17,6 +17,7 @@ public static class TeamFormMapper
         return new UpdateTeamCommand(
             form.Id,
             form.Name,
+            form.Slug,
             form.IsActive,
             form.YearFounded,
             form.Description,
@@ -32,6 +33,7 @@ public static class TeamFormMapper
         {
             Id = team.Id,
             Name = team.Name,
+            Slug = team.Slug,
             IsActive = team.IsActive,
             YearFounded = team.YearFounded,
             Description = team.Description,

@@ -1,5 +1,6 @@
 using KunigiArchive.Application.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -7,20 +8,26 @@ namespace KunigiArchive.Infrastructure.Identity;
 
 internal sealed class IdentitySeeder
 {
+    private const string DevelopmentManagerEmail = "manager@test.com";
+    private const string DevelopmentManagerPassword = "Manager@123!";
+
     private readonly RoleManager<AppRole> _roleManager;
     private readonly UserManager<AppUser> _userManager;
     private readonly AdminSeedOptions _adminSeed;
+    private readonly IHostEnvironment _environment;
     private readonly ILogger<IdentitySeeder> _logger;
 
     public IdentitySeeder(
         RoleManager<AppRole> roleManager,
         UserManager<AppUser> userManager,
         IOptions<AdminSeedOptions> adminSeed,
+        IHostEnvironment environment,
         ILogger<IdentitySeeder> logger)
     {
         _roleManager = roleManager;
         _userManager = userManager;
         _adminSeed = adminSeed.Value;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -28,6 +35,11 @@ internal sealed class IdentitySeeder
     {
         await SeedRolesAsync();
         await SeedAdminAsync();
+
+        if (_environment.IsDevelopment())
+        {
+            await SeedDevelopmentManagerAsync();
+        }
     }
 
     private async Task SeedRolesAsync()
@@ -70,6 +82,22 @@ internal sealed class IdentitySeeder
 
         EnsureSucceeded(await _userManager.AddToRoleAsync(admin, Roles.Admin), "add the admin role");
         _logger.LogInformation("Admin {Email} created", _adminSeed.Email);
+    }
+
+    private async Task SeedDevelopmentManagerAsync()
+    {
+        if (await _userManager.FindByEmailAsync(DevelopmentManagerEmail) is not null)
+        {
+            return;
+        }
+
+        AppUser manager = new AppUser
+        {
+            UserName = DevelopmentManagerEmail, Email = DevelopmentManagerEmail, EmailConfirmed = true
+        };
+        EnsureSucceeded(await _userManager.CreateAsync(manager, DevelopmentManagerPassword), "create the development manager");
+        EnsureSucceeded(await _userManager.AddToRoleAsync(manager, Roles.Manager), "add the manager role");
+        _logger.LogInformation("Development manager {Email} created", DevelopmentManagerEmail);
     }
 
     private static void EnsureSucceeded(IdentityResult result, string action)

@@ -1,0 +1,106 @@
+@page "/auth/login"
+@using KunigiArchive.Infrastructure.Identity
+@using KunigiArchive.Web2.Authentication
+@using KunigiArchive.Web2.Forms.Auth
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<AppUser> SignInManager
+@inject UserManager<AppUser> UserManager
+@inject NavigationManager Navigation
+
+<PageTitle>Σύνδεση</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <h1>Σύνδεση</h1>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger" role="alert">@_error</div>
+        }
+
+        @* No enhanced navigation: the whole page has to reload so the menu picks up the new sign-in. *@
+        <EditForm Model="Form" FormName="login" OnValidSubmit="LoginAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText id="email" type="email" autocomplete="username" class="form-control" @bind-Value="Form.Email" />
+                <ValidationMessage For="() => Form.Email" />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Κωδικός</label>
+                <InputText id="password" type="password" autocomplete="current-password" class="form-control"
+                           @bind-Value="Form.Password" />
+                <ValidationMessage For="() => Form.Password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Σύνδεση</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = null!;
+
+    [SupplyParameterFromForm]
+    private LoginForm Form { get; set; } = null!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        Form ??= new LoginForm();
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && HttpContext.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo(LocalUrl.OrHome(ReturnUrl));
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        SignInResult result = await SignInManager.PasswordSignInAsync(
+            Form.Email, Form.Password, isPersistent: false, lockoutOnFailure: true);
+
+        // One message for a wrong email and a wrong password, so the form doesn't reveal which accounts exist.
+        if (result.IsLockedOut)
+        {
+            _error = "Πολλές αποτυχημένες προσπάθειες. Δοκιμάστε ξανά σε λίγα λεπτά.";
+            return;
+        }
+
+        if (!result.Succeeded)
+        {
+            _error = "Το email ή ο κωδικός δεν ταιριάζουν.";
+            return;
+        }
+
+        Navigation.NavigateTo(await GetRedirectUrlAsync());
+    }
+
+    private async Task<string> GetRedirectUrlAsync()
+    {
+        if (LocalUrl.IsLocal(ReturnUrl))
+        {
+            return ReturnUrl!;
+        }
+
+        AppUser? user = await UserManager.FindByEmailAsync(Form.Email);
+        if (user is null)
+        {
+            return "/";
+        }
+
+        if (await UserManager.IsInRoleAsync(user, Roles.Admin))
+        {
+            return "/admin";
+        }
+
+        return await UserManager.IsInRoleAsync(user, Roles.Manager) ? "/my-teams" : "/";
+    }
+}

@@ -1,0 +1,64 @@
+@page "/teams/manage"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.GetTeams
+@inject GetTeamsHandler GetTeamsHandler
+
+<PageTitle>Διαχείριση ομάδων</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Διαχείριση ομάδων</h1>
+    <a class="btn btn-primary" href="teams/create">Νέα ομάδα</a>
+</div>
+
+@if (_page is not null)
+{
+    @if (_page.Items.Count == 0)
+    {
+        <p class="text-body-secondary">Δεν υπάρχουν ομάδες.</p>
+    }
+    else
+    {
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Όνομα</th>
+                    <th>Κατάσταση</th>
+                    <th class="text-end">Ενέργειες</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (TeamSummary team in _page.Items)
+                {
+                    <tr>
+                        <td><a href="teams/@team.Slug">@team.Name</a></td>
+                        <td>
+                            <span class="badge @(team.IsActive ? "text-bg-success" : "text-bg-secondary")">
+                                @(team.IsActive ? "Ενεργή" : "Ανενεργή")
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="teams/@team.Slug/actions">Ενέργειες</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <CursorPager BaseUrl="teams/manage" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" />
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? After { get; set; }
+
+    private TeamsCursor? _after;
+    private TeamsPage? _page;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _after = TeamsCursor.TryDecode(After, out TeamsCursor? after) ? after : null;
+        _page = await GetTeamsHandler.HandleAsync(new GetTeamsQuery(_after), CancellationToken.None);
+    }
+}

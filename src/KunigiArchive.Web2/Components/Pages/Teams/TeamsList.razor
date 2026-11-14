@@ -5,10 +5,7 @@
 
 <PageTitle>Ομάδες</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">Ομάδες</h1>
-    <a class="btn btn-primary" href="teams/create">Νέα ομάδα</a>
-</div>
+<h1 class="mb-3">Ομάδες</h1>
 
 @if (_page is not null)
 {
@@ -33,16 +30,7 @@
         </div>
     }
 
-    <nav class="d-flex gap-2" aria-label="Σελίδες">
-        @if (_after is not null)
-        {
-            <a class="btn btn-outline-secondary" href="teams">Αρχή</a>
-        }
-        @if (_page.NextCursor is not null)
-        {
-            <a class="btn btn-outline-secondary" href="teams?after=@_page.NextCursor">Επόμενες</a>
-        }
-    </nav>
+    <CursorPager BaseUrl="teams" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" />
 }
 
 @code {

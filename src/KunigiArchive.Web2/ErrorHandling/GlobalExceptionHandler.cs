@@ -26,6 +26,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         (int statusCode, string title) = exception switch
         {
             DomainException => (StatusCodes.Status400BadRequest, "Invalid request"),
+            ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
             NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             _ => (StatusCodes.Status500InternalServerError, "Server error")

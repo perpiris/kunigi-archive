@@ -1,11 +1,15 @@
+using KunigiArchive.Application.Authorization;
 using KunigiArchive.Application.Teams;
+using KunigiArchive.Application.Teams.AssignTeamManager;
 using KunigiArchive.Application.Teams.CreateTeam;
 using KunigiArchive.Application.Teams.GetTeamById;
 using KunigiArchive.Application.Teams.GetTeamBySlug;
 using KunigiArchive.Application.Teams.GetTeams;
+using KunigiArchive.Application.Teams.RemoveTeamManager;
 using KunigiArchive.Application.Teams.UpdateTeam;
 using KunigiArchive.Web2.Contracts.Teams;
 using KunigiArchive.Web2.Mappers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KunigiArchive.Web2.Controllers;
@@ -28,6 +32,7 @@ public sealed class TeamsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType<TeamResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
@@ -53,6 +58,7 @@ public sealed class TeamsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
     [ProducesResponseType<TeamResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
@@ -65,6 +71,37 @@ public sealed class TeamsController : ControllerBase
     {
         TeamDetails team = await handler.HandleAsync(request.ToCommand(id), cancellationToken);
         return Ok(team.ToResponse());
+    }
+
+    [HttpPost("{id:guid}/managers")]
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
+    public async Task<IActionResult> AssignTeamManager(
+        Guid id,
+        AssignTeamManagerRequest request,
+        [FromServices] AssignTeamManagerHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(request.ToCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/managers/{userId:guid}")]
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<IActionResult> RemoveTeamManager(
+        Guid id,
+        Guid userId,
+        [FromServices] RemoveTeamManagerHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(new RemoveTeamManagerCommand(id, userId), cancellationToken);
+        return NoContent();
     }
 
     // The guid constraint above takes precedence, so anything that isn't a guid lands here.

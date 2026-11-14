@@ -1,4 +1,8 @@
+using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Web2.Authentication;
 using KunigiArchive.Web2.ErrorHandling;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -24,13 +28,34 @@ public static class ServiceCollectionExtensions
         services.ConfigureApplicationCookie(options =>
         {
             options.LoginPath = "/auth/login";
-            options.AccessDeniedPath = "/";
+            options.AccessDeniedPath = "/access-denied";
+
+            // The API answers with status codes; only pages redirect to the login page.
+            options.Events.OnRedirectToLogin = context => RedirectOrStatus(context, StatusCodes.Status401Unauthorized);
+            options.Events.OnRedirectToAccessDenied = context => RedirectOrStatus(context, StatusCodes.Status403Forbidden);
         });
 
         services.AddAuthorization();
         services.AddCascadingAuthenticationState();
 
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, CurrentUser>();
+
         return services;
+    }
+
+    private static Task RedirectOrStatus(RedirectContext<CookieAuthenticationOptions> context, int statusCode)
+    {
+        if (context.Request.IsApiRequest())
+        {
+            context.Response.StatusCode = statusCode;
+        }
+        else
+        {
+            context.Response.Redirect(context.RedirectUri);
+        }
+
+        return Task.CompletedTask;
     }
 
     public static IServiceCollection AddApi(this IServiceCollection services)
