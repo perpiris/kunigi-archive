@@ -489,7 +489,7 @@ $RECYCLE.BIN/
 *.db-wal
 *.sqlite
 
-KunigiArchive.Web/wwwroot/media/
+src/KunigiArchive.Web/wwwroot/media/
 kunigi_media/
 
 # Local-only files

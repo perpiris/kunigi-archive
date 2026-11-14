@@ -1,7 +1,6 @@
 using KunigiArchive.Web.Services.Interfaces;
+using KunigiArchive.Web.Utilities;
 using KunigiArchive.Web.ViewModels.Admin;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using PDFtoImage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -20,13 +19,7 @@ public class DirectoryService : IDirectoryService
         ILogger<DirectoryService> logger)
     {
         _logger = logger;
-
-        var mediaPath = configuration["MediaDirectory"];
-        if (string.IsNullOrEmpty(mediaPath))
-        {
-            mediaPath = Path.Combine(environment.ContentRootPath, "..", "kunigi_media");
-        }
-        _basePath = mediaPath;
+        _basePath = MediaStorage.ResolveRoot(configuration, environment);
     }
 
     public ServiceResponse CreateDirectory(string directoryPath)

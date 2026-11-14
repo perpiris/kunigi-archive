@@ -1,3 +1,15 @@
 <Solution>
-    <Project Path="KunigiArchive.Web/KunigiArchive.Web.csproj"/>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path="CLAUDE.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="docker-compose.yml" />
+    <File Path="Dockerfile" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/KunigiArchive.Web/KunigiArchive.Web.csproj" />
+  </Folder>
 </Solution>

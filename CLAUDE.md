@@ -4,213 +4,179 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-An archive site for "Το Κυνήγι Θησαυρού" — an annual scavenger hunt game in Rethymno, Crete. It stores each year's game, the teams that hosted and won it, the game's days/events, puzzles (with question/answer media), posts, and media galleries. UI text is in Greek.
+An archive site for "Το Κυνήγι Θησαυρού", an annual scavenger hunt in Rethymno, Crete. For each year's game it stores the teams that hosted and won it, the game's days, the puzzles (with question/answer media), posts, and media galleries. UI text is in Greek. Live at https://tokinigi.gr, with a handful of users (mostly the owner).
+
+## Working Agreements
+
+- **Never commit, push, open PRs, or create/delete remote branches unless the owner explicitly says so.** Make changes in the working tree and report what's ready.
+- `master` is protected: changes go in through a PR, the **Build** check must pass, and squash merge is the only option. Work on branches.
+- **GitHub only builds (CI) and deploys (manual).** Package and .NET updates are done locally. There's no Dependabot and no package scanning in CI.
+- Stay on **.NET 10 (LTS)**; `global.json` pins SDK 10.0.x. Take the latest 10.0.x patches, never 11.x packages.
+- **SixLabors.ImageSharp stays on 3.1.x.** 3.2+ and 4.x are under a commercial license.
+- **Never lose production data** (SQL Server DB and uploaded media). Take or verify a backup before touching the DB volume, the media folder, compose volumes, or migrations. Downtime is acceptable.
+- Track problems as labeled GitHub issues (`gh issue create`). Type labels: `bug`, `security`, `infrastructure`, `data-safety`, `tech-debt`, `documentation`, `enhancement`. Priority labels: `priority: high|medium|low`.
+
+## Solution Layout
+
+```
+KunigiArchive.slnx          solution (folders: /src, /Solution Items)
+Directory.Build.props       shared MSBuild settings (net10.0, nullable, implicit usings, version)
+Directory.Packages.props    central package versions (projects use <PackageReference> without Version)
+global.json                 SDK pin (10.0.x)
+src/KunigiArchive.Web/      the web app (single project for now; will be split into smaller projects)
+ops/vps/                    server scripts + README
+Dockerfile, docker-compose.yml
+```
+
+To add or upgrade a package, edit `Directory.Packages.props` (versions) and the project's `<PackageReference Include="..." />`. New projects go under `src/` (and later `tests/`) and pick up both props files automatically.
 
 ## Build & Run
 
 ```bash
 dotnet build
-dotnet run --project KunigiArchive.Web
-dotnet watch run --project KunigiArchive.Web   # with hot reload
+dotnet run --project src/KunigiArchive.Web
+dotnet watch run --project src/KunigiArchive.Web   # with hot reload
 ```
 
-Launch profiles (from `launchSettings.json`):
-- `http`: `http://localhost:5000`
-- `https`: `https://localhost:5001`
+- Launch profiles: `http` → http://localhost:5000, `https` → https://localhost:5001
+- Local dev needs a SQL Server reachable via `ConnectionStrings:DefaultConnection` in `appsettings.Development.json` (`localhost`, user `sa`).
+- The dev SMTP password is in **user-secrets** (`dotnet user-secrets set EmailSettings:Password <value>` in `src/KunigiArchive.Web`).
+- The dev admin is seeded from `AdminSeed` in `appsettings.Development.json` (`admin@test.com`). There's also a dev-only manager, `manager@test.com`.
+- CI (`.github/workflows/ci.yml`) builds with `-warnaserror` (exempt: `NU1901–NU1904` vulnerable-package warnings and `CA1416`, see #28) and runs `dotnet test`. Reproduce locally:
+  `dotnet build KunigiArchive.slnx -c Release -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904,CA1416`
 
-Note: SixLabors.ImageSharp is pinned to 3.x — version 4.x requires a paid build-time license key. Do not bump it without one.
+## Database & Migrations
 
-## Database Migrations
-
-Migrations apply automatically on startup. To manage manually:
+SQL Server (EF Core SqlServer provider). Pending migrations apply automatically on startup.
 
 ```bash
-dotnet ef migrations add <Name> --project KunigiArchive.Web --output-dir Data/Migrations
-dotnet ef database update --project KunigiArchive.Web
+dotnet ef migrations add <Name> --project src/KunigiArchive.Web --output-dir Data/Migrations
+dotnet ef migrations has-pending-model-changes --project src/KunigiArchive.Web
 ```
 
-The SQLite database file is `kunigi_archive.db` (local, not committed). All migrations live in `Data/Migrations` (namespace `KunigiArchive.Web.Data.Migrations`).
+Migrations live in `Data/Migrations` (namespace `KunigiArchive.Web.Data.Migrations`). In production the app connects as `kunigi_app` (db_owner on `KunigiArchive` only, because migrations run at startup).
+
+## Configuration & Secrets
+
+- `appsettings.json` holds **no secrets**: the connection string, `EmailSettings:Password` and `AdminSeed:Email/Password` are empty placeholders.
+- Production values come from environment variables (`Section__Key`) in `/opt/kunigi/app.env` on the VPS, loaded through `env_file` in `docker-compose.yml`.
+- The app refuses to start if `ConnectionStrings:DefaultConnection` is empty.
+- `MediaDirectory` is where uploads are stored (`Utilities/MediaStorage.ResolveRoot`). It's required, and relative paths resolve against the project folder. In development it's `../../kunigi_media` (`<repo>/kunigi_media`). In production it's `/app/media`, bind-mounted from `/home/iperp/kunigi_media`.
+- JSON comments are allowed in the appsettings files. `appsettings.Development.json` only contains overrides. Config arrays merge **by index** (e.g. `Serilog:WriteTo:0` overrides the Console sink).
+- `EmailSettings` binds to `Settings/EmailSettings.cs`. `ApplicationUrl` is used to build links in emails.
+
+## Deployment & Operations
+
+- **Deploy**: Actions → **Deploy to VPS** (manual, master only). It copies the repo to `~iperp/kunigi-archive` on the VPS, runs `docker compose up -d --build`, then checks that https://tokinigi.gr returns 200.
+- **Containers** (`docker-compose.yml`):
+  - `kunigi_web`: the app, on :8080
+  - `kunigi_db`: SQL Server 2022, volume `kunigi-archive_db_data`; port 1433 is published but firewalled to the WireGuard VPN only
+  - `nginx-proxy` + `nginx-acme-companion`: TLS / reverse proxy
+- **Everything about the server** (layout, secrets, SQL logins, WireGuard/SSMS, backups, setup scripts, change log) is in **`ops/vps/README.md`**. Host config is scripted in `ops/vps/` (`setup.sh`, `init-secrets.sh`, `wireguard.sh`, `backup/vps-backup.sh`, `sql/tune.sql`). Run them on the VPS with `sudo bash <script>` (#41).
+- **Access**: `ssh kunigi-vps` (user `claude`, key `~/.ssh/kunigi_claude`, passwordless sudo).
+- **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (DB `.bak` + media + env files). An off-site encrypted copy comes from the manual **Off-site backup** workflow.
+- Never run `docker compose down -v`, and never rename the compose project or volumes.
 
 ## Architecture
 
-**Stack:** .NET 10, ASP.NET Core MVC, Entity Framework Core (SQLite), ASP.NET Core Identity, Serilog, SixLabors.ImageSharp (thumbnails), LigerShark WebOptimizer (JS/CSS minification)
+**Stack:** .NET 10, ASP.NET Core MVC, EF Core (SQL Server), ASP.NET Core Identity, Serilog, SixLabors.ImageSharp 3.1.x (thumbnails), PDFtoImage (first PDF page → PNG on upload), LigerShark WebOptimizer (JS/CSS minification).
 
-**Pattern:** Service-oriented MVC. Controllers are thin — all business logic lives in scoped services. Services resolve the current user via `IHttpContextAccessor` (`private ClaimsPrincipal User => _httpContextAccessor.HttpContext?.User!`). Controllers never extract `userId` or `isAdmin` to pass into services — the service reads `User` internally.
+**Pattern:** service-oriented MVC.
+- Controllers are thin. All business logic lives in scoped services.
+- `Program.cs` only wires things up. Registration lives in `Extensions/ServiceCollectionExtensions.cs`:
+  - `AddWebInfrastructure`: MVC, compression, WebOptimizer, rate limiting, upload limits
+  - `AddPersistence`: EF Core and Identity
+  - `AddApplicationServices`: the app's services and settings
+  - Middleware is added with `UseRequestCorrelation()` / `UseSecurityHeaders()` (`Middleware/MiddlewareExtensions.cs`).
+- Services resolve the current user via `IHttpContextAccessor` (`private ClaimsPrincipal User => _httpContextAccessor.HttpContext?.User!`). Controllers never pass `userId`/`isAdmin` into services.
+- Code style follows `.editorconfig` (run `dotnet format`): explicit types instead of `var`, file-scoped namespaces.
 
-**Auth:** Role-based via ASP.NET Core Identity. Two roles: `Admin` and `Manager`. Managers are linked to specific teams via the `TeamManager` join entity. A manager's access to a game is determined by whether they manage that game's host team. Cookie `LoginPath` is `/auth/login`. Login uses lockout (`lockoutOnFailure: true`). Auth endpoints are rate-limited via the `fixed` policy (60 req/min per IP).
+**Auth:**
+- Identity with two roles, `Admin` and `Manager`. A manager is linked to teams via `TeamManager`.
+- A manager's access to a game = being a manager of the game's host team (the `HasGameAccess` / `HasTeamAccess` checks are duplicated per service, #25).
+- Login path is `/auth/login`. Lockout is on. `/auth` is rate-limited by the `RateLimitPolicies.Auth` policy (60 req/min per IP; note #2, forwarded headers missing).
+- Accounts are created by an admin, and the temporary password is emailed. Password reset uses a code kept in `IMemoryCache` (buggy, #14).
 
-**Pipeline (`Program.cs`):** `RequestCorrelationMiddleware` (X-Correlation-Id → Serilog `LogContext`), `SecurityHeadersMiddleware` (nosniff, X-Frame-Options DENY, referrer/permissions policies), response compression (Brotli/Gzip), WebOptimizer minification, static files with 30-day cache headers, `UseStatusCodePagesWithRedirects("/not-found")`, rate limiter, global `AutoValidateAntiforgeryTokenAttribute`. On startup: pending migrations apply, `DataSeed.Seed` runs, and `DirectoryService.GenerateMissingThumbnailsAsync()` backfills thumbnails.
+**Pipeline (`Program.cs`):**
+- Middleware:
+  - `RequestCorrelationMiddleware`: X-Correlation-Id → Serilog. Client-supplied ids are accepted only if they're `[A-Za-z0-9-]{1,64}`.
+  - `SecurityHeadersMiddleware`, response compression (Brotli/Gzip), WebOptimizer, static files with a 30-day cache.
+- Startup errors are logged as Fatal via the bootstrap Serilog logger (try/catch in `Program.cs`).
+- A second static-file provider serves `MediaDirectory` at `/media`.
+- `UseStatusCodePagesWithRedirects("/not-found")`, rate limiter, global `AutoValidateAntiforgeryTokenAttribute`.
+- Request limits: 250 MB per request (Kestrel, and nginx `client_max_body_size` in `nginx-limits.conf`), 100 MB per file.
+- Startup: `Database.MigrateAsync()`, then `DataSeed.Seed` (roles, admin from `AdminSeed`, dev manager, `GameDayType`s). The thumbnail backfill is commented out (#10).
 
-**Routing:** Entities expose a `Slug` property used for URL segments (e.g., `/teams/team-slug`, `/games/game-slug`). The `SlugGenerator` utility in `Utilities/` handles slug creation from Greek or Latin text (transliteration, diacritics removal, reserved-name checks).
+**Routing:** entities have a `Slug` used in URLs (`/teams/{slug}`, `/games/{slug}`). `Utilities/SlugGenerator` transliterates Greek, strips diacritics, and checks reserved names.
 
-**Media:** File uploads are stored under `wwwroot/media/`. `DirectoryService` manages path resolution, file saving, directory create/delete/move, and thumbnail generation (images get a `thumb_<name>` copy, max 400px wide, via ImageSharp). Media entities (`TeamMedia`, `GameMedia`, `GameDayMedia`, `PuzzleMedia`) store file references separately from their parent entities. Stored paths are web-relative (`media/...`). Game media (including game-day and puzzle media) live under `games/{year}/`; team media under `teams/{slug}/`. Profile images are saved as `profile.*` in those folders. When an admin changes a team's slug or a game's year, the directory is moved and all stored media paths are rewritten to match.
-
-**Seeding:** `Data/DataSeed.cs` seeds roles (Admin, Manager), a default admin user, a dev-only manager user (`manager@test.com`, Development environment only), and `GameDayType` records. Runs on every startup (idempotent).
-
-**Configuration:** `appsettings.json` holds production values; `appsettings.Development.json` overrides for local dev. `EmailSettings` is bound from config to `Settings/EmailSettings.cs`.
+**Media (`DirectoryService`):**
+- Files live under `MediaDirectory`. Stored paths are web-relative (`media/...`).
+- Layout:
+  - `teams/{slug}/` — team media and `profile.*`
+  - `games/{year}/` — game, game-day and puzzle media, plus the game's `profile.*`
+  - `games/{year}/posts/{postId}/` — post media
+- Images get a `thumb_<name>` copy (max 400px wide). Generated filenames are 11-char random IDs. PDFs are converted to PNG (first page).
+- Changing a team slug or a game year moves the directory and rewrites the stored paths.
+- No file-type allowlist yet (#13).
 
 ## Domain Model
 
-### Entities
-
-- **`AppUser`** — extends `IdentityUser<long>`. Has `ICollection<TeamManager>`.
-- **`AppRole`** — extends `IdentityRole<long>`.
-- **`Team`** — `TeamId`, `Name`, `Slug`, `IsActive`, `YearFounded?`, `Description?`, `Facebook?`, `Instagram?`, `Youtube?`, `Website?`, `Image?`. Navigation: `Managers`, `MediaFiles`, `HostedGames`, `WonGames`.
-- **`TeamManager`** — join entity linking `AppUser` ↔ `Team` via `AppUserId` + `TeamId`.
-- **`TeamMedia`** — `TeamMediaId`, `TeamId`, `Path`, `OriginalFileName`, `FileName`, `TimeStamp`.
-- **`Game`** — `GameId`, `Year`, `Order`, `Slug`, `OrderTitle`, `Title?`, `Description?`, `Image?`, `HostId`, `WinnerId`. Navigation: `Host`, `Winner`, `GameDays`, `MediaFiles`, `Posts`.
-- **`GameDay`** — `GameDayId`, `Title?`, `Description?`, `Image?`, `IsEnabled`, `GameTypeId`, `GameId`. Navigation: `GameDayType`, `Game`, `Puzzles`, `GameDayMedia`.
-- **`GameDayType`** — `GameDayTypeId`, `Label`, `Slug`. Seeded values: Χορός, Σάββατο, Κυριακή, Διαδικτυακό, Παιδικό, Εφηβικό.
-- **`GameMedia`** — `GameMediaId`, `GameId`, `Path`, `OriginalFileName`, `FileName`, `TimeStamp`.
-- **`GameDayMedia`** — `GameDayMediaId`, `GameDayId`, `Path`, `OriginalFileName`, `FileName`, `TimeStamp`.
-- **`Puzzle`** — `PuzzleId`, `GameDayId`, `Order`, `Group?`, `Question?`, `Answer?`. Navigation: `GameDay`, `MediaFiles`.
-- **`PuzzleMedia`** — `PuzzleMediaId`, `PuzzleId`, `MediaType` (`"Q"` question / `"A"` answer), `Path`, `OriginalFileName`, `FileName`, `TimeStamp`.
-- **`Post`** — `PostId`, `GameId`, `Content`, `CreatedAt`. Navigation: `Game`. (Posts belong to a **Game**, not a GameDay.)
-
-### Core Relationships
-- A `Game` has one host `Team` (`HostId`) and one winner `Team` (`WinnerId`) — both `DeleteBehavior.Restrict`
-- A `Game` auto-creates one `GameDay` per `GameDayType` on creation; days are toggled visible via `IsEnabled`
-- A `GameDay` contains ordered `Puzzle` entries (optionally grouped via `Group`)
-- A `Game` contains `Post` entries
-- A manager's game access = being a `TeamManager` of the game's host `Team`
-- `Year` and `Order` are unique across games (validated in service)
+- **`AppUser`** (`IdentityUser<long>`): has `TeamManager`s. **`AppRole`** (`IdentityRole<long>`).
+- **`Team`**: `Name`, `Slug`, `IsActive`, `YearFounded?`, `Description?` (rich text), socials, `Image?`. Navigation: `Managers`, `MediaFiles`, `HostedGames`, `WonGames`.
+- **`Game`**: `Year`, `Order`, `Slug`, `OrderTitle` ("{Order}ο Κυνήγι Θησαυρού"), `Title?`, `Description?`, `Image?`, `HostId`, `WinnerId?` (optional). Navigation: `Host`, `Winner?`, `GameDays`, `MediaFiles`, `Posts`. Host/Winner use `DeleteBehavior.Restrict`. `Year`/`Order` uniqueness is checked in code only (#23).
+- **`GameDay`**: one per `GameDayType`, auto-created with the game and toggled with `IsEnabled`. Fields: `Title?`, `Description?`. Navigation: `Puzzles`, `GameDayMedia`.
+- **`GameDayType`**: seeded values Χορός, Σάββατο, Κυριακή, Διαδικτυακό, Παιδικό, Εφηβικό.
+- **`Puzzle`**: `GameDayId`, `Order`, `Group?` (puzzles in the same group form a "package"), `Question?`, `Answer?` (rich text). `PuzzleMedia.MediaType` is `"Q"` (question) or `"A"` (answer).
+- **`Post`**: belongs to a **Game**. Fields: `Title?`, `Content` (rich text), `CreatedAt`. `PostMedia`.
+- Media entities `TeamMedia`, `GameMedia`, `GameDayMedia`, `PuzzleMedia` and `PostMedia` all have `Path`, `OriginalFileName`, `FileName`, `TimeStamp`.
 
 ## Services
 
-All services are scoped and registered in `Program.cs`.
+All are scoped, with interfaces in `Services/Interfaces`. They return `ServiceResponse` / `ServiceResponse<T>`.
 
-### `AccountService` (`IAccountService`)
-- `GetPaginatedAccountsAsync` — paginated user list with roles
-- `CreateAccountAsync` — creates user with role, sends creation email with temp password
-- `GetAccountDetailsAsync` — current user's info + role
-- `GetAccountByIdAsync` — user info + role + managed teams (admin account details page)
-- `ChangeRoleAsync` — switches a user's role; blocks changing your own role; removes `TeamManager` records when demoting a Manager
-- `ChangeEmailAsync` / `ChangePasswordAsync` — account settings
-- `GetAvailableManagersAsync` — users in Manager role, eligible to be team managers
-- `InitiatePasswordResetAsync` / `ResetPasswordAsync` — code-based reset via memory cache (1h expiry)
+- **`AccountService`**: paginated users, create account (emails a temporary password), account details, change role (can't change your own role; demoting a Manager removes its `TeamManager` rows), change email/password, password reset.
+- **`TeamService`**: list/search, CRUD (delete is blocked if the team hosted or won games), manager assignment (Admin only), team media.
+- **`GameService`**: list/search, create (validates Year/Order, creates the days and `games/{year}/`), details (public and managed), day toggles, game-day edit, game update (admin: slug/year/order/host/winner; manager: title/description/image), game media, game-day media.
+- **`PuzzleService`**: puzzle management per day, create/edit with Q/A media, delete (compacts `Order`, dissolves single-member groups), delete puzzle media.
+- **`PostService`**: posts per game (newest first), CRUD, post media.
+- **`DirectoryService`**: create/delete/move directories, save files (+ thumbnail / PDF conversion), delete files, media status (admin page `/admin-dashboard/media-status`).
+- **`EmailService`**: account-creation and password-reset emails (inline HTML, sent synchronously; #20 proposes background jobs).
 
-### `TeamService` (`ITeamService`)
-- `GetPaginatedTeamsAsync` — paginated/searchable team list
-- `CreateTeamAsync` — creates team + `wwwroot/media/teams/{slug}/` directory
-- `GetTeamBySlugAsync(slug, includeFullDetails, isForPublicView)` — always loads `HostedGames` + `Managers`; loads `WonGames` + `MediaFiles` only when `includeFullDetails = true`; skips access check when `isForPublicView = true`
-- `UpdateTeamAsync` — returns `ServiceResponse<string>` with the team's final slug. Admin can update name + slug (slug is sanitized through `SlugGenerator`; on slug change the media directory is moved and stored paths rewritten); all roles update description, social links, image, active status
-- `DeleteTeamAsync` — blocked if team has hosted/won games; removes managers, media records, and directory
-- `GetTeamManagerViewModelAsync` / `AddTeamManagerAsync` / `RemoveTeamManagerAsync` — manager assignment (Admin only)
-- `GetAllUserManagedTeams` — teams the current user manages
-- `GetTeamMediaViewModelAsync` / `UploadTeamMediaAsync` / `DeleteTeamMediaAsync` — media management
-- Access check: `HasTeamAccess(team)` — true if Admin or listed in `team.Managers`
+## Controllers & Routes
 
-### `GameService` (`IGameService`)
-- `GetPaginatedGamesAsync` — paginated/searchable game list
-- `PrepareGameCreateViewModelViewModel` — builds select lists for host/winner dropdowns
-- `CreateGameAsync` — validates uniqueness of Year/Order, creates game + GameDays for all GameDayTypes + `wwwroot/media/games/{year}/` directory
-- `GetGameBySlugAsync(slug, includeFullDetails, isForPublicView)` — access-checked unless public; loads full nav when `includeFullDetails = true`
-- `GetGameDayDetailsForPublicViewAsync(slug, gameDayId)` — public game-day page (puzzles with Q/A media, day media); only when day `IsEnabled`
-- `GetGameDaysViewModelAsync` / `UpdateGameDaysAsync` — toggle `IsEnabled` per day
-- `GetGameDayActionsAsync` / `PrepareGameDayUpdateAsync` / `UpdateGameDayAsync` — game-day title/description editing
-- `PrepareGameUpdateViewModelAsync(slug, viewModel?)` — access-checked; builds select lists for admin only
-- `UpdateGameAsync(viewModel, image, modelState)` — returns `ServiceResponse<string>` with final slug. Admin can update Year/Order/HostId/WinnerId/Slug (on year change the media directory is moved and all stored paths — game image, game/game-day/puzzle media — are rewritten); all roles can update Description + Image
-- `GetGameMediaViewModelAsync` / `UploadGameMediaAsync` / `DeleteGameMediaAsync` — game media
-- `GetGameDayMediaViewModelAsync` / `UploadGameDayMediaAsync` / `DeleteGameDayMediaAsync` — game-day media
-- Access check: `HasGameAccess(game)` — true if Admin or listed in `game.Host.Managers`
+Controllers call a service, check `Success`, set TempData through `AlertMessageHandler.SetMessage`, then redirect or return a view.
 
-### `PuzzleService` (`IPuzzleService`)
-- `GetPuzzleManagementAsync(gameSlug, gameDayId)` — puzzle list for a day
-- `PrepareCreateViewModelAsync` / `CreatePuzzleAsync` — new puzzle gets `Order = max + 1`; saves question/answer media (`MediaType` `"Q"`/`"A"`)
-- `GetPuzzleEditAsync` / `UpdatePuzzleAsync` — edit question/answer/group + add media
-- `DeletePuzzleAsync` — deletes puzzle + media files, re-compacts `Order` of remaining puzzles, dissolves single-member groups
-- All methods access-checked via the game's host team
-
-### `PostService` (`IPostService`)
-- `GetPostManagementAsync(gameSlug)` — posts for a game, newest first
-- `PrepareCreateViewModelAsync` / `CreatePostAsync` / `GetPostEditAsync` / `UpdatePostAsync` / `DeletePostAsync`
-- All methods access-checked via the game's host team
-
-### `DirectoryService` (`IDirectoryService`)
-- `CreateDirectory(path)` / `DeleteDirectory(path)` / `MoveDirectory(source, destination)` — all relative to `wwwroot/media/`
-- `SaveFileAsync(file, storagePath, desiredFileName?)` — creates the target directory if missing; if `desiredFileName` provided, deletes existing files (and thumbnails) with same prefix first; generates a thumbnail for images; returns web-relative path `media/...`
-- `DeleteFile(path)` — deletes file + its thumbnail
-- `GenerateMissingThumbnailsAsync()` — startup backfill
-- Max file size: 100 MB. Generated filenames: 11-char alphanumeric short ID. Thumbnails: `thumb_<filename>`, max width 400px.
-
-### `EmailService` (`IEmailService`)
-- `SendAccountCreationEmailAsync` — sends temp password to new user
-- `SendPasswordResetEmailAsync` — sends reset link (`/auth/reset-password?code=...&email=...`)
-
-## Controllers
-
-Controllers are thin. They call a service method, check `serviceResponse.Success`, set a TempData message via `AlertMessageHandler.SetMessage`, and redirect or return a view. They never resolve user identity to pass into services.
-
-### `HomeController`
-- `GET /` → `Index`
-- `GET /error` → `Error` (sets 500)
-- `GET /not-found` → `NotFound` (sets 404)
-- `GET /admin-dashboard` → `AdminDashboard` [Admin]
-
-### `AuthenticationController` (`/auth`, rate-limited)
-- `GET/POST /auth/login` → `Login`
-- `POST /auth/logout` → `Logout`
-- `GET/POST /auth/forgot-password` → `ForgotPassword`
-- `GET/POST /auth/reset-password` → `ResetPassword`
-
-### `AccountController` (`/account`, [Authorize])
-- `GET /account/management` → `AccountManagement` [Admin]
-- `GET/POST /account/create` → `AccountCreate` [Admin]
-- `GET /account/details/{id}` → `AccountDetails` [Admin]
-- `POST /account/details/{id}/change-role` → `ChangeRole` [Admin]
-- `GET /account/settings` → `AccountSettings`
-- `POST /account/change-email` → `ChangeEmail`
-- `POST /account/change-password` → `ChangePassword`
-
-### `TeamController` (`/teams`)
-- `GET /teams` → `TeamList` (public)
-- `GET /teams/manage` → `TeamManagement` [Admin]
-- `GET/POST /teams/create` → `TeamCreate` [Admin]
-- `GET /teams/{slug}` → `TeamDetails` (public, full details)
-- `GET /teams/{slug}/actions` → `TeamActions` [Admin, Manager]
-- `GET/POST /teams/{slug}/update` → `TeamUpdate` [Admin, Manager]
-- `POST /teams/{slug}/delete` → `DeleteTeam` [Admin]
-- `GET /teams/{slug}/managers` → `TeamManagers` [Admin]
-- `POST /teams/{slug}/managers/add` / `POST /teams/{slug}/managers/remove` [Admin]
-- `GET /teams/{slug}/media` → `TeamMedia` [Admin, Manager]
-- `POST /teams/{slug}/media/upload` / `POST /teams/{slug}/media/{teamMediaId}/delete` [Admin, Manager]
-- `GET /teams/team-manager-dashboard` → `TeamManagerDashboard` [Manager]
-
-### `GameController` (`/games`)
-- `GET /games` → `GameList` (public)
-- `GET /games/manage` → `GameManagement` [Admin]
-- `GET/POST /games/create` → `GameCreate` [Admin]
-- `GET /games/{slug}` → `GameDetails` (public)
-- `GET /games/{slug}/day/{id}` → `GameDayDetails` (public, enabled days only)
-- `GET /games/{slug}/actions` → `GameActions` [Admin, Manager]
-- `GET/POST /games/{slug}/update` → `GameUpdate` [Admin, Manager] — admin: slug/year/order/host/winner + description/image; manager: description/image only
-- `GET/POST /games/{slug}/days` → `GameDays` / `UpdateGameDays` [Admin, Manager]
-- `GET /games/{slug}/media` + upload/delete [Admin, Manager]
-- `GET /games/{slug}/day/{gameDayId}/actions|update|media` (+ media upload/delete) [Admin, Manager]
-- `GET /games/{slug}/day/{gameDayId}/puzzles` + create/edit/delete [Admin, Manager]
-- `GET /games/{slug}/posts` + create/edit/delete [Admin, Manager]
+- **Home**: `/`, `/error`, `/not-found`, `/admin-dashboard` and `/admin-dashboard/media-status` [Admin]
+- **Authentication** (`/auth`, rate-limited): `login`, `logout`, `forgot-password`, `reset-password`
+- **Account** (`/account`): `management`, `create`, `details/{id}`, `details/{id}/change-role` [Admin]; `settings`, `change-email`, `change-password` [signed in]
+- **Team** (`/teams`):
+  - public: list, `{slug}`
+  - [Admin]: `manage`, `create`, `{slug}/delete`, `{slug}/managers` (+ add/remove)
+  - [Admin, Manager]: `{slug}/actions`, `{slug}/update`, `{slug}/media` (+ upload/delete)
+  - [Manager]: `team-manager-dashboard`
+- **Game** (`/games`):
+  - public: list, `{slug}`, `{slug}/day/{id}` (enabled days only)
+  - [Admin]: `manage`, `create`
+  - [Admin, Manager], all under `{slug}/`:
+    - `actions`, `update`, `days`, `media` (+ upload/delete)
+    - `day/{gameDayId}/` `actions`, `update`, `media` (+ upload/delete), `puzzles` (+ create, edit, delete, delete media)
+    - `posts` (+ create, edit, delete) and `posts/{postId}/media` (+ upload/delete)
 
 ## UI Patterns
 
-**Theme:** Neo-brutalist design system on a custom Bootstrap 5.3 build (`wwwroot/lib/bootstrap/dist/css/style.css`): square corners everywhere, 2px borders, hard offset shadows (`--reth-shadow-color`, black in light mode / white in dark mode), Space Grotesk for headings/buttons, brand colors (primary `#ff4d00` orange, secondary `#2e5cff` blue, warning `#ffd600` yellow). Light/dark theme toggle persisted in localStorage (`data-bs-theme`).
-
-**Dark-mode rule:** never use `border-dark`/`border-black` or hardcoded colors (`#fff`, `#f5f5f5`, `#212529`) in views — use the `.border-ink` utility and CSS variables (`var(--bs-border-color)`, `var(--bs-tertiary-bg)`, `var(--bs-card-bg)`) from `site.css`. Component styles (timeline, media gallery, tiles) live in `site.css`, not inline `<style>` blocks.
-
-**Page headers:** set `ViewData["Banner"]` and the layout renders a standard page banner (uppercase display heading + bottom rule). List pages render their own header row with a `_SearchForm` partial instead.
-
-**Shared partials:** `_Pagination` and `_SearchForm` both take a `PageNavViewModel` (Controller, Action, CurrentPage, TotalPages, PageSize, SearchQuery). `_MediaGallery` (fancybox grid), `_PuzzleContent` (Q/A split), `_Notification` (TempData alerts).
-
-**Forms:** Bootstrap 5 cards with `asp-for` tag helpers, validation spans, Back + Save buttons aligned right.
-
-**Custom dropdowns:** Team select fields use a custom `initCustomSelect(prefix)` JS function with search. The real `<select>` is positioned off-screen; a visible `<input>` + dropdown panel drives UX.
-
-**Rich text:** Quill editor (`~/lib/quill/quill.snow.css` + `quill.js`) for description fields. On form submit, the editor's HTML is written to a hidden `<input>`.
-
-**Notifications:** `AlertMessageHandler` writes to TempData keys `Success`, `Warning`, `Error`. A shared `_Notification` partial renders them.
-
-**Pagination + search:** Views pass `pageNumber`, `pageSize`, `searchQuery` query params. `PaginatedViewModel<T>` carries `Items`, `CurrentPage`, `TotalPages`, `PageSize`.
-
-**Admin-only sections in shared views:** Use `@if (User.IsInRole("Admin"))` / `@if (User.IsInRole("Manager"))` in Razor to conditionally show fields or cards (e.g., slug/year/order fields in `GameUpdate`, hosted games section in `TeamActions`).
+- **Theme:** neo-brutalist custom Bootstrap 5.3 build (`wwwroot/lib/bootstrap/dist/css/style.css`):
+  - square corners, 2px borders, hard offset shadows (`--reth-shadow-color`)
+  - Space Grotesk headings
+  - primary `#ff4d00`, secondary `#2e5cff`, warning `#ffd600`
+  - light/dark toggle persisted in localStorage (`data-bs-theme`)
+- **Dark mode:** never use `border-dark`/`border-black` or hard-coded colors in views. Use `.border-ink` and CSS variables (`var(--bs-border-color)`, `var(--bs-tertiary-bg)`, `var(--bs-card-bg)`). Component styles (timeline, media gallery, tiles) live in `site.css`.
+- **Page headers:** set `ViewData["Banner"]` and the layout renders the banner. List pages render their own header row with `_SearchForm`.
+- **Shared partials:**
+  - `_Pagination` and `_SearchForm` take a `PageNavViewModel`
+  - `_MediaGallery` (fancybox), `_PuzzleContent` (Q/A split), `_Notification` (TempData alerts)
+- **Forms:** Bootstrap cards, `asp-for` tag helpers, validation spans, Back + Save aligned right. Team selects use `initCustomSelect(prefix)` (searchable dropdown driving an off-screen `<select>`).
+- **Rich text:** Quill editor. HTML goes into a hidden input on submit and is rendered with `Html.Raw` **without sanitization (#12)**.
+- **Role-specific UI:** `@if (User.IsInRole("Admin"))` / `("Manager")` in Razor.
 
 ## ServiceResponse Pattern
 
@@ -222,4 +188,14 @@ ServiceResponse<T>.Successful(data, "message")
 ServiceResponse<T>.Failure("message")
 ```
 
-Controllers check `serviceResponse.Success`, call `AlertMessageHandler.SetMessage(TempData, serviceResponse)`, then redirect or return a view with `serviceResponse.Data`. Update methods that can change a slug (`UpdateTeamAsync`, `UpdateGameAsync`) return `ServiceResponse<string>` carrying the final slug for the redirect.
+Methods that can change a slug (`UpdateTeamAsync`, `UpdateGameAsync`) return `ServiceResponse<string>` with the final slug for the redirect.
+
+## Known Issues
+
+Open problems are tracked as GitHub issues (`gh issue list`). The highest-impact ones:
+- #12 stored XSS
+- #13 upload file types
+- #14 password reset
+- #15 vulnerable ImageSharp
+- #2 forwarded headers
+- #3 Data Protection keys not persisted (every deploy logs users out)

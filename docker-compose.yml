@@ -37,14 +37,11 @@ services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: kunigi_db
-    # ACCEPT_EULA + MSSQL_SA_PASSWORD live on the VPS only (see ops/vps/README.md).
-    # MSSQL_SA_PASSWORD only applies when the volume is first created; change an
-    # existing password with ops/vps/init-secrets.sh --rotate-sa.
+    # MSSQL_SA_PASSWORD only applies when the volume is first created;
+    # change it on an existing database with ops/vps/init-secrets.sh --rotate-sa.
     env_file:
       - /opt/kunigi/db.env
-    # Published, but the host firewall (DOCKER-USER rules in /etc/ufw/after.rules,
-    # see ops/vps/setup.sh) only lets it through from the WireGuard VPN (10.8.0.0/24).
-    # Connect with SSMS to 10.8.0.1,1433 while the VPN is active.
+    # Docker bypasses ufw; the DOCKER-USER rules from ops/vps/setup.sh limit this to the WireGuard VPN.
     ports:
       - "1433:1433"
     volumes:
@@ -57,8 +54,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: kunigi_web
-    # Secrets and environment (ASPNETCORE_ENVIRONMENT, connection string, SMTP
-    # password, admin seed) live on the VPS only (see ops/vps/README.md).
     env_file:
       - /opt/kunigi/app.env
     environment:
