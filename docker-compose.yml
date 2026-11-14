@@ -52,7 +52,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: src/KunigiArchive.Web/Dockerfile
     container_name: kunigi_web
     env_file:
       - /opt/kunigi/app.env

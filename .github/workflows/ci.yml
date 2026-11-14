@@ -43,8 +43,16 @@ jobs:
         run: dotnet test KunigiArchive.slnx -c Release --no-build
 
   docker:
-    name: Docker image
+    name: Docker image (${{ matrix.app }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: web
+            dockerfile: src/KunigiArchive.Web/Dockerfile
+          - app: beta
+            dockerfile: src/KunigiArchive.Blazor/Dockerfile
     steps:
       - uses: actions/checkout@v7
 
@@ -54,7 +62,8 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           push: false
           pull: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}

@@ -23,10 +23,17 @@ KunigiArchive.slnx          solution (folders: /src, /Solution Items)
 Directory.Build.props       shared MSBuild settings (net10.0, nullable, implicit usings, version)
 Directory.Packages.props    central package versions (projects use <PackageReference> without Version)
 global.json                 SDK pin (10.0.x)
-src/KunigiArchive.Web/      the web app (single project for now; will be split into smaller projects)
-ops/vps/                    server scripts + README
-Dockerfile, docker-compose.yml
+src/KunigiArchive.Web/             current MVC site, live at tokinigi.gr (own Dockerfile)
+src/KunigiArchive.Domain/          new: domain model (empty for now)
+src/KunigiArchive.Application/     new: use cases → Domain
+src/KunigiArchive.Infrastructure/  new: EF Core, files, email → Application, Domain
+src/KunigiArchive.Blazor/          new: Blazor Web App + REST API, beta.tokinigi.gr (own Dockerfile) → Application, Infrastructure
+ops/vps/                           server scripts + README
+docker-compose.yml                 live stack (proxy, db, web)
+docker-compose.beta.yml            beta stack (own compose project, joins the live network)
 ```
+
+The new projects are built **alongside** the MVC app: `KunigiArchive.Web` does not reference them. Features move over one endpoint at a time, and fixes go into both apps until the beta replaces the MVC site.
 
 To add or upgrade a package, edit `Directory.Packages.props` (versions) and the project's `<PackageReference Include="..." />`. New projects go under `src/` (and later `tests/`) and pick up both props files automatically.
 
@@ -67,7 +74,11 @@ Migrations live in `Data/Migrations` (namespace `KunigiArchive.Web.Data.Migratio
 
 ## Deployment & Operations
 
-- **Deploy**: Actions → **Deploy to VPS** (manual, master only). It copies the repo to `~iperp/kunigi-archive` on the VPS, runs `docker compose up -d --build`, then checks that https://tokinigi.gr returns 200.
+- **Deploy** (manual, master only, separate workflows):
+  - **Deploy web** (`deploy-web.yml`): copies the repo to `~iperp/kunigi-archive`, runs `docker compose up -d --build`, checks that https://tokinigi.gr returns 200.
+  - **Deploy beta** (`deploy-beta.yml`): copies the repo to `~iperp/kunigi-beta`, runs `docker compose -f docker-compose.beta.yml up -d --build`, checks https://beta.tokinigi.gr. It never touches the live stack. Needs a DNS A record `beta.tokinigi.gr → 185.4.135.49`.
+- CI builds the whole solution (required **Build** check) plus both Docker images (`Docker image (web)`, `Docker image (beta)`).
+- **Schema ownership:** only `KunigiArchive.Web` runs migrations against the production DB. The new Infrastructure layer maps the existing schema and must not migrate until cutover.
 - **Containers** (`docker-compose.yml`):
   - `kunigi_web`: the app, on :8080
   - `kunigi_db`: SQL Server 2022, volume `kunigi-archive_db_data`; port 1433 is published but firewalled to the WireGuard VPN only
