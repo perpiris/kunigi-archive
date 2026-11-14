@@ -48,7 +48,7 @@ public class TeamService : ITeamService
 
         query = query.OrderBy(x => x.Name);
 
-        var totalCount = await query.CountAsync();
+        int totalCount = await query.CountAsync();
         List<Team> items = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -67,9 +67,9 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse> CreateTeamAsync(TeamCreateViewModel viewModel, ModelStateDictionary modelState)
     {
-        var slug = SlugGenerator.GenerateSlug(viewModel.Name);
+        string slug = SlugGenerator.GenerateSlug(viewModel.Name);
 
-        var nameExists = await _context.Teams.AnyAsync(x => x.Slug == slug);
+        bool nameExists = await _context.Teams.AnyAsync(x => x.Slug == slug);
         if (nameExists)
         {
             modelState.AddModelError("Name", "Υπάρχει ήδη ομάδα με αυτό το όνομα.");
@@ -140,8 +140,8 @@ public class TeamService : ITeamService
             return ServiceResponse<string>.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτή την ομάδα.");
         }
 
-        var newName = team.Name;
-        var newSlug = team.Slug;
+        string newName = team.Name;
+        string newSlug = team.Slug;
 
         if (User.IsInRole("Admin"))
         {
@@ -152,8 +152,8 @@ public class TeamService : ITeamService
             else if (viewModel.UpdatedName.Trim() != team.Name)
             {
                 newName = viewModel.UpdatedName.Trim();
-                var nameSlug = SlugGenerator.GenerateSlug(newName);
-                var nameExists = await _context.Teams.AnyAsync(x => x.Slug == nameSlug && x.TeamId != team.TeamId);
+                string nameSlug = SlugGenerator.GenerateSlug(newName);
+                bool nameExists = await _context.Teams.AnyAsync(x => x.Slug == nameSlug && x.TeamId != team.TeamId);
                 if (nameExists)
                 {
                     modelState.AddModelError("UpdatedName", "Υπάρχει ήδη ομάδα με αυτό το όνομα.");
@@ -162,14 +162,14 @@ public class TeamService : ITeamService
 
             if (!string.IsNullOrWhiteSpace(viewModel.UpdatedSlug) && viewModel.UpdatedSlug != team.Slug)
             {
-                var sanitizedSlug = SlugGenerator.GenerateSlug(viewModel.UpdatedSlug);
+                string sanitizedSlug = SlugGenerator.GenerateSlug(viewModel.UpdatedSlug);
                 if (string.IsNullOrWhiteSpace(sanitizedSlug))
                 {
                     modelState.AddModelError("UpdatedSlug", "Το slug δεν είναι έγκυρο.");
                 }
                 else if (sanitizedSlug != team.Slug)
                 {
-                    var slugExists =
+                    bool slugExists =
                         await _context.Teams.AnyAsync(x => x.Slug == sanitizedSlug && x.TeamId != team.TeamId);
                     if (slugExists)
                     {
@@ -199,7 +199,7 @@ public class TeamService : ITeamService
 
         if (image is not null)
         {
-            var storageDirectory = $"teams/{team.Slug}";
+            string storageDirectory = $"teams/{team.Slug}";
             ServiceResponse<string> saveResult = await _directoryService.SaveFileAsync(image, storageDirectory, "profile");
 
             if (!saveResult.Success)
@@ -215,7 +215,7 @@ public class TeamService : ITeamService
 
         if (newSlug != team.Slug)
         {
-            var oldSlug = team.Slug;
+            string oldSlug = team.Slug;
             ServiceResponse moveResult = _directoryService.MoveDirectory($"teams/{oldSlug}", $"teams/{newSlug}");
             if (!moveResult.Success)
             {
@@ -225,8 +225,8 @@ public class TeamService : ITeamService
 
             team.Slug = newSlug;
 
-            var oldPrefix = $"media/teams/{oldSlug}/";
-            var newPrefix = $"media/teams/{newSlug}/";
+            string oldPrefix = $"media/teams/{oldSlug}/";
+            string newPrefix = $"media/teams/{newSlug}/";
             if (team.Image is not null && team.Image.StartsWith(oldPrefix))
             {
                 team.Image = newPrefix + team.Image[oldPrefix.Length..];
@@ -340,13 +340,13 @@ public class TeamService : ITeamService
             return ServiceResponse.Failure("Η ομάδα δεν βρέθηκε.");
         }
 
-        var userExists = await _context.Users.AnyAsync(x => x.Id == appUserId);
+        bool userExists = await _context.Users.AnyAsync(x => x.Id == appUserId);
         if (!userExists)
         {
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
         }
 
-        var managerExists = team.Managers.Any(x => x.AppUserId == appUserId);
+        bool managerExists = team.Managers.Any(x => x.AppUserId == appUserId);
         if (managerExists)
         {
             return ServiceResponse.Warning("Ο χρήστης είναι ήδη διαχειριστής της ομάδας.");
@@ -385,7 +385,7 @@ public class TeamService : ITeamService
 
     public async Task<ServiceResponse<IEnumerable<TeamDetailsViewModel>>> GetAllUserManagedTeams()
     {
-        var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        long userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         List<Team> userManagedTeams = await _context.Teams
             .Include(x => x.Managers)
             .Where(x => x.Managers.Any(y => y.AppUserId == userId))
@@ -445,7 +445,7 @@ public class TeamService : ITeamService
             return ServiceResponse.Failure("Δεν επιλέχθηκαν αρχεία για μεταφόρτωση.");
         }
 
-        var storageDirectory = $"teams/{team.Slug}";
+        string storageDirectory = $"teams/{team.Slug}";
 
         foreach (IFormFile file in files)
         {

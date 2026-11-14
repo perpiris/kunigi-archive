@@ -13,7 +13,7 @@ public static class AlertMessageHandler
     public static void SetMessage(ITempDataDictionary tempData, ServiceResponse response,
         string? defaultErrorMessage = null)
     {
-        var message = response.Message ?? (response.Severity == ResponseSeverity.Error ? defaultErrorMessage : null);
+        string? message = response.Message ?? (response.Severity == ResponseSeverity.Error ? defaultErrorMessage : null);
 
         if (string.IsNullOrWhiteSpace(message))
         {

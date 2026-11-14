@@ -79,9 +79,9 @@ public class EmailService : IEmailService
     private (string subject, string body) GetAccountCreatedEmail(string password)
     {
         const string subject = "Καλώς ήρθατε - Ο λογαριασμός σας δημιουργήθηκε";
-        var loginUrl = _settings.ApplicationUrl + "/auth/login";
+        string loginUrl = _settings.ApplicationUrl + "/auth/login";
 
-        var body = $$"""
+        string body = $$"""
                      <html>
                      <head>
                      	<meta charset="UTF-8">
@@ -159,9 +159,9 @@ public class EmailService : IEmailService
     private (string subject, string body) GetPasswordResetEmail(string email, string resetCode)
     {
         const string subject = "Επαναφορά κωδικού πρόσβασης";
-        var resetUrl = _settings.ApplicationUrl + $"/auth/reset-password?code={resetCode}&email={email}";
+        string resetUrl = _settings.ApplicationUrl + $"/auth/reset-password?code={resetCode}&email={email}";
 
-        var body = $$"""
+        string body = $$"""
                      <html>
                      <head>
                      	<meta charset="UTF-8">

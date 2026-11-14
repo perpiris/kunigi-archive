@@ -39,7 +39,7 @@ public class GameService : IGameService
         IQueryable<Game> query = _context.Games.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
-            var searchLower = searchQuery.ToLower();
+            string searchLower = searchQuery.ToLower();
             query = query.Where(x =>
                 x.OrderTitle.ToLower().Contains(searchLower) ||
                 (x.Title != null && x.Title.ToLower().Contains(searchLower)) ||
@@ -48,7 +48,7 @@ public class GameService : IGameService
 
         query = query.OrderBy(x => x.Year);
 
-        var totalCount = await query.CountAsync();
+        int totalCount = await query.CountAsync();
         List<Game> items = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -202,7 +202,7 @@ public class GameService : IGameService
             return ServiceResponse<GameDayDetailsViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
         }
 
-        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        string formattedTitle = $"{game.OrderTitle} {game.Year}";
         if (!string.IsNullOrWhiteSpace(game.Title))
         {
             formattedTitle += $" - {game.Title}";
@@ -256,7 +256,7 @@ public class GameService : IGameService
             return ServiceResponse<GameDaysViewModel>.Warning("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        string formattedTitle = $"{game.OrderTitle} {game.Year}";
         if (!string.IsNullOrWhiteSpace(game.Title))
         {
             formattedTitle += $" - {game.Title}";
@@ -304,7 +304,7 @@ public class GameService : IGameService
             return ServiceResponse<GameDayActionsViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
         }
 
-        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        string formattedTitle = $"{game.OrderTitle} {game.Year}";
         if (!string.IsNullOrWhiteSpace(game.Title))
         {
             formattedTitle += $" - {game.Title}";
@@ -348,7 +348,7 @@ public class GameService : IGameService
             return ServiceResponse<GameDayUpdateViewModel>.Failure("Η ημέρα δεν βρέθηκε.");
         }
 
-        var formattedTitle = $"{game.OrderTitle} {game.Year}";
+        string formattedTitle = $"{game.OrderTitle} {game.Year}";
         if (!string.IsNullOrWhiteSpace(game.Title))
         {
             formattedTitle += $" - {game.Title}";
@@ -479,7 +479,7 @@ public class GameService : IGameService
                 modelState.AddModelError("Order", "Υπάρχει ήδη παιχνίδι για αυτή τη σειρά.");
             }
 
-            var newSlug = game.Slug;
+            string newSlug = game.Slug;
             if (!string.IsNullOrWhiteSpace(gameUpdateViewModel.UpdatedSlug) &&
                 gameUpdateViewModel.UpdatedSlug != game.Slug)
             {
@@ -521,7 +521,7 @@ public class GameService : IGameService
 
         if (image is not null)
         {
-            var storageDirectory = $"games/{game.Year}";
+            string storageDirectory = $"games/{game.Year}";
             ServiceResponse<string> saveResult = await _directoryService.SaveFileAsync(image, storageDirectory, "profile");
 
             if (!saveResult.Success)
@@ -624,7 +624,7 @@ public class GameService : IGameService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var storageDirectory = $"games/{game.Year}";
+        string storageDirectory = $"games/{game.Year}";
 
         foreach (IFormFile file in files)
         {
@@ -748,7 +748,7 @@ public class GameService : IGameService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var storageDirectory = $"games/{gameDay.Game.Year}";
+        string storageDirectory = $"games/{gameDay.Game.Year}";
 
         foreach (IFormFile file in files)
         {
@@ -815,8 +815,8 @@ public class GameService : IGameService
 
     private async Task UpdateGameMediaPathsAsync(Game game, short oldYear, short newYear)
     {
-        var oldPrefix = $"media/games/{oldYear}/";
-        var newPrefix = $"media/games/{newYear}/";
+        string oldPrefix = $"media/games/{oldYear}/";
+        string newPrefix = $"media/games/{newYear}/";
 
         if (game.Image is not null && game.Image.StartsWith(oldPrefix))
         {
@@ -859,7 +859,7 @@ public class GameService : IGameService
 
     private static string FormatGameTitle(Game game)
     {
-        var result = $"{game.OrderTitle} {game.Year}";
+        string result = $"{game.OrderTitle} {game.Year}";
         if (!string.IsNullOrWhiteSpace(game.Title))
         {
             result += $" - {game.Title}";
@@ -875,7 +875,7 @@ public class GameService : IGameService
             return true;
         }
 
-        var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        long userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         return game.Host.Managers.Any(m => m.AppUserId == userId);
     }
 }

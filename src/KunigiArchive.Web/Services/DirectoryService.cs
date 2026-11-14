@@ -24,8 +24,8 @@ public class DirectoryService : IDirectoryService
 
     public ServiceResponse CreateDirectory(string directoryPath)
     {
-        var platformSpecificSubfolder = directoryPath.Replace('/', Path.DirectorySeparatorChar);
-        var fullPath = Path.Combine(_basePath, platformSpecificSubfolder);
+        string platformSpecificSubfolder = directoryPath.Replace('/', Path.DirectorySeparatorChar);
+        string fullPath = Path.Combine(_basePath, platformSpecificSubfolder);
 
         try
         {
@@ -56,8 +56,8 @@ public class DirectoryService : IDirectoryService
             return ServiceResponse.Failure("Η διαδρομή του φακέλου δεν μπορεί να είναι κενή.");
         }
 
-        var platformSpecificSubfolder = directoryPath.Replace('/', Path.DirectorySeparatorChar);
-        var fullPath = Path.Combine(_basePath, platformSpecificSubfolder);
+        string platformSpecificSubfolder = directoryPath.Replace('/', Path.DirectorySeparatorChar);
+        string fullPath = Path.Combine(_basePath, platformSpecificSubfolder);
 
         if (!Directory.Exists(fullPath))
         {
@@ -84,8 +84,8 @@ public class DirectoryService : IDirectoryService
             return ServiceResponse.Failure("Η διαδρομή του φακέλου δεν μπορεί να είναι κενή.");
         }
 
-        var sourceFullPath = GetFullPath(sourcePath);
-        var destinationFullPath = GetFullPath(destinationPath);
+        string sourceFullPath = GetFullPath(sourcePath);
+        string destinationFullPath = GetFullPath(destinationPath);
 
         if (!Directory.Exists(sourceFullPath))
         {
@@ -122,8 +122,8 @@ public class DirectoryService : IDirectoryService
 
         MemoryStream? imageStream = null;
         IFormFile fileToSave = mediaFile;
-        var fileExtension = Path.GetExtension(mediaFile.FileName);
-        var isPdf = fileExtension.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+        string fileExtension = Path.GetExtension(mediaFile.FileName);
+        bool isPdf = fileExtension.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
 
         if (isPdf)
         {
@@ -136,7 +136,7 @@ public class DirectoryService : IDirectoryService
                 bitmap.Encode(imageStream, SKEncodedImageFormat.Png, quality: 100);
                 imageStream.Position = 0;
 
-                var pngFileName = Path.ChangeExtension(mediaFile.FileName, ".png");
+                string pngFileName = Path.ChangeExtension(mediaFile.FileName, ".png");
                 fileToSave = new FormFile(imageStream, 0, imageStream.Length, mediaFile.Name, pngFileName)
                 {
                     Headers = mediaFile.Headers,
@@ -151,7 +151,7 @@ public class DirectoryService : IDirectoryService
             }
         }
 
-        var storageDirectory = GetFullPath(storagePath);
+        string storageDirectory = GetFullPath(storagePath);
         if (!Directory.Exists(storageDirectory))
         {
             ServiceResponse createResult = CreateDirectory(storagePath);
@@ -164,12 +164,12 @@ public class DirectoryService : IDirectoryService
 
         if (!string.IsNullOrWhiteSpace(desiredFileName))
         {
-            var directoryPath = storageDirectory;
+            string directoryPath = storageDirectory;
             try
             {
-                var existingFiles = Directory.GetFiles(directoryPath, $"{desiredFileName}.*");
-                var existingThumbs = Directory.GetFiles(directoryPath, $"thumb_{desiredFileName}.*");
-                foreach (var file in existingFiles.Concat(existingThumbs))
+                string[] existingFiles = Directory.GetFiles(directoryPath, $"{desiredFileName}.*");
+                string[] existingThumbs = Directory.GetFiles(directoryPath, $"thumb_{desiredFileName}.*");
+                foreach (string? file in existingFiles.Concat(existingThumbs))
                 {
                     File.Delete(file);
                 }
@@ -183,11 +183,11 @@ public class DirectoryService : IDirectoryService
             }
         }
 
-        var newFileName = string.IsNullOrWhiteSpace(desiredFileName)
+        string newFileName = string.IsNullOrWhiteSpace(desiredFileName)
             ? $"{GenerateShortId()}{fileExtension}"
             : $"{desiredFileName}{fileExtension}";
 
-        var fullPath = GetFullPath(Path.Combine(storagePath, newFileName));
+        string fullPath = GetFullPath(Path.Combine(storagePath, newFileName));
 
         try
         {
@@ -219,7 +219,7 @@ public class DirectoryService : IDirectoryService
             imageStream?.Dispose();
         }
 
-        var webPath = $"media/{Path.Combine(storagePath, newFileName).Replace(Path.DirectorySeparatorChar, '/')}";
+        string webPath = $"media/{Path.Combine(storagePath, newFileName).Replace(Path.DirectorySeparatorChar, '/')}";
         return ServiceResponse<string>.Successful(webPath, "Το αρχείο αποθηκεύτηκε επιτυχώς.");
     }
 
@@ -231,8 +231,8 @@ public class DirectoryService : IDirectoryService
             return ServiceResponse.Failure("Η διαδρομή του αρχείου δεν μπορεί να είναι κενή.");
         }
 
-        var relativePath = filePath.StartsWith("media/") ? filePath[6..] : filePath;
-        var fullPath = GetFullPath(relativePath);
+        string relativePath = filePath.StartsWith("media/") ? filePath[6..] : filePath;
+        string fullPath = GetFullPath(relativePath);
 
         if (!File.Exists(fullPath))
         {
@@ -244,7 +244,7 @@ public class DirectoryService : IDirectoryService
         {
             File.Delete(fullPath);
 
-            var thumbPath = GetThumbnailPath(fullPath);
+            string thumbPath = GetThumbnailPath(fullPath);
             if (File.Exists(thumbPath))
             {
                 File.Delete(thumbPath);
@@ -269,11 +269,11 @@ public class DirectoryService : IDirectoryService
         IEnumerable<string> imageFiles = Directory.EnumerateFiles(_basePath, "*.*", SearchOption.AllDirectories)
             .Where(f => IsImageFile(f) && !Path.GetFileName(f).StartsWith("thumb_"));
 
-        var count = 0;
+        int count = 0;
 
-        foreach (var filePath in imageFiles)
+        foreach (string filePath in imageFiles)
         {
-            var thumbPath = GetThumbnailPath(filePath);
+            string thumbPath = GetThumbnailPath(filePath);
             if (File.Exists(thumbPath))
             {
                 continue;
@@ -303,7 +303,7 @@ public class DirectoryService : IDirectoryService
             return;
         }
 
-        var thumbPath = GetThumbnailPath(filePath);
+        string thumbPath = GetThumbnailPath(filePath);
 
         using Image image = await Image.LoadAsync(filePath);
 
@@ -318,20 +318,20 @@ public class DirectoryService : IDirectoryService
 
     private static string GetThumbnailPath(string filePath)
     {
-        var directory = Path.GetDirectoryName(filePath)!;
-        var fileName = Path.GetFileName(filePath);
+        string directory = Path.GetDirectoryName(filePath)!;
+        string fileName = Path.GetFileName(filePath);
         return Path.Combine(directory, $"thumb_{fileName}");
     }
 
     private static bool IsImageFile(string filePath)
     {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
         return extension is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp";
     }
 
     private string GetFullPath(string subfolder)
     {
-        var platformSpecificSubfolder = subfolder.Replace('/', Path.DirectorySeparatorChar);
+        string platformSpecificSubfolder = subfolder.Replace('/', Path.DirectorySeparatorChar);
         return Path.Combine(_basePath, platformSpecificSubfolder);
     }
 

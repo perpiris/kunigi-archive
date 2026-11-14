@@ -96,7 +96,7 @@ public class PuzzleService : IPuzzleService
             return ServiceResponse.Failure("Δεν έχετε δικαίωμα πρόσβασης σε αυτό το παιχνίδι.");
         }
 
-        var maxOrder = await _context.Puzzles
+        short maxOrder = await _context.Puzzles
             .Where(p => p.GameDayId == viewModel.GameDayId)
             .MaxAsync(p => (short?)p.Order) ?? 0;
 
@@ -112,7 +112,7 @@ public class PuzzleService : IPuzzleService
         _context.Puzzles.Add(puzzle);
         await _context.SaveChangesAsync();
 
-        var storagePath = $"games/{gameDay.Game.Year}";
+        string storagePath = $"games/{gameDay.Game.Year}";
         await SavePuzzleMediaAsync(puzzle.PuzzleId, storagePath, viewModel.QuestionMediaFiles, "Q");
         await SavePuzzleMediaAsync(puzzle.PuzzleId, storagePath, viewModel.AnswerMediaFiles, "A");
 
@@ -194,7 +194,7 @@ public class PuzzleService : IPuzzleService
 
         await _context.SaveChangesAsync();
 
-        var storagePath = $"games/{puzzle.GameDay.Game.Year}";
+        string storagePath = $"games/{puzzle.GameDay.Game.Year}";
         await SavePuzzleMediaAsync(puzzle.PuzzleId, storagePath, viewModel.QuestionMediaFiles, "Q");
         await SavePuzzleMediaAsync(puzzle.PuzzleId, storagePath, viewModel.AnswerMediaFiles, "A");
 
@@ -226,9 +226,9 @@ public class PuzzleService : IPuzzleService
             _directoryService.DeleteFile(media.Path);
         }
 
-        var deletedOrder = puzzle.Order;
-        var deletedGroup = puzzle.Group;
-        var gameDayId = puzzle.GameDayId;
+        short deletedOrder = puzzle.Order;
+        short? deletedGroup = puzzle.Group;
+        long gameDayId = puzzle.GameDayId;
 
         _context.Puzzles.Remove(puzzle);
         await _context.SaveChangesAsync();
@@ -319,7 +319,7 @@ public class PuzzleService : IPuzzleService
             return true;
         }
 
-        var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        long userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         return game.Host.Managers.Any(m => m.AppUserId == userId);
     }
 
@@ -383,7 +383,7 @@ public class PuzzleService : IPuzzleService
 
     private static string FormatGameTitle(Game game)
     {
-        var result = $"{game.OrderTitle} {game.Year}";
+        string result = $"{game.OrderTitle} {game.Year}";
         if (!string.IsNullOrWhiteSpace(game.Title))
         {
             result += $" - {game.Title}";

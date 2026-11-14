@@ -24,7 +24,7 @@ public class GameDetailsViewModel
 
     public string FormattedTitle()
     {
-        var result = $"{OrderTitle} {Year}";
+        string result = $"{OrderTitle} {Year}";
 
         if (!string.IsNullOrWhiteSpace(Title))
         {

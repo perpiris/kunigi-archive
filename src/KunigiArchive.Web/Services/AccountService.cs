@@ -50,7 +50,7 @@ public class AccountService : IAccountService
             query = query.Where(user => user.Email!.Contains(searchQuery));
         }
 
-        var totalCount = await query.CountAsync();
+        int totalCount = await query.CountAsync();
 
         List<AppUser> accounts = await query
             .OrderBy(account => account.Id)
@@ -75,7 +75,7 @@ public class AccountService : IAccountService
         {
             AppUserId = account.Id,
             Email = account.Email!,
-            Role = userRoleDict.TryGetValue(account.Id, out var role) ? role : null
+            Role = userRoleDict.TryGetValue(account.Id, out string? role) ? role : null
         }).ToList();
 
         var paginatedData = new PaginatedViewModel<AccountDetailsViewModel>
@@ -101,7 +101,7 @@ public class AccountService : IAccountService
 
         var user = new AppUser { UserName = viewModel.Email, Email = viewModel.Email };
 
-        var password = GenerateTemporaryPassword();
+        string password = GenerateTemporaryPassword();
         IdentityResult identityResult = await _userManager.CreateAsync(user, password);
         if (!identityResult.Succeeded)
         {
@@ -187,7 +187,7 @@ public class AccountService : IAccountService
         IdentityResult result = await _userManager.UpdateAsync(appUser);
         if (!result.Succeeded)
         {
-            var errors = string.Join(", ", result.Errors.Select(error => error.Description));
+            string errors = string.Join(", ", result.Errors.Select(error => error.Description));
             return ServiceResponse.Failure($"Αποτυχία ενημέρωσης email: {errors}");
         }
 
@@ -209,7 +209,7 @@ public class AccountService : IAccountService
             return ServiceResponse.Failure();
         }
 
-        var passwordValid = await _userManager.CheckPasswordAsync(appUser, viewModel.OldPassword);
+        bool passwordValid = await _userManager.CheckPasswordAsync(appUser, viewModel.OldPassword);
         if (!passwordValid)
         {
             modelState.AddModelError("OldPassword", "Ο τρέχων κωδικός είναι λάθος.");
@@ -219,7 +219,7 @@ public class AccountService : IAccountService
         IdentityResult result = await _userManager.ChangePasswordAsync(appUser, viewModel.OldPassword, viewModel.NewPassword);
         if (!result.Succeeded)
         {
-            var errors = string.Join(", ", result.Errors.Select(error => error.Description));
+            string errors = string.Join(", ", result.Errors.Select(error => error.Description));
             foreach (IdentityError error in result.Errors)
             {
                 modelState.AddModelError(string.Empty, error.Description);
@@ -240,7 +240,7 @@ public class AccountService : IAccountService
         }
 
         IList<string> roles = await _userManager.GetRolesAsync(user);
-        var currentRole = roles.FirstOrDefault() ?? string.Empty;
+        string currentRole = roles.FirstOrDefault() ?? string.Empty;
 
         List<TeamDetailsViewModel> managedTeams = await _context.TeamManagers
             .Where(tm => tm.AppUserId == userId)
@@ -267,7 +267,7 @@ public class AccountService : IAccountService
 
     public async Task<ServiceResponse> ChangeRoleAsync(long userId, string newRole)
     {
-        var currentUserId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        long currentUserId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         if (userId == currentUserId)
         {
             return ServiceResponse.Failure("Δεν μπορείτε να αλλάξετε τον ρόλο του δικού σας λογαριασμού.");
@@ -280,7 +280,7 @@ public class AccountService : IAccountService
         }
 
         IList<string> currentRoles = await _userManager.GetRolesAsync(user);
-        var currentRole = currentRoles.FirstOrDefault() ?? string.Empty;
+        string currentRole = currentRoles.FirstOrDefault() ?? string.Empty;
 
         if (currentRole == newRole)
         {
@@ -346,7 +346,7 @@ public class AccountService : IAccountService
             return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
         }
 
-        var resetCode = GenerateResetCode();
+        string resetCode = GenerateResetCode();
 
         _memoryCache.Set(
             $"PasswordReset:{email}",
@@ -373,14 +373,14 @@ public class AccountService : IAccountService
         IdentityResult removePasswordResult = await _userManager.RemovePasswordAsync(user);
         if (!removePasswordResult.Succeeded)
         {
-            var errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
+            string errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
             return ServiceResponse.Failure($"Σφάλμα κατά την αφαίρεση του παλιού κωδικού: {errors}");
         }
 
         IdentityResult addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
         if (!addPasswordResult.Succeeded)
         {
-            var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
+            string errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
             return ServiceResponse.Failure($"Σφάλμα κατά τον ορισμό του νέου κωδικού: {errors}");
         }
 
@@ -397,15 +397,15 @@ public class AccountService : IAccountService
         const string digits = "23456789";
         const string all = upper + lower + digits;
 
-        var random = new byte[12];
+        byte[] random = new byte[12];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(random);
 
-        var result = new char[random.Length];
+        char[] result = new char[random.Length];
         result[0] = upper[random[0] % upper.Length];
         result[1] = lower[random[1] % lower.Length];
         result[2] = digits[random[2] % digits.Length];
-        for (var i = 3; i < result.Length; i++)
+        for (int i = 3; i < result.Length; i++)
         {
             result[i] = all[random[i] % all.Length];
         }
@@ -416,12 +416,12 @@ public class AccountService : IAccountService
     private static string GenerateResetCode()
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        var random = new byte[8];
+        byte[] random = new byte[8];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(random);
 
-        var result = new char[8];
-        for (var i = 0; i < result.Length; i++)
+        char[] result = new char[8];
+        for (int i = 0; i < result.Length; i++)
         {
             result[i] = chars[random[i] % chars.Length];
         }

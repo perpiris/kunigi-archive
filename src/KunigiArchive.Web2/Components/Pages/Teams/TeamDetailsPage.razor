@@ -1,0 +1,38 @@
+@page "/teams/{Slug}"
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.GetTeamBySlug
+@inject GetTeamBySlugHandler GetTeamBySlugHandler
+@inject NavigationManager Navigation
+
+@if (_team is not null)
+{
+    <PageTitle>@_team.Name</PageTitle>
+
+    <h1>@_team.Name</h1>
+    <p>
+        <span class="badge @(_team.IsActive ? "text-bg-success" : "text-bg-secondary")">
+            @(_team.IsActive ? "Ενεργή" : "Ανενεργή")
+        </span>
+    </p>
+    <p class="text-body-secondary">/teams/@_team.Slug</p>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private TeamDetails? _team;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _team = await GetTeamBySlugHandler.HandleAsync(Slug, CancellationToken.None);
+        }
+        catch (TeamNotFoundException)
+        {
+            _team = null;
+            Navigation.NotFound();
+        }
+    }
+}
