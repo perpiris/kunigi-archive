@@ -1,23 +1,23 @@
-/* Lists: a uniform 4:3 print. The picture is laid over it and scaled to fit, never cropped
-   (absolutely positioned, so its own height can't stretch the frame and get clipped). */
 .team-frame {
-    position: relative;
-    display: grid;
-    place-items: center;
-    aspect-ratio: 4 / 3;
-    background: linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
+    background: var(--k-sheet);
     border: 6px solid var(--k-sheet);
     box-shadow: 0 1px 0 var(--k-rule), 0 10px 22px var(--k-shadow);
-    overflow: hidden;
 }
 
+    /* The frame takes the picture's own shape, so the whole picture shows. */
     .team-frame img {
-        position: absolute;
-        inset: 0;
+        display: block;
         width: 100%;
-        height: 100%;
+        height: auto;
+        max-height: 70vh;
         object-fit: contain;
-        background: var(--k-sheet);
+    }
+
+    .team-frame.empty {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 4 / 3;
+        background: linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
     }
 
     .team-frame span {
@@ -27,17 +27,3 @@
         color: #fff;
         opacity: .9;
     }
-
-    /* Profile: the frame takes the picture's own shape, so the whole picture shows. */
-    .team-frame.natural:has(img) {
-        aspect-ratio: auto;
-        display: block;
-        background: var(--k-sheet);
-    }
-
-        .team-frame.natural img {
-            position: static;
-            height: auto;
-            max-height: 70vh;
-            object-fit: contain;
-        }

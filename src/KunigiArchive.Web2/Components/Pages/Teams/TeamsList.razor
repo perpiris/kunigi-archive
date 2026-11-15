@@ -22,12 +22,12 @@
     }
     else
     {
+        @* Names only: logos come in every shape, so cards with the name look the same for every team. *@
         <ul class="team-grid">
             @foreach (TeamSummary team in _page.Items)
             {
                 <li>
-                    <a href="teams/@team.Slug">
-                        <TeamFrame Name="@team.Name" Image="@team.Image" Thumbnail="true" />
+                    <a class="team-card" href="teams/@team.Slug">
                         <span class="name">@team.Name</span>
                     </a>
                 </li>

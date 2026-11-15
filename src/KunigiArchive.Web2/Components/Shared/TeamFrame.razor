@@ -1,11 +1,8 @@
-@using KunigiArchive.Application.Media
-@* A team's picture as a framed print. Without a picture, a stone-colored card with the team's initial. *@
-<div class="team-frame @Class">
+@* A team's picture as a framed print in its own shape. Without a picture, a stone-colored card with the team's initial. *@
+<div class="team-frame @(Image is null ? "empty" : null) @Class">
     @if (Image is not null)
     {
-        string full = "/" + Image;
-        string src = Thumbnail ? "/" + MediaRules.ThumbnailFor(Image) : full;
-        <img src="@src" alt="@Name" loading="lazy" onerror="this.onerror=null;this.src='@full'" />
+        <img src="/@Image" alt="@Name" />
     }
     else
     {
@@ -19,10 +16,6 @@
 
     [Parameter]
     public string? Image { get; set; }
-
-    // Lists show the 400px thumbnail; the team page shows the full picture.
-    [Parameter]
-    public bool Thumbnail { get; set; }
 
     [Parameter]
     public string? Class { get; set; }
