@@ -29,11 +29,11 @@
         content: "";
         position: absolute;
         z-index: -1;
-        right: -4%;
+        left: 50%;
         top: 50%;
-        width: 68%;
-        height: 90%;
-        translate: 0 -50%;
+        width: 84%;
+        height: 86%;
+        translate: -50% -50%;
         background: var(--watermark) center / contain no-repeat;
         opacity: .32;
         transition: rotate .4s ease-in-out;

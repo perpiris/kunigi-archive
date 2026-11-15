@@ -1,27 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 18 140 78" fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round">
-  <!-- The Fortezza on its rocky hill: two pointed bastions with sloped walls and the rounded
-       cordon, a parapet with arched gun openings, domed garittas on corbels at the bastion points,
-       and the Sultan Ibrahim mosque's wide dome rising in the middle. -->
-  <path d="M54 46 Q70 22 86 46 Z" fill="#fff" fill-opacity=".3"/>
-  <path d="M52.5 46 H87.5 V51 H52.5 Z"/>
-  <path d="M70 34 V30.5"/>
-  <path d="M60 46 V51 M66 46 V51 M74 46 V51 M80 46 V51" stroke-width=".7"/>
-  <path d="M12 54 L34 51 L40 56 L46 51 L92 51 L98 56 L104 51 L128 54"/>
-  <path d="M12 54 V60 M128 54 V60"/>
-  <path d="M12 60 L34 57 L40 62 L46 57 L92 57 L98 62 L104 57 L128 60"/>
-  <path d="M18.5 59.1 V57 Q20 54.6 21.5 56.8 V58.7 M25.5 58.2 V56 Q27 53.6 28.5 55.6 V57.8"/>
-  <path d="M53.5 57 V54.6 Q55 52.4 56.5 54.6 V57 M62.5 57 V54.6 Q64 52.4 65.5 54.6 V57 M71.5 57 V54.6 Q73 52.4 74.5 54.6 V57 M80.5 57 V54.6 Q82 52.4 83.5 54.6 V57"/>
-  <path d="M110.5 57.8 V55.6 Q112 53.4 113.5 55.8 V58.2 M118.5 58.8 V56.6 Q120 54.4 121.5 56.8 V59.2"/>
-  <path d="M12.4 62.5 L34 59.5 L40 64.5 L46 59.5 L92 59.5 L98 64.5 L104 59.5 L127.6 62.5" stroke-width="2.2"/>
-  <path d="M12 60 L8 84 M128 60 L132 84 M40 64.5 V84 M98 64.5 V84" />
-  <path d="M46 59.5 L45 84 M92 59.5 L93 84 M34 59.5 L35 84 M104 59.5 L103 84" stroke-width=".8" stroke-opacity=".6"/>
-  <path d="M16 70 H26 M54 68 H62 M70 72 H80 M108 70 H118 M20 77 H30 M60 78 H70 M112 77 H122 M84 66 H90" stroke-width=".7" stroke-opacity=".6"/>
-  <rect x="36.5" y="42" width="7" height="12" fill="#fff" fill-opacity=".2"/>
-  <path d="M36 42 Q40 34.5 44 42 Z" fill="#fff" fill-opacity=".45"/>
-  <path d="M36.5 54 L40 58.5 L43.5 54 M40 34.5 V32.5 M40 45 V49" />
-  <rect x="94.5" y="42" width="7" height="12" fill="#fff" fill-opacity=".2"/>
-  <path d="M94 42 Q98 34.5 102 42 Z" fill="#fff" fill-opacity=".45"/>
-  <path d="M94.5 54 L98 58.5 L101.5 54 M98 34.5 V32.5 M98 45 V49" />
-  <path d="M2 90 Q12 83 24 85 Q36 80 50 84 Q64 81 78 84 Q94 80 108 84 Q124 81 138 89"/>
-  <path d="M10 92 Q16 89 22 91 M30 88 Q36 86 40 88 M56 89 Q64 86 72 89 M86 88 Q92 86 98 88 M112 90 Q120 87 128 90" stroke-width=".8" stroke-opacity=".7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 14 140 84" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+  <!-- The Fortezza from the air, as seen from the sea: arrowhead bastions joined by curtain walls
+       along the crest, the Sultan Ibrahim mosque's dome inside, the town behind, the road and the
+       rocky shore around the headland, and the harbour mole with the lighthouse in the distance. -->
+
+  <!-- Harbour, lighthouse and town behind -->
+  <path d="M4 28 H30" stroke-width=".9" stroke-opacity=".7"/>
+  <path d="M30 28 V21 M29 21 H31" stroke-width=".9" stroke-opacity=".7"/>
+  <path d="M44 30 h5 v-3 h-5 z M52 29 h4 v-3 h-4 z M60 30 h6 v-3 h-6 z M70 28 h4 v-3 h-4 z M78 30 h5 v-3 h-5 z M88 29 h6 v-3 h-6 z M98 30 h4 v-3 h-4 z M106 29 h5 v-3 h-5 z M116 31 h4 v-3 h-4 z" stroke-width=".6" stroke-opacity=".55"/>
+
+  <!-- The plateau's sides rising to the town -->
+  <path d="M8 52 Q10 44 18 38 M132 52 Q130 44 122 37" stroke-width=".9" stroke-opacity=".7"/>
+
+  <!-- The mosque and the other buildings inside -->
+  <path d="M59 39 V46 H73 V39"/>
+  <path d="M58 39 Q66 25.5 74 39 Z" fill="#fff" fill-opacity=".3"/>
+  <path d="M66 32 V29.5"/>
+  <path d="M63.5 46 V42.5 Q66 40 68.5 42.5 V46" stroke-width=".8"/>
+  <rect x="40" y="43" width="10" height="5"/>
+  <path d="M40 43 L45 40.5 L50 43" stroke-width=".9"/>
+  <rect x="86" y="40" width="9" height="5"/>
+  <rect x="102" y="44" width="6" height="4" stroke-width=".9"/>
+  <path d="M26 45 Q32 43 36 46 M78 49 Q84 47 90 50 M110 39 Q116 37 120 41" stroke-width=".7" stroke-opacity=".6"/>
+
+  <!-- Bastioned wall: top edge, foot, visible corners and the cordon -->
+  <path d="M8 52 L20 55 L21 58 L28 65 L35 58 L36 56 L52 59 L53 62 L62 70 L71 62 L72 59 L88 58 L89 61 L98 68 L106 61 L107 58 L120 54 L126 58 L132 52"/>
+  <path d="M8 57 L20 60 M21 63 L28 70.5 L35 63 M36 61 L52 64 M53 67 L62 75.5 L71 67 M72 64 L88 63 M89 66 L98 73.5 L106 66 M107 63 L120 59 L126 63.5 L132 57" stroke-width="1.6"/>
+  <path d="M8 52 V57 M20 55 V60 M21 58 V63 M28 65 V70.5 M35 58 V63 M36 56 V61 M52 59 V64 M53 62 V67 M62 70 V75.5 M71 62 V67 M72 59 V64 M88 58 V63 M89 61 V66 M98 68 V73.5 M106 61 V66 M107 58 V63 M120 54 V59 M126 58 V63.5 M132 52 V57" stroke-width=".9"/>
+  <path d="M8 53.5 L20 56.5 L21 59.5 L28 66.5 L35 59.5 L36 57.5 L52 60.5 L53 63.5 L62 71.5 L71 63.5 L72 60.5 L88 59.5 L89 62.5 L98 69.5 L106 62.5 L107 59.5 L120 55.5 L126 59.5 L132 53.5" stroke-width=".6" stroke-opacity=".7"/>
+
+  <!-- Garittas on the bastion points -->
+  <path d="M26.8 65 V61 H29.2 V65 M26.6 61 Q28 58.6 29.4 61" stroke-width=".9"/>
+  <path d="M60.8 70 V66 H63.2 V70 M60.6 66 Q62 63.6 63.4 66" stroke-width=".9"/>
+  <path d="M96.8 68 V64 H99.2 V68 M96.6 64 Q98 61.6 99.4 64" stroke-width=".9"/>
+
+  <!-- Slope, road and rocky shore -->
+  <path d="M14 62 L17 67 M42 66 L44 71 M80 66 L82 71 M114 64 L116 69" stroke-width=".7" stroke-opacity=".6"/>
+  <path d="M4 64 Q30 86 70 83 Q112 81 136 62"/>
+  <path d="M8 61.5 Q32 80.5 70 78.5 Q108 76.5 132 60" stroke-width=".9"/>
+  <path d="M2 71 Q8 81 18 86 Q30 91 46 90 Q60 93 74 91 Q92 92 106 88 Q122 85 132 77 Q136 73 138 69" stroke-width="1"/>
+  <path d="M22 87 L26 85 M40 89 L44 87 M84 90 L88 88 M110 86 L114 84" stroke-width=".7" stroke-opacity=".6"/>
+
+  <!-- Sea -->
+  <path d="M10 94 Q14 92 18 94 T26 94 T34 94 M50 96 Q54 94 58 96 T66 96 T74 96 T82 96 M98 94 Q102 92 106 94 T114 94 T122 94" stroke-width=".8" stroke-opacity=".7"/>
 </svg>
