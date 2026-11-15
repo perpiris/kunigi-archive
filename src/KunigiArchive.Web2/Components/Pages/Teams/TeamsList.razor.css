@@ -7,7 +7,7 @@
     gap: 1.5rem;
 }
 
-/* The stone print, with the team's name set in it over a faint watermark. Seven watermarks take
+/* The stone print, with the team's name set in it over a faint watermark. Five watermarks take
    turns: the compass, the harbour lighthouse and Rethymno landmarks (wwwroot/img/watermarks). */
 .team-card {
     --watermark: url("/img/watermarks/compass.svg");
@@ -29,25 +29,24 @@
         content: "";
         position: absolute;
         z-index: -1;
-        right: -18%;
+        right: -4%;
         top: 50%;
-        width: 78%;
-        aspect-ratio: 1;
+        width: 68%;
+        height: 90%;
         translate: 0 -50%;
         background: var(--watermark) center / contain no-repeat;
-        opacity: .22;
+        opacity: .32;
         transition: rotate .4s ease-in-out;
     }
 
-    .team-grid li:nth-child(7n+2) .team-card { --watermark: url("/img/watermarks/lighthouse.svg"); }
-    .team-grid li:nth-child(7n+3) .team-card { --watermark: url("/img/watermarks/fortezza.svg"); }
-    .team-grid li:nth-child(7n+4) .team-card { --watermark: url("/img/watermarks/minaret.svg"); }
-    .team-grid li:nth-child(7n+5) .team-card { --watermark: url("/img/watermarks/fountain.svg"); }
-    .team-grid li:nth-child(7n+6) .team-card { --watermark: url("/img/watermarks/gate.svg"); }
-    .team-grid li:nth-child(7n+7) .team-card { --watermark: url("/img/watermarks/loggia.svg"); }
+
+    .team-grid li:nth-child(5n+2) .team-card { --watermark: url("/img/watermarks/lighthouse.svg"); }
+    .team-grid li:nth-child(5n+3) .team-card { --watermark: url("/img/watermarks/fortezza.svg"); }
+    .team-grid li:nth-child(5n+4) .team-card { --watermark: url("/img/watermarks/minaret.svg"); }
+    .team-grid li:nth-child(5n+5) .team-card { --watermark: url("/img/watermarks/loggia.svg"); }
 
     /* Only the compass turns. */
-    .team-grid li:nth-child(7n+1) .team-card:hover::before {
+    .team-grid li:nth-child(5n+1) .team-card:hover::before {
         rotate: 20deg;
     }
 
