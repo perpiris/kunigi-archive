@@ -37,6 +37,10 @@ public static class ServiceCollectionExtensions
             options.Events.OnRedirectToAccessDenied = context => RedirectOrStatus(context, StatusCodes.Status403Forbidden);
         });
 
+        // Roles are read from the sign-in cookie. Re-checking the security stamp every minute (default: 30)
+        // means a role change or a new temporary password takes effect almost at once. Cheap with a handful of users.
+        services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.FromMinutes(1));
+
         services.AddAuthorization();
         services.AddCascadingAuthenticationState();
 

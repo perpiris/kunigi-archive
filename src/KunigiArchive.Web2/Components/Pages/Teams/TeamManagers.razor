@@ -49,7 +49,9 @@
     <h2 class="h5 mt-4">Προσθήκη διαχειριστή</h2>
     @if (_team.AvailableManagers.Count == 0)
     {
-        <p class="text-body-secondary">Δεν υπάρχουν άλλοι χρήστες με ρόλο διαχειριστή ομάδας.</p>
+        <p class="text-body-secondary">
+            Δεν υπάρχουν άλλοι χρήστες με ρόλο διαχειριστή ομάδας. <a href="users/create">Νέος χρήστης</a>
+        </p>
     }
     else
     {

@@ -13,6 +13,11 @@ using KunigiArchive.Application.Teams.RemoveTeamManager;
 using KunigiArchive.Application.Teams.SetTeamImage;
 using KunigiArchive.Application.Teams.UpdateTeam;
 using KunigiArchive.Application.Teams.UploadTeamMedia;
+using KunigiArchive.Application.Users.ChangeUserRole;
+using KunigiArchive.Application.Users.CreateUser;
+using KunigiArchive.Application.Users.GetUserDetails;
+using KunigiArchive.Application.Users.GetUsers;
+using KunigiArchive.Application.Users.SendTemporaryPassword;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KunigiArchive.Application;
@@ -38,6 +43,12 @@ public static class DependencyInjection
 
         services.AddScoped<UploadTeamMediaHandler>();
         services.AddScoped<DeleteTeamMediaHandler>();
+
+        services.AddScoped<GetUsersHandler>();
+        services.AddScoped<GetUserDetailsHandler>();
+        services.AddScoped<CreateUserHandler>();
+        services.AddScoped<ChangeUserRoleHandler>();
+        services.AddScoped<SendTemporaryPasswordHandler>();
 
         services.AddSingleton(TimeProvider.System);
 

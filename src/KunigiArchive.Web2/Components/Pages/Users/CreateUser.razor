@@ -1,0 +1,72 @@
+@page "/users/create"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Users.CreateUser
+@using KunigiArchive.Web2.Forms.Users
+@using KunigiArchive.Web2.Mappers
+@inject CreateUserHandler CreateUserHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Νέος χρήστης</PageTitle>
+
+<h1>Νέος χρήστης</h1>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
+
+<EditForm Model="Form" FormName="create-user" OnValidSubmit="CreateAsync" Enhance>
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <InputText id="email" type="email" class="form-control" @bind-Value="Form.Email" />
+        <ValidationMessage For="() => Form.Email" />
+    </div>
+
+    <div class="mb-3">
+        <label for="role" class="form-label">Ρόλος</label>
+        <InputSelect id="role" class="form-select" @bind-Value="Form.Role">
+            @foreach ((string value, string label) in RoleOptions.All)
+            {
+                <option value="@value">@label</option>
+            }
+        </InputSelect>
+    </div>
+
+    <p class="form-text">Ο χρήστης θα λάβει email με έναν προσωρινό κωδικό για να συνδεθεί.</p>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Δημιουργία</button>
+        <a class="btn btn-outline-secondary" href="users">Ακύρωση</a>
+    </div>
+</EditForm>
+
+@code {
+    [SupplyParameterFromForm]
+    private CreateUserForm Form { get; set; } = null!;
+
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        Form ??= new CreateUserForm();
+    }
+
+    private async Task CreateAsync()
+    {
+        CreateUserResult result;
+        try
+        {
+            result = await CreateUserHandler.HandleAsync(Form.ToCommand(), CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is InvalidRequestException or ConflictException)
+        {
+            _error = exception.Message;
+            return;
+        }
+
+        Navigation.NavigateTo($"/users/{result.UserId}?created={(result.EmailSent ? "sent" : "email-failed")}");
+    }
+}

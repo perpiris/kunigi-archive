@@ -1,4 +1,5 @@
 using KunigiArchive.Application.Abstractions.Exceptions;
+using KunigiArchive.Application.Users;
 using KunigiArchive.Domain.Common;
 using KunigiArchive.Web2.Extensions;
 using Microsoft.AspNetCore.Diagnostics;
@@ -29,6 +30,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
             NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
+            EmailDeliveryException => (StatusCodes.Status502BadGateway, "Email not sent"),
             _ => (StatusCodes.Status500InternalServerError, "Server error")
         };
 
