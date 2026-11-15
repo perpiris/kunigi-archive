@@ -22,6 +22,7 @@ using KunigiArchive.Application.Users.ChangeUserRole;
 using KunigiArchive.Application.Users.CreateUser;
 using KunigiArchive.Application.Users.GetUserDetails;
 using KunigiArchive.Application.Users.GetUsers;
+using KunigiArchive.Application.Users.ResetPassword;
 using KunigiArchive.Application.Users.SendTemporaryPassword;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,6 +61,8 @@ public static class DependencyInjection
         services.AddScoped<CreateUserHandler>();
         services.AddScoped<ChangeUserRoleHandler>();
         services.AddScoped<SendTemporaryPasswordHandler>();
+        services.AddScoped<RequestPasswordResetHandler>();
+        services.AddScoped<ResetPasswordHandler>();
 
         services.AddSingleton(TimeProvider.System);
 

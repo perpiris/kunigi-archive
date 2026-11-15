@@ -19,6 +19,10 @@
     {
         <div class="alert alert-danger" role="alert">@_error</div>
     }
+    else if (Reset == 1)
+    {
+        <div class="alert alert-success" role="status">Ο κωδικός σας άλλαξε. Συνδεθείτε με τον νέο κωδικό.</div>
+    }
 
     @* No enhanced navigation: the whole page has to reload so the menu picks up the new sign-in. *@
     <EditForm Model="Form" FormName="login" OnValidSubmit="LoginAsync" class="k-form">
@@ -41,6 +45,8 @@
             <button type="submit" class="btn btn-primary w-100">Σύνδεση</button>
         </div>
     </EditForm>
+
+    <p class="mt-3 text-center"><a href="auth/forgot-password">Ξεχάσατε τον κωδικό;</a></p>
 </div>
 
 @code {
@@ -52,6 +58,9 @@
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    private int? Reset { get; set; }
 
     private string? _error;
 

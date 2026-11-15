@@ -1,6 +1,9 @@
+using System.Text;
 using KunigiArchive.Application.Abstractions.Exceptions;
 using KunigiArchive.Application.Users;
+using KunigiArchive.Application.Users.ResetPassword;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace KunigiArchive.Infrastructure.Identity;
 
@@ -53,6 +56,61 @@ internal sealed class UserAccounts : IUserAccounts
 
         EnsureSucceeded(await _userManager.SetLockoutEndDateAsync(user, null));
         EnsureSucceeded(await _userManager.ResetAccessFailedCountAsync(user));
+    }
+
+    public async Task<PasswordResetCode?> CreatePasswordResetCodeAsync(string email, CancellationToken cancellationToken)
+    {
+        AppUser? user = await _userManager.FindByEmailAsync(email);
+        if (user?.Email is null)
+        {
+            return null;
+        }
+
+        // Identity's token holds the security stamp: it expires (TokenLifespan) and dies once the password changes.
+        string token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        string code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+        return new PasswordResetCode(user.Id, user.Email, code);
+    }
+
+    public async Task<Guid?> ResetPasswordAsync(
+        string email, string code, string newPassword, CancellationToken cancellationToken)
+    {
+        AppUser? user = await _userManager.FindByEmailAsync(email);
+        if (user is null || !TryDecode(code, out string token))
+        {
+            return null;
+        }
+
+        IdentityResult result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+        if (!result.Succeeded)
+        {
+            if (result.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.InvalidToken)))
+            {
+                return null;
+            }
+
+            throw new InvalidRequestException(PasswordRules.Message);
+        }
+
+        EnsureSucceeded(await _userManager.SetLockoutEndDateAsync(user, null));
+        EnsureSucceeded(await _userManager.ResetAccessFailedCountAsync(user));
+
+        return user.Id;
+    }
+
+    private static bool TryDecode(string code, out string token)
+    {
+        try
+        {
+            token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+            return true;
+        }
+        catch (FormatException)
+        {
+            token = string.Empty;
+            return false;
+        }
     }
 
     private async Task<AppUser> FindAsync(Guid userId)

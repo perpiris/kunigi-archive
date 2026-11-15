@@ -497,6 +497,7 @@ kunigi_mail_v2/
 # Local-only files
 docker-compose.override.yml
 .claude/settings.local.json
+.claude/launch.json
 
 # Ops scripts (the VS template above ignores Backup*/ folders)
 !ops/vps/backup/

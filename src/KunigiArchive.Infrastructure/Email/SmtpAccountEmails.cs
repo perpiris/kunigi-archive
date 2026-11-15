@@ -17,19 +17,32 @@ internal sealed class SmtpAccountEmails : IAccountEmails
 
     public async Task SendAccountCreatedAsync(string email, string temporaryPassword, CancellationToken cancellationToken)
     {
-        (string subject, string body) = AccountEmailTemplates.AccountCreated(temporaryPassword, LoginUrl());
+        (string subject, string body) = AccountEmailTemplates.AccountCreated(temporaryPassword, LoginUrl(), SiteUrl());
         await SendAsync(email, subject, body, cancellationToken);
     }
 
     public async Task SendTemporaryPasswordAsync(string email, string temporaryPassword, CancellationToken cancellationToken)
     {
-        (string subject, string body) = AccountEmailTemplates.TemporaryPassword(temporaryPassword, LoginUrl());
+        (string subject, string body) = AccountEmailTemplates.TemporaryPassword(temporaryPassword, LoginUrl(), SiteUrl());
         await SendAsync(email, subject, body, cancellationToken);
+    }
+
+    public async Task SendPasswordResetAsync(string email, string code, CancellationToken cancellationToken)
+    {
+        // Escaped: emails can contain "+" and other characters that break a query string.
+        string resetUrl = $"{SiteUrl()}/auth/reset-password?email={Uri.EscapeDataString(email)}&code={Uri.EscapeDataString(code)}";
+        (string subject, string body) = AccountEmailTemplates.PasswordReset(resetUrl, SiteUrl());
+        await SendAsync(email, subject, body, cancellationToken);
+    }
+
+    private string SiteUrl()
+    {
+        return _options.ApplicationUrl.TrimEnd('/');
     }
 
     private string LoginUrl()
     {
-        return _options.ApplicationUrl.TrimEnd('/') + "/auth/login";
+        return SiteUrl() + "/auth/login";
     }
 
     private async Task SendAsync(string to, string subject, string body, CancellationToken cancellationToken)

@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using KunigiArchive.Web.Data;
 using KunigiArchive.Web.Entities;
 using KunigiArchive.Web.Services.Interfaces;
@@ -8,8 +9,8 @@ using KunigiArchive.Web.ViewModels.Common;
 using KunigiArchive.Web.ViewModels.Team;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace KunigiArchive.Web.Services;
 
@@ -20,7 +21,6 @@ public class AccountService : IAccountService
     private readonly UserManager<AppUser> _userManager;
 
     private readonly IEmailService _emailService;
-    private readonly IMemoryCache _memoryCache;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     private ClaimsPrincipal User => _httpContextAccessor.HttpContext?.User!;
@@ -30,14 +30,12 @@ public class AccountService : IAccountService
         DataContext context,
         UserManager<AppUser> userManager,
         IEmailService emailService,
-        IMemoryCache memoryCache,
         IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
         _context = context;
         _userManager = userManager;
         _emailService = emailService;
-        _memoryCache = memoryCache;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -58,7 +56,7 @@ public class AccountService : IAccountService
             .Take(pageSize)
             .ToListAsync();
 
-        var userIds = accounts.Select(user => user.Id).ToList();
+        List<long> userIds = accounts.Select(user => user.Id).ToList();
         var userRoles = await _context.UserRoles
             .Where(userRole => userIds.Contains(userRole.UserId))
             .Join(_context.Roles,
@@ -67,18 +65,18 @@ public class AccountService : IAccountService
                 (userRole, role) => new { userRole.UserId, role.Name })
             .ToListAsync();
 
-        var userRoleDict = userRoles
+        Dictionary<long, string?> userRoleDict = userRoles
             .GroupBy(user => user.UserId)
             .ToDictionary(group => group.Key, g => g.First().Name);
 
-        var accountList = accounts.Select(account => new AccountDetailsViewModel
+        List<AccountDetailsViewModel> accountList = accounts.Select(account => new AccountDetailsViewModel
         {
             AppUserId = account.Id,
             Email = account.Email!,
             Role = userRoleDict.TryGetValue(account.Id, out string? role) ? role : null
         }).ToList();
 
-        var paginatedData = new PaginatedViewModel<AccountDetailsViewModel>
+        PaginatedViewModel<AccountDetailsViewModel> paginatedData = new PaginatedViewModel<AccountDetailsViewModel>
         {
             Items = accountList,
             CurrentPage = pageNumber,
@@ -99,7 +97,7 @@ public class AccountService : IAccountService
             return ServiceResponse.Failure("Υπάρχει ήδη ένας χρήστης με αυτό το email.");
         }
 
-        var user = new AppUser { UserName = viewModel.Email, Email = viewModel.Email };
+        AppUser user = new AppUser { UserName = viewModel.Email, Email = viewModel.Email };
 
         string password = GenerateTemporaryPassword();
         IdentityResult identityResult = await _userManager.CreateAsync(user, password);
@@ -149,7 +147,7 @@ public class AccountService : IAccountService
         }
 
         IList<string> roles = await _userManager.GetRolesAsync(user);
-        var viewModel = new AccountDetailsViewModel
+        AccountDetailsViewModel viewModel = new AccountDetailsViewModel
         {
             AppUserId = user.Id,
             Email = user.Email!,
@@ -254,7 +252,7 @@ public class AccountService : IAccountService
             })
             .ToListAsync();
 
-        var viewModel = new AccountEditViewModel
+        AccountEditViewModel viewModel = new AccountEditViewModel
         {
             AppUserId = user.Id,
             Email = user.Email!,
@@ -332,61 +330,68 @@ public class AccountService : IAccountService
     {
         IList<AppUser> accounts = await _userManager.GetUsersInRoleAsync("Manager");
 
-        var mappedAccounts = accounts.Select(x => new AccountDetailsViewModel { AppUserId = x.Id, Email = x.Email! })
+        List<AccountDetailsViewModel> mappedAccounts = accounts.Select(x => new AccountDetailsViewModel { AppUserId = x.Id, Email = x.Email! })
             .ToList();
 
         return ServiceResponse<IEnumerable<AccountDetailsViewModel>>.Successful(mappedAccounts);
     }
 
+    // Always succeeds for the caller, so the form doesn't reveal which emails have accounts.
     public async Task<ServiceResponse> InitiatePasswordResetAsync(string email)
     {
         AppUser? user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
-            return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
+            return ServiceResponse.Successful();
         }
 
-        string resetCode = GenerateResetCode();
+        // Identity's token is signed and holds the security stamp: it expires (TokenLifespan), works once,
+        // and no state is kept on the server.
+        string token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        string code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
-        _memoryCache.Set(
-            $"PasswordReset:{email}",
-            resetCode,
-            new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) });
-
-        await _emailService.SendPasswordResetEmailAsync(email, resetCode);
-        return ServiceResponse.Successful("Έχει σταλεί email με οδηγίες για την επαναφορά του κωδικού.");
+        await _emailService.SendPasswordResetEmailAsync(user.Email!, code);
+        return ServiceResponse.Successful();
     }
 
-    public async Task<ServiceResponse> ResetPasswordAsync(string email, string token, string newPassword)
+    public async Task<ServiceResponse> ResetPasswordAsync(string email, string code, string newPassword)
     {
+        const string invalidLink = "Ο σύνδεσμος δεν ισχύει ή έχει λήξει. Ζητήστε νέο σύνδεσμο επαναφοράς.";
+
         AppUser? user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
-            return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
+            return ServiceResponse.Failure(invalidLink);
         }
 
-        if (!_memoryCache.TryGetValue($"PasswordReset:{email}", out string? storedToken) || storedToken != token)
+        string token;
+        try
         {
-            return ServiceResponse.Failure("Ο χρήστης δεν βρέθηκε.");
+            token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
         }
-
-        IdentityResult removePasswordResult = await _userManager.RemovePasswordAsync(user);
-        if (!removePasswordResult.Succeeded)
+        catch (FormatException)
         {
-            string errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
-            return ServiceResponse.Failure($"Σφάλμα κατά την αφαίρεση του παλιού κωδικού: {errors}");
+            return ServiceResponse.Failure(invalidLink);
         }
 
-        IdentityResult addPasswordResult = await _userManager.AddPasswordAsync(user, newPassword);
-        if (!addPasswordResult.Succeeded)
+        // One step: the password only changes if the token is valid and the new password passes the rules.
+        IdentityResult result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+        if (!result.Succeeded)
         {
-            string errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
-            return ServiceResponse.Failure($"Σφάλμα κατά τον ορισμό του νέου κωδικού: {errors}");
+            return result.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.InvalidToken))
+                ? ServiceResponse.Failure(invalidLink)
+                : ServiceResponse.Failure(PasswordRulesMessage);
         }
 
-        _memoryCache.Remove($"PasswordReset:{email}");
-        return ServiceResponse.Successful("Ο κωδικός επαναφέρθηκε επιτυχώς.");
+        await _userManager.SetLockoutEndDateAsync(user, null);
+        await _userManager.ResetAccessFailedCountAsync(user);
+
+        _logger.LogInformation("Password reset for user {UserId}", user.Id);
+        return ServiceResponse.Successful("Ο κωδικός σας άλλαξε. Μπορείτε να συνδεθείτε με τον νέο κωδικό.");
     }
+
+    private const string PasswordRulesMessage =
+        "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες, με ένα κεφαλαίο, ένα πεζό γράμμα και ένα ψηφίο.";
 
     private static string GenerateTemporaryPassword()
     {
@@ -398,7 +403,7 @@ public class AccountService : IAccountService
         const string all = upper + lower + digits;
 
         byte[] random = new byte[12];
-        using var rng = RandomNumberGenerator.Create();
+        using RandomNumberGenerator rng = RandomNumberGenerator.Create();
         rng.GetBytes(random);
 
         char[] result = new char[random.Length];
@@ -408,22 +413,6 @@ public class AccountService : IAccountService
         for (int i = 3; i < result.Length; i++)
         {
             result[i] = all[random[i] % all.Length];
-        }
-
-        return new string(result);
-    }
-
-    private static string GenerateResetCode()
-    {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        byte[] random = new byte[8];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(random);
-
-        char[] result = new char[8];
-        for (int i = 0; i < result.Length; i++)
-        {
-            result[i] = chars[random[i] % chars.Length];
         }
 
         return new string(result);

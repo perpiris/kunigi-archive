@@ -17,5 +17,5 @@ public interface IAccountService
     Task<ServiceResponse> ChangeRoleAsync(long userId, string newRole);
     Task<ServiceResponse<IEnumerable<AccountDetailsViewModel>>> GetAvailableManagersAsync();
     Task<ServiceResponse> InitiatePasswordResetAsync(string email);
-    Task<ServiceResponse> ResetPasswordAsync(string email, string token, string newPassword);
+    Task<ServiceResponse> ResetPasswordAsync(string email, string code, string newPassword);
 }

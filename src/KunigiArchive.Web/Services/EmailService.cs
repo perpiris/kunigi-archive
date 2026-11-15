@@ -159,7 +159,9 @@ public class EmailService : IEmailService
     private (string subject, string body) GetPasswordResetEmail(string email, string resetCode)
     {
         const string subject = "Επαναφορά κωδικού πρόσβασης";
-        string resetUrl = _settings.ApplicationUrl + $"/auth/reset-password?code={resetCode}&email={email}";
+        // Escaped: emails can contain "+" and other characters that break a query string.
+        string resetUrl = _settings.ApplicationUrl.TrimEnd('/') +
+                          $"/auth/reset-password?code={Uri.EscapeDataString(resetCode)}&email={Uri.EscapeDataString(email)}";
 
         string body = $$"""
                      <html>
