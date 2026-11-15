@@ -9,4 +9,5 @@ public interface ITeamRepository
     Task<Team?> GetBySlugAsync(Slug slug, CancellationToken cancellationToken);
     Task<Team?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
     void Add(Team team);
+    void Remove(Team team);
 }

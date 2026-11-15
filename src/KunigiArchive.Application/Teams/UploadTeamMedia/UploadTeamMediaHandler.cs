@@ -59,7 +59,7 @@ public sealed class UploadTeamMediaHandler
         {
             foreach (MediaUpload file in command.Files)
             {
-                StoredMedia media = await _mediaStorage.SaveAsync(TeamDirectory(team), file, cancellationToken);
+                StoredMedia media = await _mediaStorage.SaveAsync(TeamMediaPaths.Directory(team.Id), file, cancellationToken);
                 stored.Add(media);
                 added.Add(team.AddMedia(media.Path, media.FileName, OriginalName(file), _timeProvider.GetUtcNow()));
             }
@@ -79,12 +79,6 @@ public sealed class UploadTeamMediaHandler
         _logger.LogInformation("{Count} media files uploaded to team {TeamId}", added.Count, team.Id);
 
         return added.Select(m => m.ToDetails()).ToList();
-    }
-
-    // By id, not slug: the folder never has to move when an admin changes the slug.
-    private static string TeamDirectory(Team team)
-    {
-        return $"teams/{team.Id}";
     }
 
     private static string OriginalName(MediaUpload file)

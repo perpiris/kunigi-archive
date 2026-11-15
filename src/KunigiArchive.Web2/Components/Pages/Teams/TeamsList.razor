@@ -7,11 +7,13 @@
 
 <h1 class="mb-3">Ομάδες</h1>
 
+<SearchForm Action="teams" Search="@Search" Placeholder="Αναζήτηση ομάδας" MaxLength="GetTeamsQuery.SearchMaxLength" />
+
 @if (_page is not null)
 {
     @if (_page.Items.Count == 0)
     {
-        <p class="text-body-secondary">Δεν υπάρχουν ομάδες.</p>
+        <p class="text-body-secondary">@(string.IsNullOrWhiteSpace(Search) ? "Δεν υπάρχουν ομάδες." : "Δεν βρέθηκαν ομάδες.")</p>
     }
     else
     {
@@ -30,12 +32,15 @@
         </div>
     }
 
-    <CursorPager BaseUrl="teams" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" />
+    <CursorPager BaseUrl="teams" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" Search="@Search" />
 }
 
 @code {
     [SupplyParameterFromQuery]
     public string? After { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Search { get; set; }
 
     private TeamsCursor? _after;
     private TeamsPage? _page;
@@ -44,6 +49,6 @@
     {
         // An invalid or tampered cursor just starts from the beginning.
         _after = TeamsCursor.TryDecode(After, out TeamsCursor? after) ? after : null;
-        _page = await GetTeamsHandler.HandleAsync(new GetTeamsQuery(_after), CancellationToken.None);
+        _page = await GetTeamsHandler.HandleAsync(new GetTeamsQuery(_after, Search), CancellationToken.None);
     }
 }

@@ -1,26 +1,60 @@
 @page "/teams/{Slug}/edit"
 @attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
 @using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Media
 @using KunigiArchive.Application.Teams
 @using KunigiArchive.Application.Teams.GetTeamForEdit
+@using KunigiArchive.Application.Teams.SetTeamImage
 @using KunigiArchive.Application.Teams.UpdateTeam
 @using KunigiArchive.Domain.Common
 @using KunigiArchive.Web2.Forms.Teams
 @using KunigiArchive.Web2.Mappers
 @inject GetTeamForEditHandler GetTeamForEditHandler
 @inject UpdateTeamHandler UpdateTeamHandler
+@inject SetTeamImageHandler SetTeamImageHandler
 @inject NavigationManager Navigation
 
 <PageTitle>Επεξεργασία ομάδας</PageTitle>
 
-@if (Form is not null)
+@if (_team is not null && Form is not null)
 {
     <h1>Επεξεργασία ομάδας</h1>
 
-    @if (_error is not null)
+    @if (_message is not null)
     {
-        <div class="alert alert-danger" role="alert">@_error</div>
+        <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
     }
+
+    <section class="card mb-4">
+        <div class="card-body">
+            <h2 class="h5 card-title">Εικόνα</h2>
+            <div class="d-flex flex-wrap gap-3 align-items-start">
+                @if (_team.Image is not null)
+                {
+                    <img class="team-image-preview" src="/@_team.Image" alt="@_team.Name" />
+                }
+                <form method="post" enctype="multipart/form-data" @formname="team-image" @onsubmit="SaveImageAsync"
+                      class="flex-grow-1">
+                    <AntiforgeryToken />
+                    <div class="d-flex gap-2">
+                        <input type="file" name="Image" accept="@MediaRules.AcceptAttribute" class="form-control"
+                               aria-label="Νέα εικόνα" />
+                        <button type="submit" class="btn btn-primary">@(_team.Image is null ? "Ανέβασμα" : "Αντικατάσταση")</button>
+                    </div>
+                    <div class="form-text">Εικόνα (JPG, PNG, GIF, WebP) ή PDF, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB.</div>
+                </form>
+                @if (_team.Image is not null)
+                {
+                    <form method="post" @formname="remove-team-image" @onsubmit="RemoveImageAsync">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="RemoveImage" value="true" />
+                        <button type="submit" class="btn btn-outline-danger"
+                                onclick="return confirm('Αφαίρεση της εικόνας;')">Αφαίρεση</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </section>
 
     <EditForm Model="Form" FormName="edit-team" OnValidSubmit="SaveAsync" Enhance>
         <DataAnnotationsValidator />
@@ -90,23 +124,74 @@
     [Parameter]
     public string Slug { get; set; } = string.Empty;
 
-    [SupplyParameterFromForm]
+    [SupplyParameterFromForm(FormName = "edit-team")]
     private EditTeamForm? Form { get; set; }
 
-    private string? _error;
+    [SupplyParameterFromForm(FormName = "team-image")]
+    private IFormFile? Image { get; set; }
+
+    [SupplyParameterFromForm(FormName = "remove-team-image")]
+    private bool RemoveImage { get; set; }
+
+    private TeamDetails? _team;
+    private string? _message;
+    private bool _isError;
 
     protected override async Task OnInitializedAsync()
     {
-        // On a POST the form comes from the submitted fields; only a GET loads the team.
-        if (Form is not null)
+        await LoadAsync();
+
+        // When the edit form was posted its fields are kept; otherwise it starts from the saved team.
+        Form ??= _team?.ToEditForm();
+    }
+
+    private async Task SaveImageAsync()
+    {
+        if (_team is null)
         {
             return;
         }
 
+        if (Image is null || string.IsNullOrEmpty(Image.FileName))
+        {
+            (_message, _isError) = ("Δεν επιλέχθηκε αρχείο.", true);
+            return;
+        }
+
+        await using Stream content = Image.OpenReadStream();
+        await ChangeImageAsync(new MediaUpload(content, Image.FileName, Image.Length), "Η εικόνα αποθηκεύτηκε.");
+    }
+
+    private async Task RemoveImageAsync()
+    {
+        if (_team is not null && RemoveImage)
+        {
+            await ChangeImageAsync(null, "Η εικόνα αφαιρέθηκε.");
+        }
+    }
+
+    private async Task ChangeImageAsync(MediaUpload? image, string success)
+    {
         try
         {
-            TeamDetails team = await GetTeamForEditHandler.HandleAsync(Slug, CancellationToken.None);
-            Form = team.ToEditForm();
+            _team = await SetTeamImageHandler.HandleAsync(new SetTeamImageCommand(_team!.Id, image), CancellationToken.None);
+            (_message, _isError) = (success, false);
+        }
+        catch (Exception exception) when (exception is InvalidRequestException or DomainException)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _team = await GetTeamForEditHandler.HandleAsync(Slug, CancellationToken.None);
         }
         catch (TeamNotFoundException)
         {
@@ -127,7 +212,7 @@
         }
         catch (Exception exception) when (exception is DomainException or ConflictException)
         {
-            _error = exception.Message;
+            (_message, _isError) = (exception.Message, true);
             return;
         }
         catch (TeamNotFoundException)

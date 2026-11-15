@@ -1,0 +1,24 @@
+@* A plain GET form: the search ends up in the URL, so results can be bookmarked and paged. *@
+<form method="get" action="@Action" class="d-flex gap-2 mb-3" role="search">
+    <input type="search" name="search" value="@Search" class="form-control" placeholder="@Placeholder"
+           aria-label="@Placeholder" maxlength="@MaxLength" />
+    <button type="submit" class="btn btn-outline-primary">Αναζήτηση</button>
+    @if (!string.IsNullOrWhiteSpace(Search))
+    {
+        <a class="btn btn-outline-secondary" href="@Action">Καθαρισμός</a>
+    }
+</form>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Action { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Search { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Αναζήτηση";
+
+    [Parameter]
+    public int MaxLength { get; set; } = 100;
+}

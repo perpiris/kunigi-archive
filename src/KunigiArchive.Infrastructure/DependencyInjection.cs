@@ -2,6 +2,7 @@ using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Media;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Application.Users;
+using KunigiArchive.Domain.Games;
 using KunigiArchive.Domain.Teams;
 using KunigiArchive.Infrastructure.Identity;
 using KunigiArchive.Infrastructure.Media;
@@ -33,6 +34,7 @@ public static class DependencyInjection
 
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ITeamQueries, TeamQueries>();
+        services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUserQueries, UserQueries>();
 
         services.AddIdentity(configuration);

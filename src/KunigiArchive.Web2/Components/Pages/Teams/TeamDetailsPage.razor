@@ -1,7 +1,7 @@
 @page "/teams/{Slug}"
 @using KunigiArchive.Application.Teams
-@using KunigiArchive.Application.Teams.GetTeamBySlug
-@inject GetTeamBySlugHandler GetTeamBySlugHandler
+@using KunigiArchive.Application.Teams.GetTeamProfile
+@inject GetTeamProfileHandler GetTeamProfileHandler
 @inject NavigationManager Navigation
 
 @if (_team is not null)
@@ -15,9 +15,10 @@
                 @(_team.IsActive ? "Ενεργή" : "Ανενεργή")
             </span>
         </div>
-        <AuthorizeView Roles="@($"{Roles.Admin},{Roles.Manager}")">
+        @if (_profile!.CanEdit)
+        {
             <a class="btn btn-outline-primary" href="teams/@_team.Slug/actions">Ενέργειες</a>
-        </AuthorizeView>
+        }
     </div>
 
     @if (_team.Image is not null)
@@ -47,6 +48,17 @@
         </ul>
     }
 
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h2 class="h4">Διοργανώσεις</h2>
+            <GameList Games="_profile.HostedGames" Empty="Δεν έχει διοργανώσει παιχνίδι." />
+        </div>
+        <div class="col-md-6">
+            <h2 class="h4">Νίκες</h2>
+            <GameList Games="_profile.WonGames" Empty="Δεν έχει κερδίσει παιχνίδι." />
+        </div>
+    </div>
+
     <h2 class="h4 mt-4">Αρχεία</h2>
     @if (_team.Media.Count == 0)
     {
@@ -72,6 +84,7 @@
     [Parameter]
     public string Slug { get; set; } = string.Empty;
 
+    private TeamProfile? _profile;
     private TeamDetails? _team;
     private List<(string Label, string Url)> _links = [];
 
@@ -79,11 +92,12 @@
     {
         try
         {
-            _team = await GetTeamBySlugHandler.HandleAsync(Slug, CancellationToken.None);
+            _profile = await GetTeamProfileHandler.HandleAsync(Slug, CancellationToken.None);
+            _team = _profile.Team;
         }
         catch (TeamNotFoundException)
         {
-            _team = null;
+            (_profile, _team) = (null, null);
             Navigation.NotFound();
             return;
         }

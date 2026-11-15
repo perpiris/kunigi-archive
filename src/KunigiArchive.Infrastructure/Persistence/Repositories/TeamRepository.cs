@@ -38,6 +38,11 @@ internal sealed class TeamRepository : ITeamRepository
         _dbContext.Teams.Add(team);
     }
 
+    public void Remove(Team team)
+    {
+        _dbContext.Teams.Remove(team);
+    }
+
     private IQueryable<Team> Aggregate()
     {
         return _dbContext.Teams

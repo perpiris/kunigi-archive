@@ -1,0 +1,5 @@
+.team-image-preview {
+    max-width: 160px;
+    max-height: 160px;
+    object-fit: contain;
+}
