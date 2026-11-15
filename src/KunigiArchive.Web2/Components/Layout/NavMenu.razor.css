@@ -29,12 +29,6 @@
         line-height: 1;
     }
 
-    .brand small {
-        font-size: .6875rem;
-        letter-spacing: .14em;
-        text-transform: uppercase;
-        color: var(--k-faded);
-    }
 
 .sections {
     display: flex;
@@ -72,15 +66,6 @@
     .account form {
         margin: 0;
     }
-
-.who {
-    color: var(--k-faded);
-    font-size: .875rem;
-    max-width: 16rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
 
 .account-button {
     display: inline-block;
@@ -152,9 +137,5 @@
 
     .account {
         margin-left: auto;
-    }
-
-    .who {
-        display: none;
     }
 }

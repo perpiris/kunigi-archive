@@ -58,6 +58,43 @@ internal sealed class UserAccounts : IUserAccounts
         EnsureSucceeded(await _userManager.ResetAccessFailedCountAsync(user));
     }
 
+    public async Task ChangeEmailAsync(Guid userId, string currentPassword, string newEmail, CancellationToken cancellationToken)
+    {
+        AppUser user = await FindAsync(userId);
+        await EnsurePasswordAsync(user, currentPassword);
+
+        // The email is also the user name people sign in with. SetEmailAsync renews the security stamp.
+        EnsureSucceeded(await _userManager.SetUserNameAsync(user, newEmail));
+        EnsureSucceeded(await _userManager.SetEmailAsync(user, newEmail));
+
+        // Admins create accounts for addresses they know; a user's own change is trusted the same way.
+        user.EmailConfirmed = true;
+        EnsureSucceeded(await _userManager.UpdateAsync(user));
+    }
+
+    public async Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken)
+    {
+        AppUser user = await FindAsync(userId);
+        await EnsurePasswordAsync(user, currentPassword);
+
+        // Checks the rules before changing anything, and renews the security stamp.
+        IdentityResult result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+        if (!result.Succeeded)
+        {
+            throw new InvalidRequestException(PasswordRules.Message);
+        }
+    }
+
+    private async Task EnsurePasswordAsync(AppUser user, string password)
+    {
+        if (!await _userManager.CheckPasswordAsync(user, password))
+        {
+            throw new InvalidRequestException(WrongPasswordMessage);
+        }
+    }
+
+    private const string WrongPasswordMessage = "Ο τρέχων κωδικός δεν είναι σωστός.";
+
     public async Task<PasswordResetCode?> CreatePasswordResetCodeAsync(string email, CancellationToken cancellationToken)
     {
         AppUser? user = await _userManager.FindByEmailAsync(email);

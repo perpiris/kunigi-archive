@@ -179,14 +179,6 @@ h1:focus {
     color: var(--k-faded);
 }
 
-.k-catalogue {
-    font-size: .8125rem;
-    font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--k-accent);
-}
-
 /* Ordinal endings (34ο, 1ος) as a small raised lowercase letter, so "34ο" never reads as 340. */
 sup.ord {
     font-size: .62em;
@@ -455,6 +447,20 @@ th[aria-sort=descending] .k-sort::after {
 
 .k-flash {
     margin-bottom: 1.25rem;
+}
+
+/* On a form page the alert lines up with the centered form column. */
+main:has(> .k-form-page) > .k-flash {
+    max-width: 40rem;
+    margin-inline: auto;
+}
+
+main:has(> .k-form-page.wide) > .k-flash {
+    max-width: 52rem;
+}
+
+main:has(> .k-form-page.narrow) > .k-flash {
+    max-width: 26rem;
 }
 
 .badge {

@@ -136,7 +136,6 @@ internal static class AccountEmailTemplates
                 										</td>
                 										<td style="vertical-align: middle;">
                 											<p style="margin: 0; font-family: {Display}; font-size: 20px; line-height: 1.2; color: {Ink};">Το Κυνήγι Θησαυρού</p>
-                											<p style="margin: 2px 0 0; font-family: {Text}; font-size: 13px; color: {Faded};">Αρχείο · Ρέθυμνο</p>
                 										</td>
                 									</tr>
                 								</table>

@@ -3,10 +3,7 @@
     <div class="k-wrap masthead-row">
         <a class="brand" href="">
             <BrandMark />
-            <span>
-                <strong>Το Κυνήγι Θησαυρού</strong>
-                <small>Αρχείο · Ρέθυμνο</small>
-            </span>
+            <strong>Το Κυνήγι Θησαυρού</strong>
         </a>
 
         <nav class="sections" aria-label="Ενότητες">
@@ -24,7 +21,7 @@
         <div class="account">
             <AuthorizeView>
                 <Authorized>
-                    <span class="who" title="@context.User.Identity?.Name">@context.User.Identity?.Name</span>
+                    <a class="account-button" href="account" title="@context.User.Identity?.Name">Λογαριασμός</a>
                     <form action="auth/logout" method="post">
                         <AntiforgeryToken />
                         <button type="submit" class="account-button">Αποσύνδεση</button>
