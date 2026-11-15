@@ -1,6 +1,6 @@
 .content {
     padding-block: 1.75rem 4rem;
-    min-height: 60vh;
+
 }
 
 .skip-link {
@@ -15,29 +15,6 @@
 
     .skip-link:focus {
         top: .5rem;
-    }
-
-.k-footer {
-    border-top: 2px solid var(--k-ink);
-    color: var(--k-faded);
-    font-size: .875rem;
-}
-
-    .k-footer .k-wrap {
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-        padding-block: 1.25rem 2rem;
-    }
-
-    .k-footer ::deep .brand-mark {
-        width: 24px;
-        height: 24px;
-        flex: none;
-    }
-
-    .k-footer p {
-        margin: 0;
     }
 
 #blazor-error-ui {

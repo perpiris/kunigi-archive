@@ -29,10 +29,6 @@
                     <a href="teams/@team.Slug">
                         <TeamFrame Name="@team.Name" Image="@team.Image" Thumbnail="true" />
                         <span class="name">@team.Name</span>
-                        @if (!team.IsActive)
-                        {
-                            <span class="k-stamp muted">Ανενεργή</span>
-                        }
                     </a>
                 </li>
             }

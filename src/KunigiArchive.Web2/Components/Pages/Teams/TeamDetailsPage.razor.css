@@ -1,23 +1,14 @@
-.crumbs {
-    color: var(--k-faded);
-    font-size: .875rem;
-}
-
-    .crumbs a {
-        color: var(--k-faded);
-    }
-
 .record {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
     gap: 2.25rem;
     align-items: center;
-    padding-block: 1.25rem 2rem;
+    padding-block: .5rem 2rem;
     border-bottom: 1px solid var(--k-rule);
 }
 
     .record h1 {
-        margin: .5rem 0 1rem;
+        margin: 0 0 1rem;
         font-size: clamp(2.5rem, 7vw, 4rem);
     }
 
@@ -47,30 +38,24 @@
     gap: .5rem 1.125rem;
 }
 
-.layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 290px;
-    gap: 3rem;
-    padding-top: 2rem;
+.block {
+    padding-top: 2.25rem;
 }
 
-.layout ::deep .history > p:first-child::first-letter {
-        font-family: var(--k-display);
-        font-size: 3.3em;
-        float: left;
-        line-height: .9;
-        padding: 4px 8px 0 0;
-        color: var(--k-accent);
-    }
-
-.ledger {
-    margin-top: 2rem;
+.block ::deep .history > p:first-child::first-letter {
+    font-family: var(--k-display);
+    font-size: 3.3em;
+    float: left;
+    line-height: .9;
+    padding: 4px 8px 0 0;
+    color: var(--k-accent);
 }
 
 .ledger-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     border-top: 2px solid var(--k-ink);
+    max-width: 52rem;
 }
 
 .ledger-col {
@@ -86,10 +71,20 @@
         margin-bottom: .5rem;
     }
 
+.count {
+    font-family: var(--k-text);
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--k-faded);
+    vertical-align: middle;
+    margin-left: .35rem;
+}
+
+/* A contact sheet: small square prints, as many per row as fit. */
 .prints {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: .75rem;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: .875rem;
 }
 
     .prints a {
@@ -100,15 +95,15 @@
     }
 
         .prints a:nth-child(odd) {
-            transform: rotate(-1deg);
+            transform: rotate(-.8deg);
         }
 
         .prints a:nth-child(even) {
-            transform: rotate(1.2deg);
+            transform: rotate(.9deg);
         }
 
         .prints a:hover {
-            transform: none;
+            transform: scale(1.03);
         }
 
     .prints img {
@@ -116,18 +111,32 @@
         width: 100%;
         aspect-ratio: 1;
         object-fit: cover;
+        background: var(--k-sheet);
     }
 
-@media (max-width: 900px) {
-    .layout {
-        grid-template-columns: 1fr;
-        gap: 2.25rem;
-    }
-
-    .prints {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    }
+.more-media {
+    margin-top: 1rem;
 }
+
+    .more-media summary {
+        cursor: pointer;
+        display: inline-block;
+        border: 1px solid var(--k-ink);
+        padding: .35rem .9rem;
+        font-size: .8125rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        margin-bottom: .875rem;
+    }
+
+        .more-media summary::-webkit-details-marker {
+            display: none;
+        }
+
+    .more-media[open] summary {
+        display: none;
+    }
 
 @media (max-width: 680px) {
     .record {
@@ -138,6 +147,11 @@
         .record ::deep .team-frame {
             max-width: 240px;
         }
+
+    .prints {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: .6rem;
+    }
 }
 
 @media (max-width: 520px) {
