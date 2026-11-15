@@ -14,61 +14,76 @@
 
 <PageTitle>Διαχειριστές ομάδας</PageTitle>
 
+<div class="k-form-page">
+
 @if (_team is not null)
 {
-    <h1>Διαχειριστές: @_team.TeamName</h1>
+    <header class="k-page-head">
+        <h1>@_team.TeamName</h1>
+        <a class="btn btn-outline-secondary" href="teams/@_team.Slug/actions">Ενέργειες ομάδας</a>
+    </header>
 
     @if (_message is not null)
     {
-        <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+        <div class="alert k-form-alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
     }
 
-    <h2 class="h5 mt-4">Τρέχοντες διαχειριστές</h2>
-    @if (_team.Managers.Count == 0)
-    {
-        <p class="text-body-secondary">Η ομάδα δεν έχει διαχειριστές.</p>
-    }
-    else
-    {
-        <form method="post" @formname="remove-manager" @onsubmit="RemoveAsync">
-            <AntiforgeryToken />
-            <ul class="list-group mb-3">
-                @foreach (UserSummary manager in _team.Managers)
-                {
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        @manager.Email
-                        <button type="submit" name="RemoveUserId" value="@manager.Id" class="btn btn-sm btn-outline-danger">
-                            Αφαίρεση
-                        </button>
-                    </li>
-                }
-            </ul>
-        </form>
-    }
+    <section class="k-form">
+        <h2 class="k-form-title">Διαχειριστές</h2>
+        @if (_team.Managers.Count == 0)
+        {
+            <p class="k-empty mb-0">Η ομάδα δεν έχει διαχειριστές.</p>
+        }
+        else
+        {
+            <form method="post" @formname="remove-manager" @onsubmit="RemoveAsync">
+                <AntiforgeryToken />
+                <ul class="list-group">
+                    @foreach (UserSummary manager in _team.Managers)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                            <span class="text-truncate">@manager.Email</span>
+                            <button type="submit" name="RemoveUserId" value="@manager.Id" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Αφαίρεση του διαχειριστή από την ομάδα;')">
+                                Αφαίρεση
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </form>
+        }
+    </section>
 
-    <h2 class="h5 mt-4">Προσθήκη διαχειριστή</h2>
-    @if (_team.AvailableManagers.Count == 0)
-    {
-        <p class="text-body-secondary">
-            Δεν υπάρχουν άλλοι χρήστες με ρόλο διαχειριστή ομάδας. <a href="users/create">Νέος χρήστης</a>
-        </p>
-    }
-    else
-    {
-        <form method="post" @formname="add-manager" @onsubmit="AddAsync" class="d-flex gap-2">
-            <AntiforgeryToken />
-            <select name="AddUserId" class="form-select" aria-label="Χρήστης">
-                @foreach (UserSummary user in _team.AvailableManagers)
-                {
-                    <option value="@user.Id">@user.Email</option>
-                }
-            </select>
-            <button type="submit" class="btn btn-primary">Προσθήκη</button>
-        </form>
-    }
-
-    <p class="mt-4"><a href="teams/@_team.Slug/actions">← Ενέργειες ομάδας</a></p>
+    <section class="k-form">
+        <h2 class="k-form-title">Προσθήκη διαχειριστή</h2>
+        @if (_team.AvailableManagers.Count == 0)
+        {
+            <p class="k-empty mb-0">
+                Δεν υπάρχουν άλλοι χρήστες με ρόλο διαχειριστή ομάδας. <a href="users/create">Νέος χρήστης</a>
+            </p>
+        }
+        else
+        {
+            <form method="post" @formname="add-manager" @onsubmit="AddAsync">
+                <AntiforgeryToken />
+                <label for="add-user" class="form-label">Χρήστης</label>
+                <div class="k-inline-form">
+                    <k-combobox placeholder="Πληκτρολογήστε email">
+                        <select id="add-user" name="AddUserId" class="form-select">
+                            @foreach (UserSummary user in _team.AvailableManagers)
+                            {
+                                <option value="@user.Id">@user.Email</option>
+                            }
+                        </select>
+                    </k-combobox>
+                    <button type="submit" class="btn btn-primary">Προσθήκη</button>
+                </div>
+            </form>
+        }
+    </section>
 }
+
+</div>
 
 @code {
     [Parameter]

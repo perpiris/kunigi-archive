@@ -9,35 +9,38 @@
 
 <PageTitle>Σύνδεση</PageTitle>
 
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
+<div class="k-form-page narrow">
+    <header class="k-page-head">
         <h1>Σύνδεση</h1>
+    </header>
+    <p class="text-body-secondary">Για τους διαχειριστές των ομάδων και του αρχείου.</p>
 
-        @if (_error is not null)
-        {
-            <div class="alert alert-danger" role="alert">@_error</div>
-        }
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">@_error</div>
+    }
 
-        @* No enhanced navigation: the whole page has to reload so the menu picks up the new sign-in. *@
-        <EditForm Model="Form" FormName="login" OnValidSubmit="LoginAsync">
-            <DataAnnotationsValidator />
+    @* No enhanced navigation: the whole page has to reload so the menu picks up the new sign-in. *@
+    <EditForm Model="Form" FormName="login" OnValidSubmit="LoginAsync" class="k-form">
+        <DataAnnotationsValidator />
 
-            <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <InputText id="email" type="email" autocomplete="username" class="form-control" @bind-Value="Form.Email" />
-                <ValidationMessage For="() => Form.Email" />
-            </div>
+        <div class="k-field">
+            <label for="email" class="form-label">Email</label>
+            <InputText id="email" type="email" autocomplete="username" class="form-control" @bind-Value="Form.Email" />
+            <ValidationMessage For="() => Form.Email" />
+        </div>
 
-            <div class="mb-3">
-                <label for="password" class="form-label">Κωδικός</label>
-                <InputText id="password" type="password" autocomplete="current-password" class="form-control"
-                           @bind-Value="Form.Password" />
-                <ValidationMessage For="() => Form.Password" />
-            </div>
+        <div class="k-field mb-0">
+            <label for="password" class="form-label">Κωδικός</label>
+            <InputText id="password" type="password" autocomplete="current-password" class="form-control"
+                       @bind-Value="Form.Password" />
+            <ValidationMessage For="() => Form.Password" />
+        </div>
 
+        <div class="k-form-actions">
             <button type="submit" class="btn btn-primary w-100">Σύνδεση</button>
-        </EditForm>
-    </div>
+        </div>
+    </EditForm>
 </div>
 
 @code {

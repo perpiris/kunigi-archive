@@ -9,39 +9,46 @@
 
 <PageTitle>Νέος χρήστης</PageTitle>
 
-<h1>Νέος χρήστης</h1>
+<div class="k-form-page">
+
+<header class="k-page-head">
+    <h1>Νέος χρήστης</h1>
+</header>
 
 @if (_error is not null)
 {
-    <div class="alert alert-danger" role="alert">@_error</div>
+    <div class="alert alert-danger k-form-alert" role="alert">@_error</div>
 }
 
-<EditForm Model="Form" FormName="create-user" OnValidSubmit="CreateAsync" Enhance>
+<EditForm Model="Form" FormName="create-user" OnValidSubmit="CreateAsync" Enhance class="k-form">
     <DataAnnotationsValidator />
 
-    <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <InputText id="email" type="email" class="form-control" @bind-Value="Form.Email" />
-        <ValidationMessage For="() => Form.Email" />
+    <div class="k-field-row">
+        <div class="k-field">
+            <label for="email" class="form-label">Email</label>
+            <InputText id="email" type="email" class="form-control" autocomplete="off" @bind-Value="Form.Email" />
+            <ValidationMessage For="() => Form.Email" />
+        </div>
+        <div class="k-field">
+            <label for="role" class="form-label">Ρόλος</label>
+            <InputSelect id="role" class="form-select" @bind-Value="Form.Role">
+                @foreach ((string value, string label) in RoleOptions.All)
+                {
+                    <option value="@value">@label</option>
+                }
+            </InputSelect>
+        </div>
     </div>
 
-    <div class="mb-3">
-        <label for="role" class="form-label">Ρόλος</label>
-        <InputSelect id="role" class="form-select" @bind-Value="Form.Role">
-            @foreach ((string value, string label) in RoleOptions.All)
-            {
-                <option value="@value">@label</option>
-            }
-        </InputSelect>
-    </div>
+    <p class="form-text mb-0">Ο χρήστης θα λάβει email με έναν προσωρινό κωδικό για να συνδεθεί.</p>
 
-    <p class="form-text">Ο χρήστης θα λάβει email με έναν προσωρινό κωδικό για να συνδεθεί.</p>
-
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Δημιουργία</button>
+    <div class="k-form-actions">
         <a class="btn btn-outline-secondary" href="users">Ακύρωση</a>
+        <button type="submit" class="btn btn-primary">Δημιουργία</button>
     </div>
 </EditForm>
+
+</div>
 
 @code {
     [SupplyParameterFromForm]

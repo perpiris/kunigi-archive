@@ -391,6 +391,163 @@ sup.ord {
     border-left-width: 3px;
 }
 
+/* ---------- Forms ----------
+   A form sits on a sheet of its own, no wider than its longest field needs. Short values
+   (years, numbers) share a row; actions close the sheet on the right. */
+
+.k-form {
+    max-width: 40rem;
+    margin-inline: auto;
+    background: var(--k-sheet);
+    border: 1px solid var(--k-rule);
+    border-top: 3px solid var(--k-accent);
+    padding: 1.5rem 1.75rem 1.25rem;
+}
+
+    .k-form.wide {
+        max-width: 52rem;
+    }
+
+    .k-form + .k-form {
+        margin-top: 1.5rem;
+    }
+
+.k-form-title {
+    font-family: var(--k-text);
+    font-size: .8125rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--k-faded);
+    margin: 0 0 1rem;
+}
+
+.k-field {
+    margin-bottom: 1.25rem;
+}
+
+    .k-field .form-text {
+        margin-top: .35rem;
+    }
+
+.k-field-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0 1.25rem;
+}
+
+.k-field.short .form-control {
+    max-width: 10rem;
+}
+
+.k-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .6rem;
+    margin-top: 1.5rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--k-rule);
+}
+
+.k-form-alert {
+    max-width: 40rem;
+}
+
+/* A form page: heading, messages and form sheets in one centered column. */
+.k-form-page {
+    max-width: 40rem;
+    margin-inline: auto;
+}
+
+    .k-form-page.wide {
+        max-width: 52rem;
+    }
+
+    .k-form-page.narrow {
+        max-width: 26rem;
+    }
+
+    .k-form-page .k-form,
+    .k-form-page .k-form-alert {
+        max-width: none;
+    }
+
+/* The search above a list: as wide as a search needs, not the whole page. */
+.k-search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    max-width: 36rem;
+    margin-bottom: 1.5rem;
+}
+
+    .k-search input {
+        flex: 1 1 14rem;
+        min-width: 0;
+    }
+
+/* One field and its button on one line: pick a manager, change a role, upload files. */
+.k-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    align-items: flex-start;
+}
+
+    .k-inline-form > :first-child {
+        flex: 1 1 16rem;
+        min-width: 0;
+    }
+
+@media (max-width: 520px) {
+    .k-form {
+        padding: 1.1rem 1rem 1rem;
+    }
+}
+
+/* ---------- Searchable select (k-combobox, site.js) ---------- */
+
+k-combobox {
+    display: block;
+    position: relative;
+}
+
+    k-combobox .k-combobox-list {
+        position: absolute;
+        z-index: 20;
+        inset-inline: 0;
+        top: calc(100% + 2px);
+        max-height: 16rem;
+        overflow-y: auto;
+        margin: 0;
+        padding: .25rem 0;
+        list-style: none;
+        background: var(--k-sheet);
+        border: 1px solid var(--k-ink);
+        box-shadow: 0 10px 22px var(--k-shadow);
+    }
+
+    k-combobox [role=option] {
+        padding: .4rem .75rem;
+        cursor: pointer;
+    }
+
+        k-combobox [role=option][aria-selected=true] {
+            color: var(--k-accent);
+            font-weight: 600;
+        }
+
+        k-combobox [role=option].active {
+            background: var(--k-accent-soft);
+        }
+
+    k-combobox .k-combobox-empty {
+        padding: .4rem .75rem;
+        color: var(--k-faded);
+        font-style: italic;
+    }
+
 /* ---------- Rich text (sanitized HTML from the editor) ---------- */
 
 .k-prose {

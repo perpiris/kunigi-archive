@@ -35,8 +35,35 @@
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: .5rem 1.125rem;
+    gap: .5rem;
 }
+
+    /* Small outlined tags, like the catalogue's buttons: icon then name. */
+    .links a {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .35rem .8rem;
+        border: 1px solid var(--k-rule);
+        background: var(--k-sheet);
+        color: var(--k-ink);
+        font-size: .9375rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+        .links a:hover,
+        .links a:focus-visible {
+            border-color: var(--k-sea);
+            color: var(--k-sea);
+        }
+
+    .links ::deep .social-icon {
+        width: 1.05em;
+        height: 1.05em;
+        flex: none;
+        color: var(--k-sea);
+    }
 
 .block {
     padding-top: 2.25rem;

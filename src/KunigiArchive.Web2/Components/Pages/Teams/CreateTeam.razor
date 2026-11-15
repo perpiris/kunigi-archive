@@ -11,32 +11,39 @@
 
 <PageTitle>Νέα ομάδα</PageTitle>
 
-<h1>Νέα ομάδα</h1>
+<div class="k-form-page">
+
+<header class="k-page-head">
+    <h1>Νέα ομάδα</h1>
+</header>
 
 @if (_error is not null)
 {
-    <div class="alert alert-danger" role="alert">@_error</div>
+    <div class="alert alert-danger k-form-alert" role="alert">@_error</div>
 }
 
-<EditForm Model="Form" FormName="create-team" OnValidSubmit="CreateAsync" Enhance>
+<EditForm Model="Form" FormName="create-team" OnValidSubmit="CreateAsync" Enhance class="k-form">
     <DataAnnotationsValidator />
 
-    <div class="mb-3">
+    <div class="k-field">
         <label for="name" class="form-label">Όνομα ομάδας</label>
-        <InputText id="name" class="form-control" @bind-Value="Form.Name" />
+        <InputText id="name" class="form-control" autocomplete="off" @bind-Value="Form.Name" />
+        <div class="form-text">Όπως θα εμφανίζεται στο αρχείο. Η διεύθυνση της σελίδας βγαίνει από το όνομα.</div>
         <ValidationMessage For="() => Form.Name" />
     </div>
 
-    <div class="form-check mb-3">
+    <div class="form-check">
         <InputCheckbox id="is-active" class="form-check-input" @bind-Value="Form.IsActive" />
-        <label for="is-active" class="form-check-label">Ενεργή</label>
+        <label for="is-active" class="form-check-label">Ενεργή ομάδα</label>
     </div>
 
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+    <div class="k-form-actions">
         <a class="btn btn-outline-secondary" href="teams/manage">Ακύρωση</a>
+        <button type="submit" class="btn btn-primary">Δημιουργία</button>
     </div>
 </EditForm>
+
+</div>
 
 @code {
     [SupplyParameterFromForm]

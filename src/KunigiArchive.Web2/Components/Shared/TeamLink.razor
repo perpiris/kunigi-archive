@@ -1,0 +1,15 @@
+@using KunigiArchive.Application.Games
+@* A host or winner: a link to the team, or a dash when the archive has none. *@
+@if (Team is null)
+{
+    <span class="text-body-secondary">—</span>
+}
+else
+{
+    <a href="teams/@Team.Slug">@Team.Name</a>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public TeamRef? Team { get; set; }
+}

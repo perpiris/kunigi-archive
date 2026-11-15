@@ -117,6 +117,160 @@
     // Enhanced navigation may keep the element but drop the editor Quill added inside it.
     const remountEditors = () => document.querySelectorAll("k-rich-text").forEach(editor => editor.mount());
 
+    // ---------- Searchable select ----------
+    // <k-combobox><select name="...">...</select></k-combobox>
+    // The select stays the form field (hidden); a text box filters its options as you type,
+    // ignoring accents and case ("ανιχν" finds "Ανιχνευτές"). Without JavaScript the select works as is.
+
+    const fold = text => text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("el");
+    let comboboxCount = 0;
+
+    class Combobox extends HTMLElement {
+        connectedCallback() {
+            this.mount();
+        }
+
+        mount() {
+            const select = this.querySelector("select");
+            if (!select || this.querySelector("input.k-combobox-input")) {
+                return;
+            }
+
+            const id = `k-combobox-${++comboboxCount}`;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = `${select.className} k-combobox-input`;
+            input.autocomplete = "off";
+            input.spellcheck = false;
+            input.setAttribute("role", "combobox");
+            input.setAttribute("aria-autocomplete", "list");
+            input.setAttribute("aria-expanded", "false");
+            input.setAttribute("aria-controls", `${id}-list`);
+            input.placeholder = this.getAttribute("placeholder") ?? "Πληκτρολογήστε για αναζήτηση";
+
+            // The label points at the select; move its id to the text box so clicking the label focuses it.
+            if (select.id) {
+                input.id = select.id;
+                select.removeAttribute("id");
+            }
+
+            const list = document.createElement("ul");
+            list.id = `${id}-list`;
+            list.className = "k-combobox-list";
+            list.setAttribute("role", "listbox");
+            list.hidden = true;
+
+            select.hidden = true;
+            select.tabIndex = -1;
+            select.after(input, list);
+
+            const options = () => [...select.options];
+            const labelOf = option => option?.textContent.trim() ?? "";
+            let active = -1;
+
+            const showSelected = () => {
+                input.value = select.value ? labelOf(select.selectedOptions[0]) : "";
+            };
+
+            const close = () => {
+                list.hidden = true;
+                input.setAttribute("aria-expanded", "false");
+                input.removeAttribute("aria-activedescendant");
+                active = -1;
+            };
+
+            const render = () => {
+                const query = fold(input.value.trim());
+                list.replaceChildren();
+                const matches = options().filter(o => !query || fold(o.textContent).includes(query));
+                if (matches.length === 0) {
+                    const empty = document.createElement("li");
+                    empty.className = "k-combobox-empty";
+                    empty.textContent = "Δεν βρέθηκε.";
+                    list.append(empty);
+                }
+                matches.forEach((option, index) => {
+                    const item = document.createElement("li");
+                    item.id = `${id}-option-${index}`;
+                    item.setAttribute("role", "option");
+                    item.dataset.value = option.value;
+                    item.textContent = labelOf(option);
+                    item.setAttribute("aria-selected", String(option.value === select.value));
+                    // mousedown, not click: it fires before the text box loses focus.
+                    item.addEventListener("mousedown", event => {
+                        event.preventDefault();
+                        choose(option.value);
+                    });
+                    list.append(item);
+                });
+                active = -1;
+                list.hidden = false;
+                input.setAttribute("aria-expanded", "true");
+            };
+
+            const choose = value => {
+                select.value = value;
+                select.dispatchEvent(new Event("change", { bubbles: true }));
+                showSelected();
+                close();
+            };
+
+            const highlight = index => {
+                const items = [...list.querySelectorAll("[role=option]")];
+                if (items.length === 0) {
+                    return;
+                }
+                active = (index + items.length) % items.length;
+                items.forEach((item, i) => item.classList.toggle("active", i === active));
+                input.setAttribute("aria-activedescendant", items[active].id);
+                items[active].scrollIntoView({ block: "nearest" });
+            };
+
+            input.addEventListener("focus", () => {
+                input.select();
+                render();
+            });
+            input.addEventListener("input", render);
+            input.addEventListener("keydown", event => {
+                switch (event.key) {
+                    case "ArrowDown":
+                        event.preventDefault();
+                        if (list.hidden) {
+                            render();
+                        }
+                        highlight(active + 1);
+                        break;
+                    case "ArrowUp":
+                        event.preventDefault();
+                        highlight(active - 1);
+                        break;
+                    case "Enter":
+                        if (!list.hidden && active >= 0) {
+                            event.preventDefault();
+                            choose(list.querySelectorAll("[role=option]")[active].dataset.value);
+                        }
+                        break;
+                    case "Escape":
+                        if (!list.hidden) {
+                            event.preventDefault();
+                            showSelected();
+                            close();
+                        }
+                        break;
+                }
+            });
+            // Leaving the box keeps the chosen option; half-typed text is dropped.
+            input.addEventListener("blur", () => {
+                showSelected();
+                close();
+            });
+
+            showSelected();
+        }
+    }
+
+    customElements.define("k-combobox", Combobox);
+
     // ---------- Gallery ----------
     // <a href="full.webp" data-gallery="team"><img src="thumb_full.webp"></a>
     // No data-title/data-description: GLightbox inserts them as HTML, and file names come from users.
@@ -143,6 +297,7 @@
     const mount = () => {
         remountEditors();
         mountGallery();
+        document.querySelectorAll("k-combobox").forEach(combobox => combobox.mount());
     };
 
     if (document.readyState === "loading") {

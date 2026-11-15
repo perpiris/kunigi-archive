@@ -11,6 +11,7 @@
 
         <nav class="sections" aria-label="Ενότητες">
             <NavLink href="teams">Ομάδες</NavLink>
+            <NavLink href="games">Παιχνίδια</NavLink>
             @* Each user has exactly one role, so at most one of these shows. *@
             <AuthorizeView Roles="@Roles.Admin">
                 <NavLink href="admin">Διαχείριση</NavLink>
