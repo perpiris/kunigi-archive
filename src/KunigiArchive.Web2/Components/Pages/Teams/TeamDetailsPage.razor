@@ -45,7 +45,7 @@
             @if (_team.Description is not null)
             {
                 <h2>Η ιστορία της ομάδας</h2>
-                <p class="history">@_team.Description</p>
+                <RichText Html="@_team.Description" Class="history" />
             }
 
             <div class="ledger">
@@ -74,7 +74,7 @@
                 <div class="prints">
                     @foreach (TeamMediaDetails media in _team.Media)
                     {
-                        <a href="/@media.Path" target="_blank" rel="noopener">
+                        <a href="/@media.Path" data-gallery="team" aria-label="@media.OriginalFileName">
                             <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
                                  onerror="this.onerror=null;this.src='/@media.Path'" />
                         </a>

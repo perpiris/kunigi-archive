@@ -391,6 +391,189 @@ sup.ord {
     border-left-width: 3px;
 }
 
+/* ---------- Rich text (sanitized HTML from the editor) ---------- */
+
+.k-prose {
+    line-height: 1.75;
+    font-size: 1.0625rem;
+    max-width: 64ch;
+    overflow-wrap: anywhere;
+}
+
+    .k-prose > :first-child {
+        margin-top: 0;
+    }
+
+    .k-prose p,
+    .k-prose ul,
+    .k-prose ol,
+    .k-prose blockquote,
+    .k-prose pre {
+        margin: 0 0 1rem;
+    }
+
+    .k-prose h2 {
+        font-size: 1.5rem;
+        margin: 1.75rem 0 .75rem;
+    }
+
+    .k-prose h3 {
+        font-size: 1.25rem;
+        margin: 1.5rem 0 .5rem;
+    }
+
+    .k-prose h4 {
+        font-size: 1rem;
+        margin: 1.25rem 0 .5rem;
+    }
+
+    .k-prose blockquote {
+        border-left: 2px solid var(--k-accent);
+        padding-left: 1rem;
+        color: var(--k-faded);
+        font-style: italic;
+    }
+
+    .k-prose pre {
+        background: var(--k-sheet);
+        border: 1px solid var(--k-rule);
+        padding: .75rem 1rem;
+        white-space: pre-wrap;
+    }
+
+    /* Quill 2 stores every list as <ol>; bullets are <li data-list="bullet">. */
+    .k-prose ol,
+    .k-prose ul {
+        padding-left: 1.5rem;
+    }
+
+    .k-prose li[data-list=bullet] {
+        list-style-type: disc;
+    }
+
+    .k-prose li[data-list=ordered] {
+        list-style-type: decimal;
+    }
+
+    .k-prose li::marker {
+        color: var(--k-accent);
+    }
+
+    .k-prose .ql-indent-1 { margin-left: 1.5rem; }
+    .k-prose .ql-indent-2 { margin-left: 3rem; }
+    .k-prose .ql-indent-3 { margin-left: 4.5rem; }
+    .k-prose .ql-indent-4 { margin-left: 6rem; }
+
+/* ---------- Editor (Quill snow, in the theme's colors and in Greek) ---------- */
+
+k-rich-text {
+    display: block;
+}
+
+    k-rich-text .ql-toolbar.ql-snow,
+    k-rich-text .ql-container.ql-snow {
+        border-color: var(--k-rule);
+        background: var(--k-sheet);
+    }
+
+    k-rich-text .ql-toolbar.ql-snow {
+        border-bottom-color: var(--k-rule);
+        font-family: var(--k-text);
+    }
+
+    k-rich-text .ql-container.ql-snow {
+        font-family: var(--k-text);
+        font-size: 1rem;
+        color: var(--k-ink);
+    }
+
+    k-rich-text .ql-editor {
+        min-height: 14rem;
+        line-height: 1.7;
+    }
+
+        k-rich-text .ql-editor.ql-blank::before {
+            color: var(--k-faded);
+        }
+
+    k-rich-text:focus-within .ql-container.ql-snow,
+    k-rich-text:focus-within .ql-toolbar.ql-snow {
+        border-color: var(--k-sea);
+    }
+
+    k-rich-text .ql-snow .ql-stroke {
+        stroke: var(--k-ink);
+    }
+
+    k-rich-text .ql-snow .ql-fill {
+        fill: var(--k-ink);
+    }
+
+    k-rich-text .ql-snow button:hover .ql-stroke,
+    k-rich-text .ql-snow button.ql-active .ql-stroke {
+        stroke: var(--k-accent);
+    }
+
+    k-rich-text .ql-snow button:hover .ql-fill,
+    k-rich-text .ql-snow button.ql-active .ql-fill {
+        fill: var(--k-accent);
+    }
+
+    k-rich-text .ql-snow .ql-editor blockquote {
+        border-left-color: var(--k-accent);
+    }
+
+    k-rich-text .ql-snow .ql-editor a,
+    k-rich-text .ql-snow a {
+        color: var(--k-sea);
+    }
+
+    k-rich-text .ql-snow .ql-tooltip {
+        background: var(--k-sheet);
+        border-color: var(--k-rule);
+        color: var(--k-ink);
+        box-shadow: 0 6px 16px var(--k-shadow);
+        z-index: 2;
+    }
+
+        k-rich-text .ql-snow .ql-tooltip input[type=text] {
+            background: var(--k-paper);
+            border-color: var(--k-rule);
+            color: var(--k-ink);
+        }
+
+        k-rich-text .ql-snow .ql-tooltip::before {
+            content: "Σύνδεσμος:";
+        }
+
+        k-rich-text .ql-snow .ql-tooltip[data-mode=link]::before {
+            content: "Διεύθυνση:";
+        }
+
+        k-rich-text .ql-snow .ql-tooltip a.ql-action::after {
+            content: "Αλλαγή";
+            border-right-color: var(--k-rule);
+        }
+
+        k-rich-text .ql-snow .ql-tooltip a.ql-remove::before {
+            content: "Αφαίρεση";
+        }
+
+        k-rich-text .ql-snow .ql-tooltip.ql-editing a.ql-action::after {
+            content: "Αποθήκευση";
+        }
+
+/* ---------- Gallery (GLightbox) ---------- */
+
+.glightbox-clean .gslide-description {
+    background: var(--k-sheet);
+}
+
+.glightbox-clean .gslide-title {
+    font-family: var(--k-text);
+    color: var(--k-ink);
+}
+
 /* ---------- Blazor ---------- */
 
 .valid.modified:not([type=checkbox]) {

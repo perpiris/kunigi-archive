@@ -11,6 +11,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=GFS+Didot&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    @* Small and static, so they load with every page; site.js loads the libraries' scripts only where needed. *@
+    <link rel="stylesheet" href="@Assets["lib/quill/quill.snow.css"]" />
+    <link rel="stylesheet" href="@Assets["lib/glightbox/glightbox.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["KunigiArchive.Web2.styles.css"]" />
     <ImportMap />
@@ -27,6 +30,7 @@
     <Routes />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["site.js"]"></script>
 </body>
 
 </html>

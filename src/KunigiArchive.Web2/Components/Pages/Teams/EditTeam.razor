@@ -99,7 +99,10 @@
 
         <div class="mb-3">
             <label for="description" class="form-label">Περιγραφή</label>
-            <InputTextArea id="description" class="form-control" rows="6" @bind-Value="Form.Description" />
+            <k-rich-text>
+                <InputTextArea id="description" class="form-control" rows="8" @bind-Value="Form.Description" />
+            </k-rich-text>
+            <div class="form-text">Επικεφαλίδες, έντονα, λίστες, παραθέσεις και σύνδεσμοι. Τα χρώματα και τα μεγέθη ακολουθούν το θέμα της σελίδας.</div>
         </div>
 
         <div class="mb-3">
