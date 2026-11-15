@@ -16,12 +16,17 @@ internal sealed class GameConfiguration : IEntityTypeConfiguration<Game>
         builder.Property(g => g.Id)
             .ValueGeneratedNever();
 
-        // One game per year and per order; the old app only checked this in code (#23).
+        // One game per year; the old app only checked this in code (#23).
         builder.HasIndex(g => g.Year)
             .IsUnique();
 
+        // 31.5 needs one decimal. Numbers are unique, but several games may have none.
+        builder.Property(g => g.Order)
+            .HasPrecision(4, 1);
+
         builder.HasIndex(g => g.Order)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Order] IS NOT NULL");
 
         builder.Property(g => g.Slug)
             .IsRequired()
@@ -36,6 +41,7 @@ internal sealed class GameConfiguration : IEntityTypeConfiguration<Game>
             .HasMaxLength(Game.OrderTitleMaxLength);
 
         builder.Property(g => g.Title).HasMaxLength(Game.TitleMaxLength);
+        builder.Property(g => g.Note).HasMaxLength(Game.NoteMaxLength);
         builder.Property(g => g.Image).HasMaxLength(Game.ImageMaxLength);
 
         // Restrict: a team that hosted or won a game can't be deleted out from under it.

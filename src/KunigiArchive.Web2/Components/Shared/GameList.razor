@@ -12,7 +12,7 @@ else
             <li>
                 <span class="year">@game.Year</span>
                 <span>
-                    <GameOrdinal Order="game.Order" />
+                    <GameName Order="game.Order" Year="game.Year" />
                     @if (game.Title is not null)
                     {
                         <em>@game.Title</em>

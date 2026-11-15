@@ -1,0 +1,71 @@
+@page "/games/manage"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetGames
+@inject GetGamesHandler GetGamesHandler
+
+<PageTitle>Διαχείριση παιχνιδιών</PageTitle>
+
+<header class="k-page-head">
+    <h1>Διαχείριση παιχνιδιών</h1>
+    <a class="btn btn-primary" href="games/create">Νέο παιχνίδι</a>
+</header>
+
+<SearchForm Action="games/manage" Search="@Search" Placeholder="Αναζήτηση: χρονιά, τίτλος ή ομάδα" MaxLength="GetGamesQuery.SearchMaxLength" />
+
+@if (_page is not null)
+{
+    @if (_page.Items.Count == 0)
+    {
+        <p class="k-empty">@(string.IsNullOrWhiteSpace(Search) ? "Δεν υπάρχουν παιχνίδια." : "Δεν βρέθηκαν παιχνίδια.")</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Χρονιά</th>
+                        <th scope="col">Παιχνίδι</th>
+                        <th scope="col">Διοργάνωση</th>
+                        <th scope="col">Νικητής</th>
+                        <th scope="col" class="text-end"><span class="visually-hidden">Ενέργειες</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (GameListItem game in _page.Items)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@game.Year</td>
+                            <td><GameName Order="game.Order" Year="game.Year" /></td>
+                            <td><TeamLink Team="game.Host" /></td>
+                            <td><TeamLink Team="game.Winner" /></td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary" href="games/@game.Id/edit">Στοιχεία</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <CursorPager BaseUrl="games/manage" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" Search="@Search" />
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? After { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Search { get; set; }
+
+    private GamesCursor? _after;
+    private GamesPage? _page;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _after = GamesCursor.TryDecode(After, out GamesCursor? after) ? after : null;
+        _page = await GetGamesHandler.HandleAsync(new GetGamesQuery(_after, Search), CancellationToken.None);
+    }
+}

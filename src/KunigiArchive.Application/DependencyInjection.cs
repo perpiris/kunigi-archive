@@ -1,3 +1,7 @@
+using KunigiArchive.Application.Games.CreateGame;
+using KunigiArchive.Application.Games.GetGameRecord;
+using KunigiArchive.Application.Games.GetGames;
+using KunigiArchive.Application.Games.UpdateGameRecord;
 using KunigiArchive.Application.Teams.AssignTeamManager;
 using KunigiArchive.Application.Teams.CreateTeam;
 using KunigiArchive.Application.Teams.DeleteTeam;
@@ -7,6 +11,7 @@ using KunigiArchive.Application.Teams.GetTeamById;
 using KunigiArchive.Application.Teams.GetTeamBySlug;
 using KunigiArchive.Application.Teams.GetTeamForEdit;
 using KunigiArchive.Application.Teams.GetTeamManagers;
+using KunigiArchive.Application.Teams.GetTeamOptions;
 using KunigiArchive.Application.Teams.GetTeamProfile;
 using KunigiArchive.Application.Teams.GetTeams;
 using KunigiArchive.Application.Teams.RemoveTeamManager;
@@ -36,6 +41,12 @@ public static class DependencyInjection
         services.AddScoped<UpdateTeamHandler>();
         services.AddScoped<SetTeamImageHandler>();
         services.AddScoped<DeleteTeamHandler>();
+        services.AddScoped<GetTeamOptionsHandler>();
+
+        services.AddScoped<GetGamesHandler>();
+        services.AddScoped<CreateGameHandler>();
+        services.AddScoped<GetGameRecordHandler>();
+        services.AddScoped<UpdateGameRecordHandler>();
 
         services.AddScoped<GetTeamManagersHandler>();
         services.AddScoped<AssignTeamManagerHandler>();

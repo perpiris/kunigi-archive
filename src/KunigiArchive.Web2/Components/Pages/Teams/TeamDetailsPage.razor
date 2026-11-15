@@ -24,9 +24,13 @@
             @if (_links.Count > 0)
             {
                 <ul class="links">
-                    @foreach ((string label, string url) in _links)
+                    @foreach ((string label, string url, SocialIcon.Kind icon) in _links)
                     {
-                        <li><a href="@url" target="_blank" rel="noopener noreferrer">@label</a></li>
+                        <li>
+                            <a href="@url" target="_blank" rel="noopener noreferrer">
+                                <SocialIcon Icon="icon" />@label
+                            </a>
+                        </li>
                     }
                 </ul>
             }
@@ -95,7 +99,7 @@
 
     private TeamProfile? _profile;
     private TeamDetails? _team;
-    private List<(string Label, string Url)> _links = [];
+    private List<(string Label, string Url, SocialIcon.Kind Icon)> _links = [];
 
     protected override async Task OnParametersSetAsync()
     {
@@ -111,15 +115,15 @@
             return;
         }
 
-        _links = new List<(string Label, string? Url)>
+        _links = new List<(string Label, string? Url, SocialIcon.Kind Icon)>
             {
-                ("Facebook", _team.Facebook),
-                ("Instagram", _team.Instagram),
-                ("YouTube", _team.Youtube),
-                ("Ιστοσελίδα", _team.Website)
+                ("Facebook", _team.Facebook, SocialIcon.Kind.Facebook),
+                ("Instagram", _team.Instagram, SocialIcon.Kind.Instagram),
+                ("YouTube", _team.Youtube, SocialIcon.Kind.Youtube),
+                ("Ιστοσελίδα", _team.Website, SocialIcon.Kind.Website)
             }
             .Where(link => link.Url is not null)
-            .Select(link => (link.Label, link.Url!))
+            .Select(link => (link.Label, link.Url!, link.Icon))
             .ToList();
     }
 

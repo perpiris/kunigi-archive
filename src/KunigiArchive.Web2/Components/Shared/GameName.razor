@@ -1,0 +1,25 @@
+@* A game's name: "34ο Κυνήγι Θησαυρού" with the ending raised so it never reads as 340,
+   "31,5ο Κυνήγι Θησαυρού" for the half game, "Κυνήγι Θησαυρού 1988" for an unnumbered one.
+   Game.OrderTitle keeps the same name as plain text; a title («Το Ξεκίνημα») is shown apart. *@
+@if (Order is null)
+{
+    @($"Κυνήγι Θησαυρού {Year}")
+}
+else if (Order % 1 == 0)
+{
+    @($"{Order.Value:0}")<sup class="ord">ο</sup>@(" Κυνήγι Θησαυρού")
+}
+else
+{
+    @(Order.Value.ToString("0.#", Greek))<sup class="ord">ο</sup>@(" Κυνήγι Θησαυρού")
+}
+
+@code {
+    private static readonly System.Globalization.CultureInfo Greek = System.Globalization.CultureInfo.GetCultureInfo("el-GR");
+
+    [Parameter, EditorRequired]
+    public decimal? Order { get; set; }
+
+    [Parameter, EditorRequired]
+    public short Year { get; set; }
+}

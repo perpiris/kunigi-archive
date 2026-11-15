@@ -14,29 +14,34 @@
 
 <PageTitle>Χρήστης</PageTitle>
 
+<div class="k-form-page">
+
 @if (_user is not null)
 {
-    <h1 class="mb-3">@_user.Email</h1>
+    <header class="k-page-head">
+        <h1 class="text-break">@_user.Email</h1>
+        <a class="btn btn-outline-secondary" href="users">Όλοι οι χρήστες</a>
+    </header>
 
     @if (_message is not null)
     {
-        <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+        <div class="alert k-form-alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
     }
 
-    <section class="card mb-4">
-        <div class="card-body">
-            <h2 class="h5 card-title">Ρόλος</h2>
-            @if (_user.IsCurrentUser)
-            {
-                <p class="mb-0">
-                    @RoleOptions.Label(_user.Role)
-                    <span class="text-body-secondary">· Δεν μπορείτε να αλλάξετε τον ρόλο του δικού σας λογαριασμού.</span>
-                </p>
-            }
-            else
-            {
-                <form method="post" @formname="change-role" @onsubmit="ChangeRoleAsync" class="d-flex gap-2">
-                    <AntiforgeryToken />
+    <section class="k-form">
+        <h2 class="k-form-title">Ρόλος</h2>
+        @if (_user.IsCurrentUser)
+        {
+            <p class="mb-0">
+                @RoleOptions.Label(_user.Role)
+                <span class="text-body-secondary">· Δεν μπορείτε να αλλάξετε τον ρόλο του δικού σας λογαριασμού.</span>
+            </p>
+        }
+        else
+        {
+            <form method="post" @formname="change-role" @onsubmit="ChangeRoleAsync">
+                <AntiforgeryToken />
+                <div class="k-inline-form">
                     <select name="Role" class="form-select" aria-label="Ρόλος">
                         @foreach ((string value, string label) in RoleOptions.All)
                         {
@@ -44,57 +49,53 @@
                         }
                     </select>
                     <button type="submit" class="btn btn-primary">Αλλαγή</button>
-                </form>
-                @if (_user.Role == Roles.Manager && _user.ManagedTeams.Count > 0)
-                {
-                    <div class="form-text">Αν αλλάξει ο ρόλος, ο χρήστης αφαιρείται από τις ομάδες που διαχειρίζεται.</div>
-                }
+                </div>
+            </form>
+            @if (_user.Role == Roles.Manager && _user.ManagedTeams.Count > 0)
+            {
+                <div class="form-text">Αν αλλάξει ο ρόλος, ο χρήστης αφαιρείται από τις ομάδες που διαχειρίζεται.</div>
             }
-        </div>
+        }
     </section>
 
     @if (_user.Role == Roles.Manager)
     {
-        <section class="card mb-4">
-            <div class="card-body">
-                <h2 class="h5 card-title">Ομάδες</h2>
-                @if (_user.ManagedTeams.Count == 0)
-                {
-                    <p class="text-body-secondary mb-0">Δεν διαχειρίζεται καμία ομάδα. Προσθέστε τον από τη σελίδα «Διαχειριστές» μιας ομάδας.</p>
-                }
-                else
-                {
-                    <ul class="mb-0">
-                        @foreach (TeamSummary team in _user.ManagedTeams)
-                        {
-                            <li><a href="teams/@team.Slug/managers">@team.Name</a></li>
-                        }
-                    </ul>
-                }
-            </div>
+        <section class="k-form">
+            <h2 class="k-form-title">Ομάδες</h2>
+            @if (_user.ManagedTeams.Count == 0)
+            {
+                <p class="k-empty mb-0">Δεν διαχειρίζεται καμία ομάδα. Προσθέστε τον από τη σελίδα «Διαχειριστές» μιας ομάδας.</p>
+            }
+            else
+            {
+                <ul class="mb-0">
+                    @foreach (TeamSummary team in _user.ManagedTeams)
+                    {
+                        <li><a href="teams/@team.Slug/managers">@team.Name</a></li>
+                    }
+                </ul>
+            }
         </section>
     }
 
-    <section class="card mb-4">
-        <div class="card-body">
-            <h2 class="h5 card-title">Προσωρινός κωδικός</h2>
-            <p class="card-text">
-                Στέλνει στον χρήστη email με νέο προσωρινό κωδικό. Ο τρέχων κωδικός του παύει να ισχύει
-                και αποσυνδέεται από όπου είναι συνδεδεμένος.
-            </p>
-            <form method="post" @formname="temporary-password" @onsubmit="SendTemporaryPasswordAsync">
-                <AntiforgeryToken />
-                <input type="hidden" name="ConfirmSend" value="true" />
-                <button type="submit" class="btn btn-outline-danger"
-                        onclick="return confirm('Αποστολή νέου προσωρινού κωδικού; Ο τρέχων κωδικός θα πάψει να ισχύει.')">
-                    Αποστολή νέου κωδικού
-                </button>
-            </form>
-        </div>
+    <section class="k-form">
+        <h2 class="k-form-title">Προσωρινός κωδικός</h2>
+        <p class="mb-0">
+            Στέλνει στον χρήστη email με νέο προσωρινό κωδικό. Ο τρέχων κωδικός του παύει να ισχύει
+            και αποσυνδέεται από όπου είναι συνδεδεμένος.
+        </p>
+        <form method="post" @formname="temporary-password" @onsubmit="SendTemporaryPasswordAsync" class="k-form-actions">
+            <AntiforgeryToken />
+            <input type="hidden" name="ConfirmSend" value="true" />
+            <button type="submit" class="btn btn-outline-danger"
+                    onclick="return confirm('Αποστολή νέου προσωρινού κωδικού; Ο τρέχων κωδικός θα πάψει να ισχύει.')">
+                Αποστολή νέου κωδικού
+            </button>
+        </form>
     </section>
-
-    <p><a href="users">← Όλοι οι χρήστες</a></p>
 }
+
+</div>
 
 @code {
     [Parameter]

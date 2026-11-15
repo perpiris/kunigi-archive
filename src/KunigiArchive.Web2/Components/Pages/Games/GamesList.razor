@@ -1,0 +1,78 @@
+@page "/games"
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetGames
+@inject GetGamesHandler GetGamesHandler
+
+<PageTitle>Παιχνίδια</PageTitle>
+
+<header class="k-page-head">
+    <h1>Παιχνίδια</h1>
+</header>
+
+<SearchForm Action="games" Search="@Search" Placeholder="Αναζήτηση: χρονιά, τίτλος ή ομάδα" MaxLength="GetGamesQuery.SearchMaxLength" />
+
+@if (_page is not null)
+{
+    @if (_page.Items.Count == 0)
+    {
+        <p class="k-empty">@(string.IsNullOrWhiteSpace(Search) ? "Δεν υπάρχουν παιχνίδια ακόμη." : "Δεν βρέθηκαν παιχνίδια.")</p>
+    }
+    else
+    {
+        <ol class="game-grid">
+            @foreach (GameListItem game in _page.Items)
+            {
+                <li class="game-card">
+                    <div class="poster">
+                        @if (game.Image is not null)
+                        {
+                            <img src="/@game.Image" alt="Αφίσα: @game.OrderTitle" loading="lazy" />
+                        }
+                        else
+                        {
+                            <span class="poster-empty" aria-hidden="true"></span>
+                        }
+                    </div>
+                    <div class="info">
+                        <div class="year">@game.Year</div>
+                        <h2 class="name"><GameName Order="game.Order" Year="game.Year" /></h2>
+                        @if (game.Title is not null)
+                        {
+                            <p class="subtitle">«@game.Title»</p>
+                        }
+                        <dl class="facts">
+                            <dt>Διοργάνωση</dt>
+                            <dd><TeamLink Team="game.Host" /></dd>
+                            <dt>Νικητής</dt>
+                            <dd><TeamLink Team="game.Winner" /></dd>
+                        </dl>
+                        @if (game.Note is not null)
+                        {
+                            <p class="note">@game.Note</p>
+                        }
+                    </div>
+                </li>
+            }
+        </ol>
+    }
+
+    <CursorPager BaseUrl="games" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" Search="@Search" />
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? After { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Search { get; set; }
+
+    private GamesCursor? _after;
+    private GamesPage? _page;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // An invalid or tampered cursor just starts from the beginning.
+        _after = GamesCursor.TryDecode(After, out GamesCursor? after) ? after : null;
+        _page = await GetGamesHandler.HandleAsync(new GetGamesQuery(_after, Search), CancellationToken.None);
+    }
+}

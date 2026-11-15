@@ -1,0 +1,95 @@
+.game-grid {
+    list-style: none;
+    margin: 0 0 2rem;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+
+/* A catalogue card: the poster in its own shape on the left, the record on the right. */
+.game-card {
+    display: grid;
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+    background: var(--k-sheet);
+    border: 1px solid var(--k-rule);
+    border-top: 3px solid var(--k-accent);
+    padding: 1rem;
+}
+
+.poster img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 4px solid var(--k-paper);
+    box-shadow: 0 1px 3px var(--k-shadow);
+}
+
+/* No poster yet: a stone card the shape of one (741 × 920), with the compass watermark. */
+.poster-empty {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 741 / 920;
+    background: url("/img/watermarks/compass.svg") center / 62% no-repeat, linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
+}
+
+.year {
+    font-size: .8125rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--k-accent);
+}
+
+.name {
+    font-size: 1.4rem;
+    line-height: 1.15;
+    margin: .2rem 0 0;
+}
+
+.subtitle {
+    font-style: italic;
+    color: var(--k-faded);
+    margin: .2rem 0 0;
+}
+
+.facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: .2rem .9rem;
+    margin: .8rem 0 0;
+    font-size: .9375rem;
+}
+
+    .facts dt {
+        color: var(--k-faded);
+        font-weight: 400;
+    }
+
+    .facts dd {
+        margin: 0;
+    }
+
+.note {
+    margin: .6rem 0 0;
+    padding-top: .5rem;
+    border-top: 1px solid var(--k-rule);
+    font-size: .875rem;
+    font-style: italic;
+    color: var(--k-faded);
+}
+
+@media (max-width: 900px) {
+    .game-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 460px) {
+    .game-card {
+        grid-template-columns: 6.5rem minmax(0, 1fr);
+        gap: .9rem;
+    }
+
+}

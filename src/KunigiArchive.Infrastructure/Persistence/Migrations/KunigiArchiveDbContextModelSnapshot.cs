@@ -30,15 +30,20 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("HostId")
+                    b.Property<Guid?>("HostId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Image")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<short>("Order")
-                        .HasColumnType("smallint");
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal?>("Order")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("decimal(4,1)");
 
                     b.Property<string>("OrderTitle")
                         .IsRequired()
@@ -65,7 +70,8 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                     b.HasIndex("HostId");
 
                     b.HasIndex("Order")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Order] IS NOT NULL");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -380,8 +386,7 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                     b.HasOne("KunigiArchive.Domain.Teams.Team", null)
                         .WithMany()
                         .HasForeignKey("HostId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("KunigiArchive.Domain.Teams.Team", null)
                         .WithMany()

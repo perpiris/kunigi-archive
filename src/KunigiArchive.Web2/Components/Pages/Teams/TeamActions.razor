@@ -12,7 +12,10 @@
 {
     <PageTitle>@_team.Name - Ενέργειες</PageTitle>
 
-    <h1 class="mb-4">@_team.Name</h1>
+    <header class="k-page-head">
+        <h1>@_team.Name</h1>
+        <a class="btn btn-outline-secondary" href="teams/@_team.Slug">Δημόσια σελίδα</a>
+    </header>
 
     @if (_error is not null)
     {

@@ -2,7 +2,7 @@ namespace KunigiArchive.Application.Teams.GetTeams;
 
 public sealed class GetTeamsHandler
 {
-    private const int PageSize = 20;
+    private const int PageSize = 30;
 
     private readonly ITeamQueries _teamQueries;
 

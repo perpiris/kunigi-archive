@@ -78,6 +78,15 @@ internal sealed class TeamQueries : ITeamQueries
         return games.Select(g => g.ToSummary()).ToList();
     }
 
+    public async Task<IReadOnlyList<TeamOption>> GetOptionsAsync(CancellationToken cancellationToken)
+    {
+        return await _dbContext.Teams
+            .AsNoTracking()
+            .OrderBy(t => t.Name)
+            .Select(t => new TeamOption(t.Id, t.Name, t.IsActive))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<TeamsPage> GetPageAsync(
         TeamsCursor? after,
         string? search,
