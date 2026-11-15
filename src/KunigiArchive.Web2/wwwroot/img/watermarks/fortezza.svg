@@ -1,20 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 27 100 70" fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round">
-  <!-- The Fortezza: sloped bastion walls with the rounded cordon, a garitta (sentry box) on the
-       bastion's point, and the Sultan Ibrahim mosque's wide, low dome behind. -->
-  <path d="M17 49 Q30 30 43 49" fill="#fff" fill-opacity=".3"/>
-  <path d="M15.5 49 H44.5 V52 H15.5 Z"/>
-  <path d="M30 31 V28"/>
-  <path d="M8 82 L13 58 L40 54 L52 63 L64 54 L91 58 L95 82"/>
-  <path d="M13 58 V54 L40 50 V54 M64 54 V50 L91 54 V58" />
-  <path d="M40 50 L52 59 L64 50"/>
-  <path d="M12.6 60.5 L40 56.5 L52 65.5 L64 56.5 L91.4 60.5" stroke-width="2.2"/>
-  <path d="M52 65.5 V84" stroke-width=".9"/>
-  <path d="M18 54 V52.3 M24 53.2 V51.4 M30 52.3 V50.5 M70 52.3 V50.5 M76 53.2 V51.4 M82 54 V52.3" stroke-width=".9"/>
-  <rect x="48.5" y="47" width="7" height="12" fill="#fff" fill-opacity=".25"/>
-  <path d="M48 47 Q52 39.5 56 47 Z" fill="#fff" fill-opacity=".45"/>
-  <path d="M52 39.5 V37.5 M52 50 V54" />
-  <path d="M48.5 57 H55.5" stroke-width=".9"/>
-  <path d="M20 66 H30 M58 70 H66 M72 66 H82 M24 74 H34 M70 76 H80 M42 72 H48 M16 72 H22" stroke-width=".7" stroke-opacity=".7"/>
-  <path d="M2 88 Q14 82 26 84 T50 86 T74 83 T98 87"/>
-  <path d="M10 92 Q20 89 30 91 M46 93 Q58 90 68 92 M78 94 Q86 91 94 93" stroke-width=".8" stroke-opacity=".7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 18 140 78" fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round">
+  <!-- The Fortezza on its rocky hill: two pointed bastions with sloped walls and the rounded
+       cordon, a parapet with arched gun openings, domed garittas on corbels at the bastion points,
+       and the Sultan Ibrahim mosque's wide dome rising in the middle. -->
+  <path d="M54 46 Q70 22 86 46 Z" fill="#fff" fill-opacity=".3"/>
+  <path d="M52.5 46 H87.5 V51 H52.5 Z"/>
+  <path d="M70 34 V30.5"/>
+  <path d="M60 46 V51 M66 46 V51 M74 46 V51 M80 46 V51" stroke-width=".7"/>
+  <path d="M12 54 L34 51 L40 56 L46 51 L92 51 L98 56 L104 51 L128 54"/>
+  <path d="M12 54 V60 M128 54 V60"/>
+  <path d="M12 60 L34 57 L40 62 L46 57 L92 57 L98 62 L104 57 L128 60"/>
+  <path d="M18.5 59.1 V57 Q20 54.6 21.5 56.8 V58.7 M25.5 58.2 V56 Q27 53.6 28.5 55.6 V57.8"/>
+  <path d="M53.5 57 V54.6 Q55 52.4 56.5 54.6 V57 M62.5 57 V54.6 Q64 52.4 65.5 54.6 V57 M71.5 57 V54.6 Q73 52.4 74.5 54.6 V57 M80.5 57 V54.6 Q82 52.4 83.5 54.6 V57"/>
+  <path d="M110.5 57.8 V55.6 Q112 53.4 113.5 55.8 V58.2 M118.5 58.8 V56.6 Q120 54.4 121.5 56.8 V59.2"/>
+  <path d="M12.4 62.5 L34 59.5 L40 64.5 L46 59.5 L92 59.5 L98 64.5 L104 59.5 L127.6 62.5" stroke-width="2.2"/>
+  <path d="M12 60 L8 84 M128 60 L132 84 M40 64.5 V84 M98 64.5 V84" />
+  <path d="M46 59.5 L45 84 M92 59.5 L93 84 M34 59.5 L35 84 M104 59.5 L103 84" stroke-width=".8" stroke-opacity=".6"/>
+  <path d="M16 70 H26 M54 68 H62 M70 72 H80 M108 70 H118 M20 77 H30 M60 78 H70 M112 77 H122 M84 66 H90" stroke-width=".7" stroke-opacity=".6"/>
+  <rect x="36.5" y="42" width="7" height="12" fill="#fff" fill-opacity=".2"/>
+  <path d="M36 42 Q40 34.5 44 42 Z" fill="#fff" fill-opacity=".45"/>
+  <path d="M36.5 54 L40 58.5 L43.5 54 M40 34.5 V32.5 M40 45 V49" />
+  <rect x="94.5" y="42" width="7" height="12" fill="#fff" fill-opacity=".2"/>
+  <path d="M94 42 Q98 34.5 102 42 Z" fill="#fff" fill-opacity=".45"/>
+  <path d="M94.5 54 L98 58.5 L101.5 54 M98 34.5 V32.5 M98 45 V49" />
+  <path d="M2 90 Q12 83 24 85 Q36 80 50 84 Q64 81 78 84 Q94 80 108 84 Q124 81 138 89"/>
+  <path d="M10 92 Q16 89 22 91 M30 88 Q36 86 40 88 M56 89 Q64 86 72 89 M86 88 Q92 86 98 88 M112 90 Q120 87 128 90" stroke-width=".8" stroke-opacity=".7"/>
 </svg>
