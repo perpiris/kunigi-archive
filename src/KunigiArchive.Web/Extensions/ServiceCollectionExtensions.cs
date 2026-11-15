@@ -96,6 +96,9 @@ public static class ServiceCollectionExtensions
             .AddEntityFrameworkStores<DataContext>()
             .AddDefaultTokenProviders();
 
+        // Password reset links expire after an hour (the email says so).
+        services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(1));
+
         services.ConfigureApplicationCookie(options =>
         {
             options.LoginPath = "/auth/login";

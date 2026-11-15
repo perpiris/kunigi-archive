@@ -1,6 +1,7 @@
 ﻿using KunigiArchive.Web.Entities;
 using KunigiArchive.Web.Enums;
 using KunigiArchive.Web.Extensions;
+using KunigiArchive.Web.Services;
 using KunigiArchive.Web.Services.Interfaces;
 using KunigiArchive.Web.ViewModels.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -94,18 +95,11 @@ public class AuthenticationController : Controller
             return View(viewModel);
         }
 
-        try
-        {
-            await _accountService.InitiatePasswordResetAsync(viewModel.Email);
+        // The same answer whether or not the account exists (a failed send is logged by EmailService).
+        await _accountService.InitiatePasswordResetAsync(viewModel.Email);
 
-            TempData["Success"] = "Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε οδηγίες επαναφοράς κωδικού.";
-            return RedirectToAction("Login");
-        }
-        catch (Exception ex)
-        {
-            TempData["Error"] = ex.Message;
-            return View(viewModel);
-        }
+        TempData["Success"] = "Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύνδεσμο για νέο κωδικό. Ο σύνδεσμος ισχύει μία ώρα.";
+        return RedirectToAction("Login");
     }
 
     [HttpGet("reset-password")]
@@ -121,7 +115,7 @@ public class AuthenticationController : Controller
             return RedirectToAction("Login");
         }
 
-        var viewModel = new ResetPasswordViewModel { Token = code, Email = email };
+        ResetPasswordViewModel viewModel = new ResetPasswordViewModel { Token = code, Email = email };
         return View(viewModel);
     }
 
@@ -133,17 +127,15 @@ public class AuthenticationController : Controller
             return View(viewModel);
         }
 
-        try
-        {
+        ServiceResponse response =
             await _accountService.ResetPasswordAsync(viewModel.Email, viewModel.Token, viewModel.Password);
-
-            TempData["Success"] = "Ο κωδικός σας άλλαξε με επιτυχία. Μπορείτε να συνδεθείτε με τον νέο κωδικό σας.";
-            return RedirectToAction("Login");
-        }
-        catch (Exception ex)
+        if (!response.Success)
         {
-            TempData["Error"] = ex.Message;
+            ModelState.AddModelError(string.Empty, response.Message!);
             return View(viewModel);
         }
+
+        TempData["Success"] = response.Message;
+        return RedirectToAction("Login");
     }
 }

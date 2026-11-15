@@ -5,4 +5,5 @@ public interface IAccountEmails
 {
     Task SendAccountCreatedAsync(string email, string temporaryPassword, CancellationToken cancellationToken);
     Task SendTemporaryPasswordAsync(string email, string temporaryPassword, CancellationToken cancellationToken);
+    Task SendPasswordResetAsync(string email, string code, CancellationToken cancellationToken);
 }

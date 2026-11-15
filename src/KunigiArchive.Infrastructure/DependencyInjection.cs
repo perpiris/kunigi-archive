@@ -102,7 +102,7 @@ public static class DependencyInjection
         services.AddIdentityCore<AppUser>(options =>
             {
                 options.User.RequireUniqueEmail = true;
-                options.Password.RequiredLength = 8;
+                options.Password.RequiredLength = PasswordRules.MinLength;
                 options.Password.RequireDigit = true;
                 options.Password.RequireUppercase = true;
                 options.Password.RequireLowercase = true;
@@ -112,6 +112,9 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<KunigiArchiveDbContext>()
             .AddSignInManager()
             .AddDefaultTokenProviders();
+
+        // Password reset links expire after an hour (the email says so).
+        services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(1));
 
         services.Configure<AdminSeedOptions>(configuration.GetSection(AdminSeedOptions.SectionName));
         services.AddScoped<IdentitySeeder>();
