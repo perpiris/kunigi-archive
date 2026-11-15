@@ -1,18 +1,19 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+<a class="skip-link" href="#main">Μετάβαση στο περιεχόμενο</a>
+
+<NavMenu />
+
+<main id="main" class="k-wrap content">
+    @Body
+</main>
+
+<footer class="k-footer">
+    <div class="k-wrap">
+        <BrandMark />
+        <p>Το αρχείο του Κυνηγιού Θησαυρού του Ρεθύμνου.</p>
     </div>
-
-    <main>
-        <div class="top-row px-4"></div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+</footer>
 
 <div id="blazor-error-ui" data-nosnippet>
     Παρουσιάστηκε ένα απρόσμενο σφάλμα.

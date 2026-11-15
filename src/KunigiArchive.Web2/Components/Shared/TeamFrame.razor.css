@@ -1,0 +1,24 @@
+.team-frame {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 4 / 3;
+    background: linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
+    border: 6px solid var(--k-sheet);
+    box-shadow: 0 1px 0 var(--k-rule), 0 10px 22px var(--k-shadow);
+    overflow: hidden;
+}
+
+    .team-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: var(--k-sheet);
+    }
+
+    .team-frame span {
+        font-family: var(--k-display);
+        font-size: 3rem;
+        line-height: 1;
+        color: #fff;
+        opacity: .9;
+    }

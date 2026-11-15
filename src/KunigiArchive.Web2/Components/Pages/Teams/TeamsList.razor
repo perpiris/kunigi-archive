@@ -5,7 +5,12 @@
 
 <PageTitle>Ομάδες</PageTitle>
 
-<h1 class="mb-3">Ομάδες</h1>
+<header class="k-page-head">
+    <div>
+        <div class="k-catalogue">Αρχείο</div>
+        <h1>Ομάδες</h1>
+    </div>
+</header>
 
 <SearchForm Action="teams" Search="@Search" Placeholder="Αναζήτηση ομάδας" MaxLength="GetTeamsQuery.SearchMaxLength" />
 
@@ -13,23 +18,25 @@
 {
     @if (_page.Items.Count == 0)
     {
-        <p class="text-body-secondary">@(string.IsNullOrWhiteSpace(Search) ? "Δεν υπάρχουν ομάδες." : "Δεν βρέθηκαν ομάδες.")</p>
+        <p class="k-empty">@(string.IsNullOrWhiteSpace(Search) ? "Δεν υπάρχουν ομάδες." : "Δεν βρέθηκαν ομάδες.")</p>
     }
     else
     {
-        <div class="list-group mb-3">
+        <ul class="team-grid">
             @foreach (TeamSummary team in _page.Items)
             {
-                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                   href="teams/@team.Slug">
-                    @team.Name
-                    @if (!team.IsActive)
-                    {
-                        <span class="badge text-bg-secondary">Ανενεργή</span>
-                    }
-                </a>
+                <li>
+                    <a href="teams/@team.Slug">
+                        <TeamFrame Name="@team.Name" Image="@team.Image" Thumbnail="true" />
+                        <span class="name">@team.Name</span>
+                        @if (!team.IsActive)
+                        {
+                            <span class="k-stamp muted">Ανενεργή</span>
+                        }
+                    </a>
+                </li>
             }
-        </div>
+        </ul>
     }
 
     <CursorPager BaseUrl="teams" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" Search="@Search" />

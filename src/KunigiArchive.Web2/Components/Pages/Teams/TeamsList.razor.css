@@ -1,0 +1,36 @@
+.team-grid {
+    list-style: none;
+    margin: 0 0 2rem;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem 1.5rem;
+}
+
+    .team-grid a {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .6rem;
+        color: var(--k-ink);
+        text-decoration: none;
+    }
+
+    .team-grid ::deep .team-frame {
+        width: 100%;
+        transition: transform .15s ease-in-out;
+    }
+
+    .team-grid a:hover ::deep .team-frame {
+        transform: rotate(-1deg) translateY(-2px);
+    }
+
+.name {
+    font-family: var(--k-display);
+    font-size: 1.35rem;
+    line-height: 1.15;
+}
+
+.team-grid a:hover .name {
+    color: var(--k-accent);
+}
