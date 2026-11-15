@@ -62,8 +62,17 @@
 
         <div class="mb-3">
             <label for="name" class="form-label">Όνομα ομάδας</label>
-            <InputText id="name" class="form-control" @bind-Value="Form.Name" />
-            <ValidationMessage For="() => Form.Name" />
+            <AuthorizeView Roles="@Roles.Admin" Context="auth">
+                <Authorized>
+                    <InputText id="name" class="form-control" @bind-Value="Form.Name" />
+                    <ValidationMessage For="() => Form.Name" />
+                </Authorized>
+                <NotAuthorized>
+                    @* Still posted (readonly, not disabled), so the form stays valid; the handler refuses a change. *@
+                    <InputText id="name" class="form-control" readonly @bind-Value="Form.Name" />
+                    <div class="form-text">Το όνομα αλλάζει μόνο από τον γενικό διαχειριστή.</div>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <AuthorizeView Roles="@Roles.Admin" Context="auth">

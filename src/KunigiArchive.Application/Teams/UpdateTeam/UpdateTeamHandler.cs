@@ -35,6 +35,13 @@ public sealed class UpdateTeamHandler
 
         string previousName = team.Name;
 
+        // The archive keeps a team's name; renames are rare corrections, so only admins make them.
+        // Teams that split or start over are created as new teams.
+        if (command.Name.Trim() != previousName)
+        {
+            _currentUser.EnsureAdmin();
+        }
+
         team.Update(
             command.Name,
             command.IsActive,
