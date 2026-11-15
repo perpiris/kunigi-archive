@@ -7,10 +7,10 @@
     gap: 1.5rem;
 }
 
-/* The stone print, with the team's name set in it over a faint watermark: a compass rose, and on
-   every other card the harbour lighthouse from the site mark. */
+/* The stone print, with the team's name set in it over a faint watermark. Seven watermarks take
+   turns: the compass, the harbour lighthouse and Rethymno landmarks (wwwroot/img/watermarks). */
 .team-card {
-    --watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='white' stroke-width='1.2'%3E%3Ccircle cx='50' cy='50' r='44'/%3E%3Ccircle cx='50' cy='50' r='36' stroke-dasharray='1.5 3'/%3E%3Cpath fill='white' fill-opacity='.55' stroke='none' d='M50 4 L55 45 L96 50 L55 55 L50 96 L45 55 L4 50 L45 45 Z'/%3E%3Cpath fill='white' fill-opacity='.35' stroke='none' d='M50 22 L53 47 L78 50 L53 53 L50 78 L47 53 L22 50 L47 47 Z' transform='rotate(45 50 50)'/%3E%3C/svg%3E");
+    --watermark: url("/img/watermarks/compass.svg");
     position: relative;
     overflow: hidden;
     isolation: isolate;
@@ -39,16 +39,16 @@
         transition: rotate .4s ease-in-out;
     }
 
-    .team-grid li:nth-child(even) .team-card {
-        --watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='white'%3E%3Cpath d='M27 50 L29.2 25 H34.8 L37 50 Z'/%3E%3Crect x='27.6' y='18' width='8.8' height='6.2' rx='1'/%3E%3Cpath d='M26.6 18 Q32 11.5 37.4 18 Z'/%3E%3Cpath d='M38 21 L58 15 V27 Z M26 21 L6 15 V27 Z' fill-opacity='.45'/%3E%3Cpath d='M14 50 H50' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M8 56 Q16 53 24 56 T40 56 T56 56' stroke='white' stroke-width='1.4' fill='none'/%3E%3C/svg%3E");
-    }
+    .team-grid li:nth-child(7n+2) .team-card { --watermark: url("/img/watermarks/lighthouse.svg"); }
+    .team-grid li:nth-child(7n+3) .team-card { --watermark: url("/img/watermarks/fortezza.svg"); }
+    .team-grid li:nth-child(7n+4) .team-card { --watermark: url("/img/watermarks/minaret.svg"); }
+    .team-grid li:nth-child(7n+5) .team-card { --watermark: url("/img/watermarks/fountain.svg"); }
+    .team-grid li:nth-child(7n+6) .team-card { --watermark: url("/img/watermarks/gate.svg"); }
+    .team-grid li:nth-child(7n+7) .team-card { --watermark: url("/img/watermarks/loggia.svg"); }
 
-    .team-card:hover::before {
+    /* Only the compass turns. */
+    .team-grid li:nth-child(7n+1) .team-card:hover::before {
         rotate: 20deg;
-    }
-
-    .team-grid li:nth-child(even) .team-card:hover::before {
-        rotate: none;
     }
 
     .team-card:hover,
