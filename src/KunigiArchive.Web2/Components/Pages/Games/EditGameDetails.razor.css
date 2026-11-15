@@ -1,0 +1,19 @@
+.image-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-items: flex-start;
+}
+
+.poster-preview {
+    max-width: 9rem;
+    max-height: 12rem;
+    object-fit: contain;
+    border: 4px solid var(--k-paper);
+    box-shadow: 0 1px 3px var(--k-shadow);
+}
+
+.image-upload {
+    flex: 1 1 18rem;
+    min-width: 0;
+}

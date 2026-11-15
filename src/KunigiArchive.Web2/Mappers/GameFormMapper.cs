@@ -1,6 +1,7 @@
 using System.Globalization;
 using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Games.CreateGame;
+using KunigiArchive.Application.Games.UpdateGameDetails;
 using KunigiArchive.Application.Games.UpdateGameRecord;
 using KunigiArchive.Web2.Forms.Games;
 
@@ -18,6 +19,16 @@ public static class GameFormMapper
     public static UpdateGameRecordCommand ToUpdateCommand(this GameRecordForm form)
     {
         return new UpdateGameRecordCommand(form.Id, form.Year!.Value, ParseOrder(form.Order), form.HostId, form.WinnerId);
+    }
+
+    public static GameDetailsForm ToDetailsForm(this GameDetails game)
+    {
+        return new GameDetailsForm { Id = game.Id, Title = game.Title, Note = game.Note, Description = game.Description };
+    }
+
+    public static UpdateGameDetailsCommand ToCommand(this GameDetailsForm form)
+    {
+        return new UpdateGameDetailsCommand(form.Id, form.Title, form.Note, form.Description);
     }
 
     public static GameRecordForm ToForm(this GameRecord game)

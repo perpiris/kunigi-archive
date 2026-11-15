@@ -23,19 +23,12 @@
             @foreach (GameListItem game in _page.Items)
             {
                 <li class="game-card">
-                    <div class="poster">
-                        @if (game.Image is not null)
-                        {
-                            <img src="/@game.Image" alt="Αφίσα: @game.OrderTitle" loading="lazy" />
-                        }
-                        else
-                        {
-                            <span class="poster-empty" aria-hidden="true"></span>
-                        }
-                    </div>
+                    <a class="poster" href="games/@game.Slug" tabindex="-1" aria-hidden="true">
+                        <GamePoster Image="@game.Image" Name="@game.OrderTitle" />
+                    </a>
                     <div class="info">
                         <div class="year">@game.Year</div>
-                        <h2 class="name"><GameName Order="game.Order" Year="game.Year" /></h2>
+                        <h2 class="name"><a href="games/@game.Slug"><GameName Order="game.Order" Year="game.Year" /></a></h2>
                         @if (game.Title is not null)
                         {
                             <p class="subtitle">«@game.Title»</p>

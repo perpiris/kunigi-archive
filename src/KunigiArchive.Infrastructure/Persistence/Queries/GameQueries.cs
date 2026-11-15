@@ -1,5 +1,8 @@
 using System.Globalization;
+using System.Linq.Expressions;
 using KunigiArchive.Application.Games;
+using KunigiArchive.Application.Mappers;
+using KunigiArchive.Domain.Common;
 using KunigiArchive.Domain.Games;
 using KunigiArchive.Domain.Teams;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +79,62 @@ internal sealed class GameQueries : IGameQueries
         return game is null
             ? null
             : new GameRecord(game.Id, game.Slug.Value, game.Year, game.Order, game.OrderTitle, game.HostId, game.WinnerId);
+    }
+
+    public async Task<GameDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return await GetDetailsAsync(g => g.Id == id, cancellationToken);
+    }
+
+    public async Task<GameDetails?> GetDetailsBySlugAsync(Slug slug, CancellationToken cancellationToken)
+    {
+        return await GetDetailsAsync(g => g.Slug == slug, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<GameSummary>> GetHostedByManagerAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        IQueryable<Guid> managedTeamIds = _dbContext.Teams
+            .Where(t => t.Managers.Any(m => m.UserId == userId))
+            .Select(t => t.Id);
+
+        List<Game> games = await _dbContext.Games.AsNoTracking()
+            .Where(g => g.HostId != null && managedTeamIds.Contains(g.HostId.Value))
+            .OrderByDescending(g => g.Year)
+            .ToListAsync(cancellationToken);
+
+        return games.Select(g => g.ToSummary()).ToList();
+    }
+
+    private async Task<GameDetails?> GetDetailsAsync(Expression<Func<Game, bool>> predicate, CancellationToken cancellationToken)
+    {
+        Game? game = await _dbContext.Games.AsNoTracking()
+            .Include(g => g.Media)
+            .FirstOrDefaultAsync(predicate, cancellationToken);
+
+        if (game is null)
+        {
+            return null;
+        }
+
+        List<Guid> teamIds = new[] { game.HostId, game.WinnerId }.OfType<Guid>().ToList();
+        Dictionary<Guid, TeamRef> teams = await _dbContext.Teams.AsNoTracking()
+            .Where(t => teamIds.Contains(t.Id))
+            .Select(t => new TeamRef(t.Id, t.Name, t.Slug.Value))
+            .ToDictionaryAsync(t => t.Id, cancellationToken);
+
+        return new GameDetails(
+            game.Id,
+            game.Slug.Value,
+            game.Year,
+            game.Order,
+            game.OrderTitle,
+            game.Title,
+            game.Note,
+            game.Description,
+            game.Image,
+            game.HostId is Guid hostId ? teams.GetValueOrDefault(hostId) : null,
+            game.WinnerId is Guid winnerId ? teams.GetValueOrDefault(winnerId) : null,
+            game.Media.OrderByDescending(m => m.UploadedAt).Select(m => m.ToDetails()).ToList());
     }
 
     private static GameListItem ToListItem(GameRow row)

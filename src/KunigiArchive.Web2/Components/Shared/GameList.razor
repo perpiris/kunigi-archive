@@ -1,5 +1,5 @@
 @using KunigiArchive.Application.Games
-@* Plain text until the game pages exist; then each entry links to /games/{slug}. *@
+@* A team's games (hosted or won), each linking to its game page. *@
 @if (Games.Count == 0)
 {
     <p class="k-empty mb-0">@Empty</p>
@@ -12,7 +12,7 @@ else
             <li>
                 <span class="year">@game.Year</span>
                 <span>
-                    <GameName Order="game.Order" Year="game.Year" />
+                    <a href="games/@game.Slug"><GameName Order="game.Order" Year="game.Year" /></a>
                     @if (game.Title is not null)
                     {
                         <em>@game.Title</em>

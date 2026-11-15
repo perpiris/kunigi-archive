@@ -1,0 +1,87 @@
+/* Laid out like the team page: the poster beside the record, then the story and the material. */
+.record {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 2.25rem;
+    align-items: center;
+    padding-block: .5rem 2rem;
+    border-bottom: 1px solid var(--k-rule);
+}
+
+    .record h1 {
+        margin: .25rem 0 0;
+        font-size: clamp(2.25rem, 6vw, 3.5rem);
+        line-height: 1.1;
+    }
+
+.year {
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--k-accent);
+}
+
+.subtitle {
+    margin: .4rem 0 0;
+    font-family: var(--k-display);
+    font-size: 1.5rem;
+    font-style: italic;
+    color: var(--k-faded);
+}
+
+.facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: .4rem 1.125rem;
+    margin: 1.25rem 0 0;
+}
+
+    .facts dt {
+        color: var(--k-faded);
+        font-weight: 400;
+    }
+
+    .facts dd {
+        margin: 0;
+    }
+
+.note {
+    margin: 1rem 0 0;
+    padding-top: .75rem;
+    border-top: 1px solid var(--k-rule);
+    font-style: italic;
+    color: var(--k-faded);
+}
+
+.block {
+    padding-top: 2.25rem;
+}
+
+.block ::deep .story > p:first-child::first-letter {
+    font-family: var(--k-display);
+    font-size: 3.3em;
+    float: left;
+    line-height: .9;
+    padding: 4px 8px 0 0;
+    color: var(--k-accent);
+}
+
+.count {
+    font-family: var(--k-text);
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--k-faded);
+    vertical-align: middle;
+    margin-left: .35rem;
+}
+
+@media (max-width: 680px) {
+    .record {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .poster {
+        max-width: 240px;
+    }
+}

@@ -62,32 +62,7 @@
 
     <section class="block">
         <h2>Υλικό @if (_team.Media.Count > 0) { <span class="count">@_team.Media.Count</span> }</h2>
-        @if (_team.Media.Count == 0)
-        {
-            <p class="k-empty">Δεν υπάρχει υλικό ακόμη.</p>
-        }
-        else
-        {
-            @* The first photos show; the rest open with "Όλο το υλικό". The lightbox still steps through all of them. *@
-            <div class="prints">
-                @foreach (TeamMediaDetails media in _team.Media.Take(MediaPreviewCount))
-                {
-                    @Print(media)
-                }
-            </div>
-            @if (_team.Media.Count > MediaPreviewCount)
-            {
-                <details class="more-media">
-                    <summary>Όλο το υλικό (@_team.Media.Count)</summary>
-                    <div class="prints">
-                        @foreach (TeamMediaDetails media in _team.Media.Skip(MediaPreviewCount))
-                        {
-                            @Print(media)
-                        }
-                    </div>
-                </details>
-            }
-        }
+        <MediaSheet Items="_mediaThumbs" Gallery="team" />
     </section>
 }
 
@@ -95,11 +70,10 @@
     [Parameter]
     public string Slug { get; set; } = string.Empty;
 
-    private const int MediaPreviewCount = 12;
-
     private TeamProfile? _profile;
     private TeamDetails? _team;
     private List<(string Label, string Url, SocialIcon.Kind Icon)> _links = [];
+    private List<MediaSheet.Thumb> _mediaThumbs = [];
 
     protected override async Task OnParametersSetAsync()
     {
@@ -115,6 +89,8 @@
             return;
         }
 
+        _mediaThumbs = _team.Media.Select(m => new MediaSheet.Thumb(m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList();
+
         _links = new List<(string Label, string? Url, SocialIcon.Kind Icon)>
             {
                 ("Facebook", _team.Facebook, SocialIcon.Kind.Facebook),
@@ -126,10 +102,4 @@
             .Select(link => (link.Label, link.Url!, link.Icon))
             .ToList();
     }
-
-    private static RenderFragment Print(TeamMediaDetails media) =>
-        @<a href="/@media.Path" data-gallery="team" aria-label="@media.OriginalFileName">
-            <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
-                 onerror="this.onerror=null;this.src='/@media.Path'" />
-        </a>;
 }

@@ -1,0 +1,157 @@
+@page "/games/{Slug}/media"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.DeleteGameMedia
+@using KunigiArchive.Application.Games.GetGameForEdit
+@using KunigiArchive.Application.Games.UploadGameMedia
+@using KunigiArchive.Application.Media
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Web2.Mappers
+@inject GetGameForEditHandler GetGameForEditHandler
+@inject UploadGameMediaHandler UploadGameMediaHandler
+@inject DeleteGameMediaHandler DeleteGameMediaHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Υλικό παιχνιδιού</PageTitle>
+
+@if (_game is not null)
+{
+    <header class="k-page-head">
+        <h1><GameName Order="_game.Order" Year="_game.Year" /></h1>
+        <a class="btn btn-outline-secondary" href="games/@_game.Slug/actions">Ενέργειες παιχνιδιού</a>
+    </header>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+    }
+
+    <form method="post" enctype="multipart/form-data" @formname="upload-media" @onsubmit="UploadAsync" class="k-form mb-4">
+        <AntiforgeryToken />
+        <h2 class="k-form-title">Υλικό</h2>
+        <label for="files" class="form-label">Νέα αρχεία</label>
+        <div class="k-inline-form">
+            <input id="files" type="file" name="Files" multiple accept="@MediaRules.AcceptAttribute" class="form-control" />
+            <button type="submit" class="btn btn-primary">Ανέβασμα</button>
+        </div>
+        <div class="form-text">
+            Εικόνες (JPG, PNG, GIF, WebP) ή PDF, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB το καθένα.
+            Από τα PDF κρατιέται η πρώτη σελίδα ως εικόνα.
+        </div>
+    </form>
+
+    @if (_game.Media.Count == 0)
+    {
+        <p class="text-body-secondary">Δεν υπάρχουν αρχεία.</p>
+    }
+    else
+    {
+        <form method="post" @formname="delete-media" @onsubmit="DeleteAsync">
+            <AntiforgeryToken />
+            <div class="media-grid">
+                @foreach (GameMediaDetails media in _game.Media)
+                {
+                    <figure class="media-item">
+                        <a href="/@media.Path" data-gallery="game-media" aria-label="@media.OriginalFileName">
+                            <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
+                                 onerror="this.onerror=null;this.src='/@media.Path'" />
+                        </a>
+                        <figcaption class="small text-truncate" title="@media.OriginalFileName">@media.OriginalFileName</figcaption>
+                        <button type="submit" name="DeleteMediaId" value="@media.Id" class="btn btn-sm btn-outline-danger w-100"
+                                onclick="return confirm('Διαγραφή του αρχείου;')">
+                            Διαγραφή
+                        </button>
+                    </figure>
+                }
+            </div>
+        </form>
+    }
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "upload-media")]
+    private IReadOnlyList<IFormFile>? Files { get; set; }
+
+    [SupplyParameterFromForm(FormName = "delete-media")]
+    private Guid? DeleteMediaId { get; set; }
+
+    private GameDetails? _game;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task UploadAsync()
+    {
+        if (_game is null)
+        {
+            return;
+        }
+
+        List<MediaUpload> uploads = (Files ?? []).ToUploads();
+        try
+        {
+            IReadOnlyList<GameMediaDetails> added = await UploadGameMediaHandler.HandleAsync(
+                new UploadGameMediaCommand(_game.Id, uploads), CancellationToken.None);
+            string uploaded = added.Count == 1 ? "Ανέβηκε 1 αρχείο." : $"Ανέβηκαν {added.Count} αρχεία.";
+            (_message, _isError) = (uploaded, false);
+        }
+        catch (Exception exception) when (exception is InvalidRequestException or DomainException)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+        finally
+        {
+            foreach (MediaUpload upload in uploads)
+            {
+                await upload.Content.DisposeAsync();
+            }
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_game is null || DeleteMediaId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DeleteGameMediaHandler.HandleAsync(new DeleteGameMediaCommand(_game.Id, DeleteMediaId.Value), CancellationToken.None);
+            (_message, _isError) = ("Το αρχείο διαγράφηκε.", false);
+        }
+        catch (DomainException exception)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+        }
+        catch (GameNotFoundException)
+        {
+            _game = null;
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+}

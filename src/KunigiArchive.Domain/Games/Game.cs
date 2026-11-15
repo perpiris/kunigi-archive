@@ -3,7 +3,7 @@ using KunigiArchive.Domain.Common;
 
 namespace KunigiArchive.Domain.Games;
 
-// Only the game itself for now; days, puzzles, posts and media come with the game pages.
+// The game and its media; days, puzzles and posts come later.
 public sealed class Game
 {
     public const short YearMin = 1900;
@@ -38,6 +38,9 @@ public sealed class Game
     public Guid? HostId { get; private set; }
     public Guid? WinnerId { get; private set; }
 
+    private readonly List<GameMedia> _media = [];
+    public IReadOnlyCollection<GameMedia> Media => _media.AsReadOnly();
+
     private Game()
     {
     }
@@ -70,6 +73,37 @@ public sealed class Game
         WinnerId = winnerId;
     }
 
+    /// <summary>The host team's part: the game's own title («Το Ξεκίνημα»), a short note and the story.</summary>
+    public void UpdateDetails(string? title, string? note, string? description)
+    {
+        Title = Optional(title, TitleMaxLength, "Ο τίτλος");
+        Note = Optional(note, NoteMaxLength, "Η σημείωση");
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+    }
+
+    // Returns the previous poster so the caller can delete its file once the change is saved.
+    public string? SetImage(string? path)
+    {
+        string? previous = Image;
+        Image = path;
+        return previous;
+    }
+
+    public GameMedia AddMedia(string path, string fileName, string originalFileName, DateTimeOffset uploadedAt)
+    {
+        GameMedia media = new GameMedia(Id, path, fileName, originalFileName, uploadedAt);
+        _media.Add(media);
+        return media;
+    }
+
+    public GameMedia RemoveMedia(Guid mediaId)
+    {
+        GameMedia media = _media.FirstOrDefault(m => m.Id == mediaId)
+            ?? throw new DomainException("Το αρχείο δεν ανήκει στο παιχνίδι.");
+        _media.Remove(media);
+        return media;
+    }
+
     /// <summary>"34ο Κυνήγι Θησαυρού", "31,5ο Κυνήγι Θησαυρού", or "Κυνήγι Θησαυρού 1988" for an unnumbered game.</summary>
     public static string OrderTitleFor(short year, decimal? order)
     {
@@ -81,6 +115,22 @@ public sealed class Game
         return order % 1 == 0
             ? $"{order.Value:0}ο {BaseTitle}"
             : $"{order.Value.ToString("0.#", Greek)}ο {BaseTitle}";
+    }
+
+    private static string? Optional(string? value, int maxLength, string label)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        string trimmed = value.Trim();
+        if (trimmed.Length > maxLength)
+        {
+            throw new DomainException($"{label} δεν μπορεί να ξεπερνά τους {maxLength} χαρακτήρες.");
+        }
+
+        return trimmed;
     }
 
     private static void ValidateOrder(decimal? order)

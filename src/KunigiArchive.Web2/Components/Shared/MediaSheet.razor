@@ -1,0 +1,49 @@
+@* A contact sheet of small square prints. The first ones show; the rest open with "Όλο το υλικό".
+   The lightbox (site.js, data-gallery) still steps through all of them. Used by the team and game pages. *@
+@if (Items.Count == 0)
+{
+    <p class="k-empty">@Empty</p>
+}
+else
+{
+    <div class="prints">
+        @foreach (Thumb item in Items.Take(PreviewCount))
+        {
+            @Print(item)
+        }
+    </div>
+    @if (Items.Count > PreviewCount)
+    {
+        <details class="more-media">
+            <summary>Όλο το υλικό (@Items.Count)</summary>
+            <div class="prints">
+                @foreach (Thumb item in Items.Skip(PreviewCount))
+                {
+                    @Print(item)
+                }
+            </div>
+        </details>
+    }
+}
+
+@code {
+    public sealed record Thumb(string Path, string ThumbnailPath, string Name);
+
+    private const int PreviewCount = 12;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Thumb> Items { get; set; } = [];
+
+    // Groups the lightbox: one gallery per page section.
+    [Parameter, EditorRequired]
+    public string Gallery { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Empty { get; set; } = "Δεν υπάρχει υλικό ακόμη.";
+
+    private RenderFragment Print(Thumb item) =>
+        @<a href="/@item.Path" data-gallery="@Gallery" aria-label="@item.Name">
+            <img src="/@item.ThumbnailPath" alt="@item.Name" loading="lazy"
+                 onerror="this.onerror=null;this.src='/@item.Path'" />
+        </a>;
+}

@@ -1,0 +1,20 @@
+@* A game's poster in its own shape. Without one, a stone card the shape of a poster with the compass watermark. *@
+@if (Image is not null)
+{
+    <img class="game-poster" src="/@Image" alt="Αφίσα: @Name" loading="@(Lazy ? "lazy" : "eager")" />
+}
+else
+{
+    <span class="game-poster empty" aria-hidden="true"></span>
+}
+
+@code {
+    [Parameter]
+    public string? Image { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool Lazy { get; set; } = true;
+}

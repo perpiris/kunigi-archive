@@ -107,64 +107,6 @@
     margin-left: .35rem;
 }
 
-/* A contact sheet: small square prints, as many per row as fit. */
-.prints {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: .875rem;
-}
-
-    .prints a {
-        display: block;
-        border: 5px solid var(--k-sheet);
-        box-shadow: 0 1px 3px var(--k-shadow);
-        transition: transform .15s ease-in-out;
-    }
-
-        .prints a:nth-child(odd) {
-            transform: rotate(-.8deg);
-        }
-
-        .prints a:nth-child(even) {
-            transform: rotate(.9deg);
-        }
-
-        .prints a:hover {
-            transform: scale(1.03);
-        }
-
-    .prints img {
-        display: block;
-        width: 100%;
-        aspect-ratio: 1;
-        object-fit: cover;
-        background: var(--k-sheet);
-    }
-
-.more-media {
-    margin-top: 1rem;
-}
-
-    .more-media summary {
-        cursor: pointer;
-        display: inline-block;
-        border: 1px solid var(--k-ink);
-        padding: .35rem .9rem;
-        font-size: .8125rem;
-        font-weight: 700;
-        letter-spacing: .06em;
-        text-transform: uppercase;
-        margin-bottom: .875rem;
-    }
-
-        .more-media summary::-webkit-details-marker {
-            display: none;
-        }
-
-    .more-media[open] summary {
-        display: none;
-    }
-
 @media (max-width: 680px) {
     .record {
         grid-template-columns: 1fr;
@@ -174,11 +116,6 @@
         .record ::deep .team-frame {
             max-width: 240px;
         }
-
-    .prints {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: .6rem;
-    }
 }
 
 @media (max-width: 520px) {
