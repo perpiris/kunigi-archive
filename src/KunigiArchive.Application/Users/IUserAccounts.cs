@@ -15,6 +15,12 @@ public interface IUserAccounts
     // Replaces the password, ends the user's open sessions and clears any lockout.
     Task SetPasswordAsync(Guid userId, string password, CancellationToken cancellationToken);
 
+    // The user's own changes, confirmed with their current password. Both renew the security stamp, so the
+    // user's other sessions end. Throw InvalidRequestException for a wrong current password, or an email or
+    // password Identity rejects.
+    Task ChangeEmailAsync(Guid userId, string currentPassword, string newEmail, CancellationToken cancellationToken);
+    Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken);
+
     // Null when no account has this email.
     Task<PasswordResetCode?> CreatePasswordResetCodeAsync(string email, CancellationToken cancellationToken);
 

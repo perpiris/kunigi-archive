@@ -39,6 +39,7 @@ using KunigiArchive.Application.Users.ChangeUserRole;
 using KunigiArchive.Application.Users.CreateUser;
 using KunigiArchive.Application.Users.GetUserDetails;
 using KunigiArchive.Application.Users.GetUsers;
+using KunigiArchive.Application.Users.MyAccount;
 using KunigiArchive.Application.Users.ResetPassword;
 using KunigiArchive.Application.Users.SendTemporaryPassword;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,6 +98,9 @@ public static class DependencyInjection
         services.AddScoped<CreateUserHandler>();
         services.AddScoped<ChangeUserRoleHandler>();
         services.AddScoped<SendTemporaryPasswordHandler>();
+        services.AddScoped<GetMyAccountHandler>();
+        services.AddScoped<ChangeMyEmailHandler>();
+        services.AddScoped<ChangeMyPasswordHandler>();
         services.AddScoped<RequestPasswordResetHandler>();
         services.AddScoped<ResetPasswordHandler>();
 
