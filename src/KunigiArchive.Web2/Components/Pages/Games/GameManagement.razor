@@ -21,15 +21,15 @@
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table align-middle">
+        <div class="k-table">
+            <table class="table align-middle k-sortable">
                 <thead>
                     <tr>
                         <th scope="col">Χρονιά</th>
                         <th scope="col">Παιχνίδι</th>
                         <th scope="col">Διοργάνωση</th>
                         <th scope="col">Νικητής</th>
-                        <th scope="col" class="text-end"><span class="visually-hidden">Ενέργειες</span></th>
+                        <th scope="col" class="text-end" data-no-sort><span class="visually-hidden">Ενέργειες</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -37,7 +37,7 @@
                     {
                         <tr>
                             <td class="text-nowrap">@game.Year</td>
-                            <td><GameName Order="game.Order" Year="game.Year" /></td>
+                            <td data-sort-value="@game.Year"><GameName Order="game.Order" Year="game.Year" /></td>
                             <td><TeamLink Team="game.Host" /></td>
                             <td><TeamLink Team="game.Winner" /></td>
                             <td class="text-end">

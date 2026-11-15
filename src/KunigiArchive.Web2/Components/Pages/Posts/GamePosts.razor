@@ -1,0 +1,134 @@
+@page "/games/{Slug}/posts"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetGameForEdit
+@using KunigiArchive.Application.Posts
+@using KunigiArchive.Application.Posts.DeletePost
+@using KunigiArchive.Application.Posts.GetGamePosts
+@inject GetGameForEditHandler GetGameForEditHandler
+@inject GetGamePostsHandler GetGamePostsHandler
+@inject DeletePostHandler DeletePostHandler
+@inherits FormPage
+
+<PageTitle>Αναρτήσεις</PageTitle>
+
+@if (_game is not null && _posts is not null)
+{
+    <header class="k-page-head">
+        <h1>Αναρτήσεις</h1>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary" href="games/@_game.Slug/actions">Ενέργειες παιχνιδιού</a>
+            <a class="btn btn-primary" href="games/@_game.Slug/posts/create">Νέα ανάρτηση</a>
+        </div>
+    </header>
+    <p class="text-body-secondary"><GameName Order="_game.Order" Year="_game.Year" /></p>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+    }
+
+    @if (_posts.Count == 0)
+    {
+        <p class="k-empty">Δεν υπάρχουν αναρτήσεις ακόμη.</p>
+    }
+    else
+    {
+        <form method="post" @formname="delete-post" @onsubmit="DeleteAsync">
+            <AntiforgeryToken />
+            <div class="k-table">
+                <table class="table align-middle k-sortable">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ημερομηνία</th>
+                            <th scope="col">Τίτλος</th>
+                            <th scope="col">Υλικό</th>
+                            <th scope="col" class="text-end" data-no-sort><span class="visually-hidden">Ενέργειες</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (PostDetails post in _posts)
+                        {
+                            <tr>
+                                <td class="text-nowrap" data-sort-value="@post.CreatedAt.ToUnixTimeSeconds()"><PostDate Value="post.CreatedAt" /></td>
+                                <td>@(post.Title ?? "Χωρίς τίτλο")</td>
+                                <td>@post.Media.Count</td>
+                                <td class="text-end text-nowrap">
+                                    <a class="btn btn-sm btn-outline-primary" href="games/@_game.Slug/posts/@post.Id">Επεξεργασία</a>
+                                    <button type="submit" name="DeletePostId" value="@post.Id" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Διαγραφή της ανάρτησης και του υλικού της;')">
+                                        Διαγραφή
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </form>
+    }
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "delete-post")]
+    private Guid? DeletePostId { get; set; }
+
+    private GameDetails? _game;
+    private IReadOnlyList<PostDetails>? _posts;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_game is null || DeletePostId is null)
+        {
+            return;
+        }
+
+        // The post must belong to this game; the handler checks the user may edit it.
+        if (_posts?.Any(p => p.Id == DeletePostId) != true)
+        {
+            (_message, _isError) = ("Η ανάρτηση δεν βρέθηκε.", true);
+            return;
+        }
+
+        try
+        {
+            await DeletePostHandler.HandleAsync(DeletePostId.Value, CancellationToken.None);
+            Reload("Η ανάρτηση διαγράφηκε.");
+        }
+        catch (PostNotFoundException exception)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+            _posts = await GetGamePostsHandler.HandleAsync(_game.Id, CancellationToken.None);
+        }
+        catch (GameNotFoundException)
+        {
+            _game = null;
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+}

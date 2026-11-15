@@ -10,6 +10,15 @@ using KunigiArchive.Application.Games.SetGameImage;
 using KunigiArchive.Application.Games.UpdateGameDetails;
 using KunigiArchive.Application.Games.UpdateGameRecord;
 using KunigiArchive.Application.Games.UploadGameMedia;
+using KunigiArchive.Application.Media.GetMediaStatus;
+using KunigiArchive.Application.Posts;
+using KunigiArchive.Application.Posts.CreatePost;
+using KunigiArchive.Application.Posts.DeletePost;
+using KunigiArchive.Application.Posts.DeletePostMedia;
+using KunigiArchive.Application.Posts.GetGamePosts;
+using KunigiArchive.Application.Posts.GetPostForEdit;
+using KunigiArchive.Application.Posts.UpdatePost;
+using KunigiArchive.Application.Posts.UploadPostMedia;
 using KunigiArchive.Application.Teams.AssignTeamManager;
 using KunigiArchive.Application.Teams.CreateTeam;
 using KunigiArchive.Application.Teams.DeleteTeam;
@@ -64,6 +73,17 @@ public static class DependencyInjection
         services.AddScoped<UploadGameMediaHandler>();
         services.AddScoped<DeleteGameMediaHandler>();
         services.AddScoped<DeleteGameHandler>();
+
+        services.AddScoped<GetMediaStatusHandler>();
+
+        services.AddScoped<PostAccess>();
+        services.AddScoped<GetGamePostsHandler>();
+        services.AddScoped<GetPostForEditHandler>();
+        services.AddScoped<CreatePostHandler>();
+        services.AddScoped<UpdatePostHandler>();
+        services.AddScoped<DeletePostHandler>();
+        services.AddScoped<UploadPostMediaHandler>();
+        services.AddScoped<DeletePostMediaHandler>();
 
         services.AddScoped<GetTeamManagersHandler>();
         services.AddScoped<AssignTeamManagerHandler>();

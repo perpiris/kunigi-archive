@@ -21,11 +21,12 @@
     }
     else
     {
-        <table class="table align-middle">
+        <div class="k-table">
+        <table class="table align-middle k-sortable">
             <thead>
                 <tr>
                     <th>Όνομα</th>
-                    <th class="text-end">Ενέργειες</th>
+                    <th class="text-end" data-no-sort>Ενέργειες</th>
                 </tr>
             </thead>
             <tbody>
@@ -40,6 +41,7 @@
                 }
             </tbody>
         </table>
+        </div>
 
         @* The games these teams hosted: their managers fill in the title, story, poster and material. *@
         <h2 class="h4 mt-5">Παιχνίδια που διοργανώσατε</h2>
@@ -49,12 +51,13 @@
         }
         else
         {
-            <table class="table align-middle">
+            <div class="k-table">
+            <table class="table align-middle k-sortable">
                 <thead>
                     <tr>
                         <th>Χρονιά</th>
                         <th>Παιχνίδι</th>
-                        <th class="text-end">Ενέργειες</th>
+                        <th class="text-end" data-no-sort>Ενέργειες</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,7 +65,7 @@
                     {
                         <tr>
                             <td class="text-nowrap">@game.Year</td>
-                            <td><a href="games/@game.Slug"><GameName Order="game.Order" Year="game.Year" /></a></td>
+                            <td data-sort-value="@game.Year"><a href="games/@game.Slug"><GameName Order="game.Order" Year="game.Year" /></a></td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-primary" href="games/@game.Slug/actions">Ενέργειες</a>
                             </td>
@@ -70,6 +73,7 @@
                     }
                 </tbody>
             </table>
+            </div>
         }
     }
 }

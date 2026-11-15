@@ -284,6 +284,43 @@ internal sealed class LocalMediaStorage : IMediaStorage
         return buffer;
     }
 
+    public MediaUsage GetTotalUsage()
+    {
+        return Measure(new DirectoryInfo(Path.GetFullPath(_root)));
+    }
+
+    public IReadOnlyDictionary<string, MediaUsage> GetUsageOfSubfolders(string directory)
+    {
+        DirectoryInfo parent = new DirectoryInfo(ResolveInsideRoot(directory));
+        if (!parent.Exists)
+        {
+            return new Dictionary<string, MediaUsage>();
+        }
+
+        return parent.EnumerateDirectories().ToDictionary(folder => folder.Name, Measure, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static MediaUsage Measure(DirectoryInfo directory)
+    {
+        if (!directory.Exists)
+        {
+            return MediaUsage.None;
+        }
+
+        int files = 0;
+        long bytes = 0;
+        foreach (FileInfo file in directory.EnumerateFiles("*", SearchOption.AllDirectories))
+        {
+            bytes += file.Length;
+            if (!file.Name.StartsWith(MediaRules.ThumbnailPrefix, StringComparison.Ordinal))
+            {
+                files++;
+            }
+        }
+
+        return new MediaUsage(files, bytes);
+    }
+
     private static string ThumbnailPath(string fullPath)
     {
         return Path.Combine(Path.GetDirectoryName(fullPath)!, MediaRules.ThumbnailPrefix + Path.GetFileName(fullPath));

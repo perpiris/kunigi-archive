@@ -13,4 +13,5 @@ public interface ITeamQueries
     Task<IReadOnlyList<GameSummary>> GetHostedGamesAsync(Guid teamId, CancellationToken cancellationToken);
     Task<IReadOnlyList<GameSummary>> GetWonGamesAsync(Guid teamId, CancellationToken cancellationToken);
     Task<IReadOnlyList<TeamOption>> GetOptionsAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<TeamRef>> GetRefsAsync(CancellationToken cancellationToken);
 }

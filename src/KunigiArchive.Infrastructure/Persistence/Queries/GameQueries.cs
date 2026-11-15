@@ -81,6 +81,12 @@ internal sealed class GameQueries : IGameQueries
             : new GameRecord(game.Id, game.Slug.Value, game.Year, game.Order, game.OrderTitle, game.HostId, game.WinnerId);
     }
 
+    public async Task<IReadOnlyList<GameSummary>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        List<Game> games = await _dbContext.Games.AsNoTracking().OrderByDescending(g => g.Year).ToListAsync(cancellationToken);
+        return games.Select(g => g.ToSummary()).ToList();
+    }
+
     public async Task<GameDetails?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
     {
         return await GetDetailsAsync(g => g.Id == id, cancellationToken);

@@ -294,10 +294,61 @@
         lightbox = GLightbox({ selector: "a[data-gallery]", loop: true, touchNavigation: true });
     };
 
+    // ---------- Sortable tables ----------
+    // table.k-sortable: each header becomes a button that sorts the rows (asc, then desc). A cell's
+    // data-sort-value wins over its text (dates, sizes, game numbers); numbers sort as numbers, text in
+    // Greek order ignoring accents. Headers with data-no-sort (actions) stay as they are. Sorts the rows
+    // on the page only.
+    const collator = new Intl.Collator("el", { sensitivity: "base", numeric: true });
+
+    const sortValue = cell => cell?.dataset.sortValue ?? cell?.textContent.trim() ?? "";
+
+    const compare = (a, b) => {
+        const x = Number(a), y = Number(b);
+        if (a !== "" && b !== "" && !Number.isNaN(x) && !Number.isNaN(y)) {
+            return x - y;
+        }
+
+        return collator.compare(a, b);
+    };
+
+    const mountTable = table => {
+        if (table.dataset.sortReady) {
+            return;
+        }
+
+        table.dataset.sortReady = "true";
+        const headers = [...table.tHead.rows[0].cells];
+
+        headers.forEach((th, column) => {
+            if (th.hasAttribute("data-no-sort") || !th.textContent.trim()) {
+                return;
+            }
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "k-sort";
+            button.append(...th.childNodes);
+            th.append(button);
+
+            button.addEventListener("click", () => {
+                const ascending = th.getAttribute("aria-sort") !== "ascending";
+                headers.forEach(other => other.removeAttribute("aria-sort"));
+                th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
+
+                const body = table.tBodies[0];
+                const rows = [...body.rows];
+                rows.sort((r1, r2) => compare(sortValue(r1.cells[column]), sortValue(r2.cells[column])) * (ascending ? 1 : -1));
+                body.append(...rows);
+            });
+        });
+    };
+
     const mount = () => {
         remountEditors();
         mountGallery();
         document.querySelectorAll("k-combobox").forEach(combobox => combobox.mount());
+        document.querySelectorAll("table.k-sortable").forEach(mountTable);
     };
 
     if (document.readyState === "loading") {

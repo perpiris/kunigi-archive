@@ -1,0 +1,14 @@
+@using System.Globalization
+@* A post's date in Greek time, e.g. "16 Νοεμβρίου 2026". *@
+<time datetime="@Value.ToString("O", CultureInfo.InvariantCulture)">@TimeZoneInfo.ConvertTime(Value, Athens).ToString("d MMMM yyyy", Greek)</time>
+
+@code {
+    private static readonly CultureInfo Greek = CultureInfo.GetCultureInfo("el-GR");
+
+    // Falls back to UTC if the host has no time zone data.
+    private static readonly TimeZoneInfo Athens =
+        TimeZoneInfo.TryFindSystemTimeZoneById("Europe/Athens", out TimeZoneInfo? zone) ? zone : TimeZoneInfo.Utc;
+
+    [Parameter, EditorRequired]
+    public DateTimeOffset Value { get; set; }
+}

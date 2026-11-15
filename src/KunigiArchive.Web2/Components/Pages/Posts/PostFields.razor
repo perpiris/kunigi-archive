@@ -1,0 +1,21 @@
+@using KunigiArchive.Domain.Posts
+@using KunigiArchive.Web2.Forms.Posts
+@* The post's fields, shared by the create and edit pages. *@
+<div class="k-field">
+    <label for="title" class="form-label">Τίτλος <span class="text-body-secondary">(προαιρετικός)</span></label>
+    <InputText id="title" class="form-control" maxlength="@Post.TitleMaxLength" @bind-Value="Form.Title" />
+    <ValidationMessage For="() => Form.Title" />
+</div>
+
+<div class="k-field">
+    <label for="content" class="form-label">Κείμενο</label>
+    <k-rich-text>
+        <InputTextArea id="content" class="form-control" rows="10" @bind-Value="Form.Content" />
+    </k-rich-text>
+    <ValidationMessage For="() => Form.Content" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PostForm Form { get; set; } = null!;
+}

@@ -1,0 +1,147 @@
+@page "/admin/media"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using System.Globalization
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Media
+@using KunigiArchive.Application.Media.GetMediaStatus
+@inject GetMediaStatusHandler GetMediaStatusHandler
+
+<PageTitle>Αποθηκευτικός χώρος</PageTitle>
+
+<header class="k-page-head">
+    <h1>Αποθηκευτικός χώρος</h1>
+    <a class="btn btn-outline-secondary" href="admin">Πίνακας διαχείρισης</a>
+</header>
+
+@if (_status is not null)
+{
+    <div class="totals">
+        @Total("Σύνολο", _status.Total)
+        @Total("Ομάδες", _status.Teams)
+        @Total("Παιχνίδια", _status.Games)
+    </div>
+    <p class="form-text">
+        Τα αρχεία μετρούν ό,τι ανέβηκε (εικόνες, αφίσες, υλικό, αναρτήσεις). Το μέγεθος περιλαμβάνει και τις μικρογραφίες.
+    </p>
+
+    @if (_rows.Count == 0)
+    {
+        <p class="k-empty">Δεν υπάρχει υλικό ακόμη.</p>
+    }
+    else
+    {
+        <div class="k-table mt-4">
+            <table class="table align-middle k-sortable">
+                <thead>
+                    <tr>
+                        <th scope="col">Όνομα</th>
+                        <th scope="col">Είδος</th>
+                        <th scope="col" class="text-end">Αρχεία</th>
+                        <th scope="col" class="text-end" aria-sort="descending">Μέγεθος</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (Row row in _rows)
+                    {
+                        <tr>
+                            <td data-sort-value="@row.SortName"><a href="@row.Href">@row.Name</a></td>
+                            <td>@row.Kind</td>
+                            <td class="text-end">@row.Usage.Files</td>
+                            <td class="text-end text-nowrap" data-sort-value="@row.Usage.Bytes">@Size(row.Usage.Bytes)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (_withoutMedia.Teams > 0 || _withoutMedia.Games > 0)
+    {
+        <p class="form-text">Χωρίς υλικό: @_withoutMedia.Games παιχνίδια και @_withoutMedia.Teams ομάδες.</p>
+    }
+
+    @if (_status.UnknownFolders.Count > 0)
+    {
+        <section class="mt-4">
+            <h2 class="h4 text-danger">Φάκελοι χωρίς ομάδα ή παιχνίδι</h2>
+            <p class="form-text">Φάκελοι που έμειναν στον δίσκο ενώ η ομάδα ή το παιχνίδι τους δεν υπάρχει πια.</p>
+            <div class="k-table">
+                <table class="table align-middle k-sortable">
+                    <thead>
+                        <tr>
+                            <th scope="col">Φάκελος</th>
+                            <th scope="col" class="text-end">Αρχεία</th>
+                            <th scope="col" class="text-end">Μέγεθος</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (MediaStatus.FolderUsage folder in _status.UnknownFolders)
+                        {
+                            <tr>
+                                <td><code>@folder.Path</code></td>
+                                <td class="text-end">@folder.Usage.Files</td>
+                                <td class="text-end text-nowrap" data-sort-value="@folder.Usage.Bytes">@Size(folder.Usage.Bytes)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private static readonly CultureInfo Greek = CultureInfo.GetCultureInfo("el-GR");
+
+    // One table for teams and games: Kind tells them apart, SortName sorts games by year.
+    private sealed record Row(RenderFragment Name, string SortName, string Kind, string Href, MediaUsage Usage);
+
+    private MediaStatus? _status;
+    private List<Row> _rows = [];
+    private (int Teams, int Games) _withoutMedia;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _status = await GetMediaStatusHandler.HandleAsync(CancellationToken.None);
+
+        _rows =
+        [
+            .. _status.GameRows.Where(r => r.Usage.Files > 0)
+                .Select(r => new Row(Game(r.Game), r.Game.Year.ToString(CultureInfo.InvariantCulture), "Παιχνίδι", $"games/{r.Game.Slug}", r.Usage)),
+            .. _status.TeamRows.Where(r => r.Usage.Files > 0)
+                .Select(r => new Row(Text(r.Team.Name), r.Team.Name, "Ομάδα", $"teams/{r.Team.Slug}", r.Usage))
+        ];
+        _rows = _rows.OrderByDescending(r => r.Usage.Bytes).ToList();
+
+        _withoutMedia = (_status.TeamRows.Count(r => r.Usage.Files == 0), _status.GameRows.Count(r => r.Usage.Files == 0));
+    }
+
+    private static RenderFragment Total(string label, MediaUsage usage) =>
+        @<div class="total">
+            <div class="k-label">@label</div>
+            <div class="size">@Size(usage.Bytes)</div>
+            <div class="files">@Files(usage.Files)</div>
+        </div>;
+
+    private static RenderFragment Game(GameSummary game) =>
+        @<span><GameName Order="game.Order" Year="game.Year" /> <span class="text-body-secondary">(@game.Year)</span></span>;
+
+    private static RenderFragment Text(string text) => @<span>@text</span>;
+
+    private static string Files(int count) => count == 1 ? "1 αρχείο" : $"{count.ToString("N0", Greek)} αρχεία";
+
+    // 1024-based, like the operating system shows sizes.
+    private static string Size(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return unit == 0 ? $"{bytes} B" : $"{value.ToString(value < 10 ? "0.0" : "0", Greek)} {units[unit]}";
+    }
+}

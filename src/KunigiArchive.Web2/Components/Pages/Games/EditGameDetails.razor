@@ -13,7 +13,7 @@
 @inject GetGameForEditHandler GetGameForEditHandler
 @inject UpdateGameDetailsHandler UpdateGameDetailsHandler
 @inject SetGameImageHandler SetGameImageHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 @* The host team's part of the game. Year, number and teams are the admin's ("Στοιχεία", games/{id}/edit). *@
 <PageTitle>Επεξεργασία παιχνιδιού</PageTitle>
@@ -143,7 +143,7 @@
             return;
         }
 
-        Navigation.NavigateTo($"/games/{_game.Slug}");
+        Done("Οι αλλαγές αποθηκεύτηκαν.", $"/games/{_game.Slug}/actions");
     }
 
     private async Task SaveImageAsync()
@@ -176,7 +176,7 @@
         try
         {
             _game = await SetGameImageHandler.HandleAsync(new SetGameImageCommand(_game!.Id, image), CancellationToken.None);
-            (_message, _isError) = (success, false);
+            Reload(success);
         }
         catch (Exception exception) when (exception is InvalidRequestException or DomainException)
         {

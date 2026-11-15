@@ -12,7 +12,7 @@
 @inject GetGameRecordHandler GetGameRecordHandler
 @inject UpdateGameRecordHandler UpdateGameRecordHandler
 @inject GetTeamOptionsHandler GetTeamOptionsHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Στοιχεία παιχνιδιού</PageTitle>
 
@@ -22,6 +22,7 @@
 {
     <header class="k-page-head">
         <h1><GameName Order="_game.Order" Year="_game.Year" /></h1>
+        <a class="btn btn-outline-secondary" href="games/@_game.Slug/actions">Ενέργειες παιχνιδιού</a>
     </header>
 
     @if (_error is not null)
@@ -35,7 +36,7 @@
         <GameRecordFields Form="Form" Teams="_teams" />
 
         <div class="k-form-actions">
-            <a class="btn btn-outline-secondary" href="games/manage">Ακύρωση</a>
+            <a class="btn btn-outline-secondary" href="games/@_game.Slug/actions">Ακύρωση</a>
             <button type="submit" class="btn btn-primary">Αποθήκευση</button>
         </div>
     </EditForm>
@@ -72,11 +73,12 @@
 
     private async Task SaveAsync()
     {
+        GameSummary game;
         try
         {
             // The game comes from the route, not from the posted form.
             GameRecordForm form = Form! with { Id = Id };
-            await UpdateGameRecordHandler.HandleAsync(form.ToUpdateCommand(), CancellationToken.None);
+            game = await UpdateGameRecordHandler.HandleAsync(form.ToUpdateCommand(), CancellationToken.None);
         }
         catch (Exception exception) when (exception is DomainException or ConflictException or InvalidRequestException)
         {
@@ -84,6 +86,7 @@
             return;
         }
 
-        Navigation.NavigateTo("/games/manage");
+        // The slug follows the number, so the address comes from the saved game.
+        Done("Τα στοιχεία αποθηκεύτηκαν.", $"/games/{game.Slug}/actions");
     }
 }

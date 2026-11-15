@@ -6,7 +6,7 @@
 @using KunigiArchive.Application.Games.GetGameForEdit
 @inject GetGameForEditHandler GetGameForEditHandler
 @inject DeleteGameHandler DeleteGameHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 @if (_game is not null)
 {
@@ -21,6 +21,7 @@
         <ActionTile Href="@($"games/{_game.Slug}")" Title="Προβολή" Description="Η δημόσια σελίδα του παιχνιδιού." />
         <ActionTile Href="@($"games/{_game.Slug}/edit")" Title="Επεξεργασία" Description="Τίτλος, σημείωση, ιστορία, αφίσα." />
         <ActionTile Href="@($"games/{_game.Slug}/media")" Title="Υλικό" Description="Φωτογραφίες και αρχεία του παιχνιδιού." />
+        <ActionTile Href="@($"games/{_game.Slug}/posts")" Title="Αναρτήσεις" Description="Ανακοινώσεις και νέα του παιχνιδιού." />
         <AuthorizeView Roles="@Roles.Admin">
             <ActionTile Href="@($"games/{_game.Id}/edit")" Title="Στοιχεία"
                         Description="Χρονιά, αριθμός, διοργάνωση και νικητής." />
@@ -88,6 +89,6 @@
             return;
         }
 
-        Navigation.NavigateTo("/games/manage");
+        Done($"Το «{_game.OrderTitle}» διαγράφηκε.", "/games/manage");
     }
 }

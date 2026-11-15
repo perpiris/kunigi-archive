@@ -7,7 +7,7 @@
 @using KunigiArchive.Web2.Forms.Teams
 @using KunigiArchive.Web2.Mappers
 @inject CreateTeamHandler CreateTeamHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Νέα ομάδα</PageTitle>
 
@@ -69,6 +69,6 @@
             return;
         }
 
-        Navigation.NavigateTo($"/teams/{team.Slug}");
+        Done($"Η ομάδα «{team.Name}» δημιουργήθηκε.", "/teams/manage");
     }
 }
