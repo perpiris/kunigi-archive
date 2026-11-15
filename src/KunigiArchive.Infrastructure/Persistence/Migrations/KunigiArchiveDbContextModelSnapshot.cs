@@ -84,6 +84,39 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                     b.ToTable("Games", (string)null);
                 });
 
+            modelBuilder.Entity("KunigiArchive.Domain.Games.GameMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    b.ToTable("GameMedia", (string)null);
+                });
+
             modelBuilder.Entity("KunigiArchive.Domain.Teams.Team", b =>
                 {
                     b.Property<Guid>("Id")
@@ -394,6 +427,15 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("KunigiArchive.Domain.Games.GameMedia", b =>
+                {
+                    b.HasOne("KunigiArchive.Domain.Games.Game", null)
+                        .WithMany("Media")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("KunigiArchive.Domain.Teams.TeamManager", b =>
                 {
                     b.HasOne("KunigiArchive.Domain.Teams.Team", null)
@@ -467,6 +509,11 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.Games.Game", b =>
+                {
+                    b.Navigation("Media");
                 });
 
             modelBuilder.Entity("KunigiArchive.Domain.Teams.Team", b =>

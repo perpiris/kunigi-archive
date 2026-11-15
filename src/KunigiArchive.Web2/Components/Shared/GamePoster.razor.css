@@ -1,0 +1,13 @@
+.game-poster {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 4px solid var(--k-paper);
+    box-shadow: 0 1px 3px var(--k-shadow);
+}
+
+    /* A typical poster is 741 × 920. */
+    .game-poster.empty {
+        aspect-ratio: 741 / 920;
+        background: url("/img/watermarks/compass.svg") center / 62% no-repeat, linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
+    }

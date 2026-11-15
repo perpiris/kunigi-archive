@@ -1,0 +1,71 @@
+@page "/games/{Slug}"
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetGameBySlug
+@inject GetGameBySlugHandler GetGameBySlugHandler
+@inject NavigationManager Navigation
+
+@if (_game is not null)
+{
+    <PageTitle>@(_game.Title is null ? _game.OrderTitle : $"{_game.OrderTitle} «{_game.Title}»")</PageTitle>
+
+    <section class="record">
+        <div class="poster">
+            <GamePoster Image="@_game.Image" Name="@_game.OrderTitle" Lazy="false" />
+        </div>
+        <div>
+            <div class="year">@_game.Year</div>
+            <h1><GameName Order="_game.Order" Year="_game.Year" /></h1>
+            @if (_game.Title is not null)
+            {
+                <p class="subtitle">«@_game.Title»</p>
+            }
+            <dl class="facts">
+                <dt>Διοργάνωση</dt>
+                <dd><TeamLink Team="_game.Host" /></dd>
+                <dt>Νικητής</dt>
+                <dd><TeamLink Team="_game.Winner" /></dd>
+            </dl>
+            @if (_game.Note is not null)
+            {
+                <p class="note">@_game.Note</p>
+            }
+        </div>
+    </section>
+
+    @if (_game.Description is not null)
+    {
+        <section class="block">
+            <h2>Το παιχνίδι</h2>
+            <RichText Html="@_game.Description" Class="story" />
+        </section>
+    }
+
+    <section class="block">
+        <h2>Υλικό @if (_game.Media.Count > 0) { <span class="count">@_game.Media.Count</span> }</h2>
+        <MediaSheet Items="_mediaThumbs" Gallery="game" />
+    </section>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private GameDetails? _game;
+    private List<MediaSheet.Thumb> _mediaThumbs = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _game = await GetGameBySlugHandler.HandleAsync(Slug, CancellationToken.None);
+        }
+        catch (GameNotFoundException)
+        {
+            _game = null;
+            Navigation.NotFound();
+            return;
+        }
+
+        _mediaThumbs = _game.Media.Select(m => new MediaSheet.Thumb(m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList();
+    }
+}

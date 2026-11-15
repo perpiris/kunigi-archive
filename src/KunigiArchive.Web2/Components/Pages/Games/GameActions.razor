@@ -1,0 +1,93 @@
+@page "/games/{Slug}/actions"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.DeleteGame
+@using KunigiArchive.Application.Games.GetGameForEdit
+@inject GetGameForEditHandler GetGameForEditHandler
+@inject DeleteGameHandler DeleteGameHandler
+@inject NavigationManager Navigation
+
+@if (_game is not null)
+{
+    <PageTitle>@_game.OrderTitle - Ενέργειες</PageTitle>
+
+    <header class="k-page-head">
+        <h1><GameName Order="_game.Order" Year="_game.Year" /></h1>
+        <a class="btn btn-outline-secondary" href="games/@_game.Slug">Δημόσια σελίδα</a>
+    </header>
+
+    <div class="row g-3">
+        <ActionTile Href="@($"games/{_game.Slug}")" Title="Προβολή" Description="Η δημόσια σελίδα του παιχνιδιού." />
+        <ActionTile Href="@($"games/{_game.Slug}/edit")" Title="Επεξεργασία" Description="Τίτλος, σημείωση, ιστορία, αφίσα." />
+        <ActionTile Href="@($"games/{_game.Slug}/media")" Title="Υλικό" Description="Φωτογραφίες και αρχεία του παιχνιδιού." />
+        <AuthorizeView Roles="@Roles.Admin">
+            <ActionTile Href="@($"games/{_game.Id}/edit")" Title="Στοιχεία"
+                        Description="Χρονιά, αριθμός, διοργάνωση και νικητής." />
+        </AuthorizeView>
+    </div>
+
+    <AuthorizeView Roles="@Roles.Admin">
+        <section class="card border-danger mt-5">
+            <div class="card-body">
+                <h2 class="h5 card-title text-danger">Διαγραφή παιχνιδιού</h2>
+                <p class="card-text">Διαγράφει το παιχνίδι, την αφίσα και όλο το υλικό του. Δεν αναιρείται.</p>
+                <form method="post" @formname="delete-game" @onsubmit="DeleteAsync">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="ConfirmDelete" value="true" />
+                    <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('Οριστική διαγραφή του παιχνιδιού και όλου του υλικού του;')">
+                        Διαγραφή παιχνιδιού
+                    </button>
+                </form>
+            </div>
+        </section>
+    </AuthorizeView>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "delete-game")]
+    private bool ConfirmDelete { get; set; }
+
+    private GameDetails? _game;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+        }
+        catch (GameNotFoundException)
+        {
+            _game = null;
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_game is null || !ConfirmDelete)
+        {
+            return;
+        }
+
+        try
+        {
+            await DeleteGameHandler.HandleAsync(_game.Id, CancellationToken.None);
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
+            return;
+        }
+
+        Navigation.NavigateTo("/games/manage");
+    }
+}

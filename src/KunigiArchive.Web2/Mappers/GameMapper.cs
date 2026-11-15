@@ -1,6 +1,7 @@
 using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Games.CreateGame;
 using KunigiArchive.Application.Games.GetGames;
+using KunigiArchive.Application.Games.UpdateGameDetails;
 using KunigiArchive.Application.Games.UpdateGameRecord;
 using KunigiArchive.Web2.Contracts.Games;
 
@@ -43,6 +44,33 @@ public static class GameMapper
             game.Image,
             game.Host?.ToResponse(),
             game.Winner?.ToResponse());
+    }
+
+    public static UpdateGameDetailsCommand ToCommand(this UpdateGameDetailsRequest request, Guid id)
+    {
+        return new UpdateGameDetailsCommand(id, request.Title, request.Note, request.Description);
+    }
+
+    public static GameDetailsResponse ToResponse(this GameDetails game)
+    {
+        return new GameDetailsResponse(
+            game.Id,
+            game.Slug,
+            game.Year,
+            game.Order,
+            game.OrderTitle,
+            game.Title,
+            game.Note,
+            game.Description,
+            game.Image,
+            game.Host?.ToResponse(),
+            game.Winner?.ToResponse(),
+            game.Media.Select(ToResponse).ToList());
+    }
+
+    public static GameMediaResponse ToResponse(this GameMediaDetails media)
+    {
+        return new GameMediaResponse(media.Id, media.Path, media.ThumbnailPath, media.OriginalFileName, media.UploadedAt);
     }
 
     public static GameSummaryResponse ToResponse(this GameSummary game)

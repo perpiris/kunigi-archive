@@ -1,8 +1,11 @@
 @page "/my-teams"
 @attribute [Authorize(Roles = Roles.Manager)]
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetMyGames
 @using KunigiArchive.Application.Teams
 @using KunigiArchive.Application.Teams.GetMyTeams
 @inject GetMyTeamsHandler GetMyTeamsHandler
+@inject GetMyGamesHandler GetMyGamesHandler
 
 <PageTitle>Οι ομάδες μου</PageTitle>
 
@@ -10,7 +13,7 @@
     <h1>Οι ομάδες μου</h1>
 </header>
 
-@if (_teams is not null)
+@if (_teams is not null && _games is not null)
 {
     @if (_teams.Count == 0)
     {
@@ -37,14 +40,47 @@
                 }
             </tbody>
         </table>
+
+        @* The games these teams hosted: their managers fill in the title, story, poster and material. *@
+        <h2 class="h4 mt-5">Παιχνίδια που διοργανώσατε</h2>
+        @if (_games.Count == 0)
+        {
+            <p class="text-body-secondary">Οι ομάδες σας δεν έχουν διοργανώσει ακόμα παιχνίδι στο αρχείο.</p>
+        }
+        else
+        {
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Χρονιά</th>
+                        <th>Παιχνίδι</th>
+                        <th class="text-end">Ενέργειες</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (GameSummary game in _games)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@game.Year</td>
+                            <td><a href="games/@game.Slug"><GameName Order="game.Order" Year="game.Year" /></a></td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary" href="games/@game.Slug/actions">Ενέργειες</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     }
 }
 
 @code {
     private IReadOnlyList<TeamSummary>? _teams;
+    private IReadOnlyList<GameSummary>? _games;
 
     protected override async Task OnInitializedAsync()
     {
         _teams = await GetMyTeamsHandler.HandleAsync(CancellationToken.None);
+        _games = await GetMyGamesHandler.HandleAsync(CancellationToken.None);
     }
 }

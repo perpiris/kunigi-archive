@@ -15,7 +15,12 @@ internal sealed class GameRepository : IGameRepository
 
     public async Task<Game?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _dbContext.Games.FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
+        return await Aggregate().FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
+    }
+
+    public async Task<Game?> GetBySlugAsync(Slug slug, CancellationToken cancellationToken)
+    {
+        return await Aggregate().FirstOrDefaultAsync(g => g.Slug == slug, cancellationToken);
     }
 
     public async Task<bool> AnyHostedOrWonByAsync(Guid teamId, CancellationToken cancellationToken)
@@ -41,5 +46,15 @@ internal sealed class GameRepository : IGameRepository
     public void Add(Game game)
     {
         _dbContext.Games.Add(game);
+    }
+
+    public void Remove(Game game)
+    {
+        _dbContext.Games.Remove(game);
+    }
+
+    private IQueryable<Game> Aggregate()
+    {
+        return _dbContext.Games.Include(g => g.Media);
     }
 }

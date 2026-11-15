@@ -54,5 +54,10 @@ internal sealed class GameConfiguration : IEntityTypeConfiguration<Game>
             .WithMany()
             .HasForeignKey(g => g.WinnerId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(g => g.Media)
+            .WithOne()
+            .HasForeignKey(m => m.GameId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

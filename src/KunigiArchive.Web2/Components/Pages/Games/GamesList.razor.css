@@ -19,20 +19,8 @@
     padding: 1rem;
 }
 
-.poster img {
+.poster {
     display: block;
-    width: 100%;
-    height: auto;
-    border: 4px solid var(--k-paper);
-    box-shadow: 0 1px 3px var(--k-shadow);
-}
-
-/* No poster yet: a stone card the shape of one (741 × 920), with the compass watermark. */
-.poster-empty {
-    display: grid;
-    place-items: center;
-    aspect-ratio: 741 / 920;
-    background: url("/img/watermarks/compass.svg") center / 62% no-repeat, linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
 }
 
 .year {
@@ -47,6 +35,16 @@
     line-height: 1.15;
     margin: .2rem 0 0;
 }
+
+    .name a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+        .name a:hover,
+        .name a:focus-visible {
+            color: var(--k-accent);
+        }
 
 .subtitle {
     font-style: italic;

@@ -28,3 +28,13 @@
     display: block;
     color: var(--k-faded);
 }
+
+.game-list a {
+    color: inherit;
+    text-decoration: none;
+}
+
+    .game-list a:hover,
+    .game-list a:focus-visible {
+        color: var(--k-accent);
+    }
