@@ -72,7 +72,7 @@
         @if (!string.IsNullOrEmpty(Model.Description))
         {
             <div class="fs-5 lh-lg">
-                @Html.Raw(Model.Description)
+                @Html.RichText(Model.Description)
             </div>
         }
         else
@@ -120,7 +120,7 @@
                         <div id="@collapseId" class="accordion-collapse collapse"
                              data-bs-parent="#postAccordion">
                             <div class="accordion-body fs-5 lh-lg ql-editor px-3">
-                                @Html.Raw(post.Content)
+                                @Html.RichText(post.Content)
                                 @if (post.Media != null && post.Media.Any())
                                 {
                                     <div class="mt-4">
