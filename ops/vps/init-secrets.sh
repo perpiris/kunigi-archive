@@ -14,8 +14,16 @@
 #   /opt/kunigi/admin.env    SQL_ADMIN_USER/PASSWORD
 #                            (login kunigi_admin, sysadmin)  for SSMS / manual work
 #
+# With --beta, also the beta site (Web2, docker-compose.beta.yml):
+#   database KunigiArchiveV2, login kunigi_beta (db_owner on it only),
+#   /opt/kunigi/beta.env     connection string, first admin, SMTP password,
+#                            email link base URL                     (kunigi_beta)
+#   /home/iperp/kunigi_beta_media and /home/iperp/kunigi_beta_keys, owned by
+#   the container user (uid 1654)
+#
 # Usage (as root on the VPS):
 #   init-secrets.sh                 create missing files, ensure logins
+#   init-secrets.sh --beta          also set up the beta site
 #   init-secrets.sh --rotate-sa     also give sa a new random password
 #
 # Optional inputs, only used when app.env is created for the first time:
@@ -33,8 +41,19 @@ DB_CONTAINER=kunigi_db
 DB_NAME=KunigiArchive
 SQLCMD=/opt/mssql-tools18/bin/sqlcmd
 DEPLOY_DIR=/home/iperp/kunigi-archive
+BETA_DB_NAME=KunigiArchiveV2
+BETA_URL=https://beta.tokinigi.gr
+BETA_DATA_DIR=/home/iperp     # next to ~/kunigi-beta: the compose file mounts ../kunigi_beta_*
+BETA_APP_UID=1654             # APP_UID of the .NET runtime image
 ROTATE_SA=false
-[ "${1:-}" = "--rotate-sa" ] && ROTATE_SA=true
+SETUP_BETA=false
+for arg in "$@"; do
+    case "$arg" in
+        --rotate-sa) ROTATE_SA=true ;;
+        --beta) SETUP_BETA=true ;;
+        *) echo "Unknown option: $arg" >&2; exit 1 ;;
+    esac
+done
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Run as root (sudo)." >&2
@@ -118,16 +137,16 @@ chmod 600 "$SECRETS_DIR/backup.env" "$SECRETS_DIR/admin.env"
 
 # --- SQL logins -----------------------------------------------------------------
 ensure_login() {
-    local name="$1" password="$2" role="$3"
-    log "SQL login $name ($role on $DB_NAME)"
+    local name="$1" password="$2" role="$3" database="${4:-$DB_NAME}"
+    log "SQL login $name ($role on $database)"
     sql_as_sa > /dev/null <<EOF
 SET NOCOUNT ON;
 IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'$name')
-    CREATE LOGIN [$name] WITH PASSWORD = N'$password', CHECK_POLICY = ON, DEFAULT_DATABASE = [$DB_NAME];
+    CREATE LOGIN [$name] WITH PASSWORD = N'$password', CHECK_POLICY = ON, DEFAULT_DATABASE = [$database];
 ELSE
     ALTER LOGIN [$name] WITH PASSWORD = N'$password';
 GO
-USE [$DB_NAME];
+USE [$database];
 IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'$name')
     CREATE USER [$name] FOR LOGIN [$name];
 ALTER ROLE [$role] ADD MEMBER [$name];
@@ -153,6 +172,39 @@ ELSE
 ALTER SERVER ROLE [sysadmin] ADD MEMBER [kunigi_admin];
 GO
 EOF
+
+# --- optional: beta site ----------------------------------------------------------
+# Never touches the live database or media: its own database, login, env file and folders.
+if $SETUP_BETA; then
+    log "Beta database $BETA_DB_NAME"
+    echo "SET NOCOUNT ON; IF DB_ID(N'$BETA_DB_NAME') IS NULL CREATE DATABASE [$BETA_DB_NAME];" | sql_as_sa > /dev/null
+    echo "SET NOCOUNT ON; ALTER DATABASE [$BETA_DB_NAME] SET RECOVERY SIMPLE;" | sql_as_sa > /dev/null
+
+    if [ ! -f "$SECRETS_DIR/beta.env" ]; then
+        log "Creating beta.env"
+        # Same SMTP account and first-admin email as the live site; the admin password is new.
+        cat > "$SECRETS_DIR/beta.env" <<EOF
+ConnectionStrings__KunigiArchive=Server=db;Database=$BETA_DB_NAME;User Id=kunigi_beta;Password=$(genpw);TrustServerCertificate=True;
+AdminSeed__Email=${BETA_ADMIN_EMAIL:-$(env_get "$SECRETS_DIR/app.env" AdminSeed__Email)}
+AdminSeed__Password=$(genpw)
+EmailSettings__Password=$(env_get "$SECRETS_DIR/app.env" EmailSettings__Password)
+EmailSettings__ApplicationUrl=$BETA_URL
+EOF
+    fi
+    chown "root:$DEPLOY_GROUP" "$SECRETS_DIR/beta.env"
+    chmod 640 "$SECRETS_DIR/beta.env"
+
+    BETA_PASSWORD=$(env_get "$SECRETS_DIR/beta.env" ConnectionStrings__KunigiArchive | grep -oP 'Password=\K[^;]+')
+    ensure_login kunigi_beta "$BETA_PASSWORD" db_owner "$BETA_DB_NAME"
+
+    for dir in kunigi_beta_media kunigi_beta_keys; do
+        log "Folder $BETA_DATA_DIR/$dir (owner $BETA_APP_UID)"
+        mkdir -p "$BETA_DATA_DIR/$dir"
+        chown "$BETA_APP_UID:$BETA_APP_UID" "$BETA_DATA_DIR/$dir"
+    done
+    chmod 755 "$BETA_DATA_DIR/kunigi_beta_media"
+    chmod 700 "$BETA_DATA_DIR/kunigi_beta_keys"
+fi
 
 # --- optional: rotate sa ----------------------------------------------------------
 if $ROTATE_SA; then

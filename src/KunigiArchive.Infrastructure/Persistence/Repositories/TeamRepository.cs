@@ -28,6 +28,13 @@ internal sealed class TeamRepository : ITeamRepository
         return await Aggregate().FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Team>> GetManagedByAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        return await Aggregate()
+            .Where(t => t.Managers.Any(m => m.UserId == userId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Team?> GetBySlugAsync(Slug slug, CancellationToken cancellationToken)
     {
         return await Aggregate().FirstOrDefaultAsync(t => t.Slug == slug, cancellationToken);

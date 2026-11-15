@@ -4,6 +4,7 @@ using KunigiArchive.Domain.Teams;
 using KunigiArchive.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace KunigiArchive.Infrastructure.Persistence;
 
@@ -15,6 +16,14 @@ public sealed class KunigiArchiveDbContext : IdentityDbContext<AppUser, AppRole,
 
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<Game> Games => Set<Game>();
+
+    // Identity's stores use this same scoped context, so their saves join the transaction too.
+    public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+    {
+        await using IDbContextTransaction transaction = await Database.BeginTransactionAsync(cancellationToken);
+        await work(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

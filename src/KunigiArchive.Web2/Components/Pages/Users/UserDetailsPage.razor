@@ -1,0 +1,182 @@
+@page "/users/{Id:guid}"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Users
+@using KunigiArchive.Application.Users.ChangeUserRole
+@using KunigiArchive.Application.Users.GetUserDetails
+@using KunigiArchive.Application.Users.SendTemporaryPassword
+@using KunigiArchive.Web2.Forms.Users
+@inject GetUserDetailsHandler GetUserDetailsHandler
+@inject ChangeUserRoleHandler ChangeUserRoleHandler
+@inject SendTemporaryPasswordHandler SendTemporaryPasswordHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Χρήστης</PageTitle>
+
+@if (_user is not null)
+{
+    <h1 class="mb-3">@_user.Email</h1>
+
+    @if (_message is not null)
+    {
+        <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+    }
+
+    <section class="card mb-4">
+        <div class="card-body">
+            <h2 class="h5 card-title">Ρόλος</h2>
+            @if (_user.IsCurrentUser)
+            {
+                <p class="mb-0">
+                    @RoleOptions.Label(_user.Role)
+                    <span class="text-body-secondary">· Δεν μπορείτε να αλλάξετε τον ρόλο του δικού σας λογαριασμού.</span>
+                </p>
+            }
+            else
+            {
+                <form method="post" @formname="change-role" @onsubmit="ChangeRoleAsync" class="d-flex gap-2">
+                    <AntiforgeryToken />
+                    <select name="Role" class="form-select" aria-label="Ρόλος">
+                        @foreach ((string value, string label) in RoleOptions.All)
+                        {
+                            <option value="@value" selected="@(value == (_user.Role ?? string.Empty))">@label</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-primary">Αλλαγή</button>
+                </form>
+                @if (_user.Role == Roles.Manager && _user.ManagedTeams.Count > 0)
+                {
+                    <div class="form-text">Αν αλλάξει ο ρόλος, ο χρήστης αφαιρείται από τις ομάδες που διαχειρίζεται.</div>
+                }
+            }
+        </div>
+    </section>
+
+    @if (_user.Role == Roles.Manager)
+    {
+        <section class="card mb-4">
+            <div class="card-body">
+                <h2 class="h5 card-title">Ομάδες</h2>
+                @if (_user.ManagedTeams.Count == 0)
+                {
+                    <p class="text-body-secondary mb-0">Δεν διαχειρίζεται καμία ομάδα. Προσθέστε τον από τη σελίδα «Διαχειριστές» μιας ομάδας.</p>
+                }
+                else
+                {
+                    <ul class="mb-0">
+                        @foreach (TeamSummary team in _user.ManagedTeams)
+                        {
+                            <li><a href="teams/@team.Slug/managers">@team.Name</a></li>
+                        }
+                    </ul>
+                }
+            </div>
+        </section>
+    }
+
+    <section class="card mb-4">
+        <div class="card-body">
+            <h2 class="h5 card-title">Προσωρινός κωδικός</h2>
+            <p class="card-text">
+                Στέλνει στον χρήστη email με νέο προσωρινό κωδικό. Ο τρέχων κωδικός του παύει να ισχύει
+                και αποσυνδέεται από όπου είναι συνδεδεμένος.
+            </p>
+            <form method="post" @formname="temporary-password" @onsubmit="SendTemporaryPasswordAsync">
+                <AntiforgeryToken />
+                <input type="hidden" name="ConfirmSend" value="true" />
+                <button type="submit" class="btn btn-outline-danger"
+                        onclick="return confirm('Αποστολή νέου προσωρινού κωδικού; Ο τρέχων κωδικός θα πάψει να ισχύει.')">
+                    Αποστολή νέου κωδικού
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <p><a href="users">← Όλοι οι χρήστες</a></p>
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    // Set by the create page: whether the account email went out.
+    [SupplyParameterFromQuery]
+    public string? Created { get; set; }
+
+    [SupplyParameterFromForm(FormName = "change-role")]
+    private string? Role { get; set; }
+
+    [SupplyParameterFromForm(FormName = "temporary-password")]
+    private bool ConfirmSend { get; set; }
+
+    private UserDetails? _user;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        (_message, _isError) = Created switch
+        {
+            "sent" => ("Ο χρήστης δημιουργήθηκε και του στάλθηκε email με τον προσωρινό κωδικό.", false),
+            "email-failed" => ("Ο χρήστης δημιουργήθηκε, αλλά το email με τον προσωρινό κωδικό δεν στάλθηκε. " +
+                               "Στείλτε νέο κωδικό από κάτω όταν το email λειτουργεί.", true),
+            _ => (null, false)
+        };
+
+        await LoadAsync();
+    }
+
+    private async Task ChangeRoleAsync()
+    {
+        try
+        {
+            await ChangeUserRoleHandler.HandleAsync(new ChangeUserRoleCommand(Id, Role), CancellationToken.None);
+            (_message, _isError) = ("Ο ρόλος ενημερώθηκε.", false);
+        }
+        catch (InvalidRequestException exception)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task SendTemporaryPasswordAsync()
+    {
+        if (!ConfirmSend)
+        {
+            return;
+        }
+
+        try
+        {
+            await SendTemporaryPasswordHandler.HandleAsync(Id, CancellationToken.None);
+            (_message, _isError) = ("Στάλθηκε email με νέο προσωρινό κωδικό.", false);
+        }
+        catch (EmailDeliveryException)
+        {
+            (_message, _isError) = ("Το email δεν στάλθηκε. Ο κωδικός άλλαξε ήδη, οπότε δοκιμάστε ξανά: " +
+                                    "κάθε αποστολή ορίζει νέο κωδικό.", true);
+        }
+        catch (InvalidRequestException exception)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _user = await GetUserDetailsHandler.HandleAsync(Id, CancellationToken.None);
+        }
+        catch (UserNotFoundException)
+        {
+            _user = null;
+            Navigation.NotFound();
+        }
+    }
+}

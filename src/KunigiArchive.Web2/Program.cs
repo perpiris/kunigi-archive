@@ -20,6 +20,7 @@ try
         .AddSerilogLogging(builder.Configuration)
         .AddApplication()
         .AddInfrastructure(builder.Configuration)
+        .AddHosting(builder.Configuration)
         .AddWebAuthentication()
         .AddApi();
 
@@ -28,8 +29,12 @@ try
 
     WebApplication app = builder.Build();
 
-    // Outermost, so it logs the final status code after errors have been turned into responses.
+    // First, so everything after it (logging, HTTPS redirect, cookies) sees the client's scheme and IP.
+    app.UseForwardedHeaders();
+
+    // Outermost after that, so it logs the final status code after errors have been turned into responses.
     app.UseSerilogRequestLogging();
+    app.UseNoIndex();
 
     if (!app.Environment.IsDevelopment())
     {

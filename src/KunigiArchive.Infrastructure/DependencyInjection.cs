@@ -4,6 +4,7 @@ using KunigiArchive.Application.Teams;
 using KunigiArchive.Application.Users;
 using KunigiArchive.Domain.Games;
 using KunigiArchive.Domain.Teams;
+using KunigiArchive.Infrastructure.Email;
 using KunigiArchive.Infrastructure.Identity;
 using KunigiArchive.Infrastructure.Media;
 using KunigiArchive.Infrastructure.Persistence;
@@ -36,11 +37,29 @@ public static class DependencyInjection
         services.AddScoped<ITeamQueries, TeamQueries>();
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUserQueries, UserQueries>();
+        services.AddScoped<IUserAccounts, UserAccounts>();
 
         services.AddIdentity(configuration);
         services.AddMediaStorage(configuration);
+        services.AddEmail(configuration);
 
         return services;
+    }
+
+    // Not validated on start: the site runs without email settings, only sending fails (and the admin is told).
+    private static void AddEmail(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .PostConfigure<IHostEnvironment>((options, environment) =>
+            {
+                if (!string.IsNullOrWhiteSpace(options.PickupDirectory))
+                {
+                    options.PickupDirectory = Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.PickupDirectory));
+                }
+            });
+
+        services.AddScoped<IAccountEmails, SmtpAccountEmails>();
     }
 
     public static async Task InitializeDatabaseAsync(this IServiceProvider services)

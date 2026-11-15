@@ -11,7 +11,7 @@ Everything about the production server that isn't the app itself.
 |---|---|
 | `setup.sh` | Idempotent host configuration (journal cap, cache prune, backup script + cron, optional SQL tuning). Safe to re-run. |
 | `wireguard.sh` | VPN helper, installed as `/usr/local/sbin/kunigi-wireguard` (`init`, `add <name>`, `list`). |
-| `init-secrets.sh` | Creates the env files in `/opt/kunigi` (if missing) and the SQL logins they use. `--rotate-sa` gives `sa` a new password. Safe to re-run. |
+| `init-secrets.sh` | Creates the env files in `/opt/kunigi` (if missing) and the SQL logins they use. `--beta` also sets up the beta site (database, login, `beta.env`, folders). `--rotate-sa` gives `sa` a new password. Safe to re-run. |
 | `backup/vps-backup.sh` | Nightly backup script. Installed to `/opt/kunigi-backups/vps-backup.sh` by `setup.sh`. |
 | `sql/tune.sql` | SQL Server settings (SIMPLE recovery, smaller diagnostic traces). Applied by `setup.sh --sql`. |
 
@@ -26,7 +26,8 @@ ssh kunigi-vps 'sudo ~iperp/kunigi-archive/ops/vps/setup.sh --sql'
 | What | Where |
 |---|---|
 | Deployed repo / compose project | `/home/iperp/kunigi-archive` (compose project `kunigi-archive`) |
-| Beta site | `/home/iperp/kunigi-beta`, compose project `kunigi-beta` (`docker-compose.beta.yml`), container `kunigi_beta`, https://beta.tokinigi.gr. Optional secrets in `/opt/kunigi/beta.env`. Joins the `kunigi-archive_default` network. |
+| Beta site | `/home/iperp/kunigi-beta`, compose project `kunigi-beta` (`docker-compose.beta.yml`), container `kunigi_beta`, https://beta.tokinigi.gr (sent with `X-Robots-Tag: noindex`). Secrets in `/opt/kunigi/beta.env`. Joins the `kunigi-archive_default` network and uses `kunigi_db`. |
+| Beta data | DB `KunigiArchiveV2` (same SQL Server), uploads in `/home/iperp/kunigi_beta_media`, sign-in keys in `/home/iperp/kunigi_beta_keys` (both owned by uid 1654, the container user). **Not in the nightly backup**: beta holds test data until the cutover (#63). |
 | Containers | `kunigi_web` (.NET app, :8080), `kunigi_db` (SQL Server 2022), `nginx-proxy`, `nginx-acme-companion` |
 | **Uploaded media** | `/home/iperp/kunigi_media` → mounted in `kunigi_web` at `/app/media` |
 | **Database** | Docker volume `kunigi-archive_db_data` (`/var/lib/docker/volumes/kunigi-archive_db_data/_data`), DB `KunigiArchive` |
@@ -47,19 +48,31 @@ Secrets exist **only on the VPS**, in `/opt/kunigi`. The dir is `root:iperp 750`
 |---|---|---|
 | `db.env` | `kunigi_db` | `ACCEPT_EULA`, `MSSQL_SA_PASSWORD` |
 | `app.env` | `kunigi_web` | `ASPNETCORE_ENVIRONMENT`, `ConnectionStrings__DefaultConnection` (login `kunigi_app`), `EmailSettings__Password`, `AdminSeed__Email`, `AdminSeed__Password` |
+| `beta.env` | `kunigi_beta` | `ConnectionStrings__KunigiArchive` (login `kunigi_beta`), `AdminSeed__Email` (same as live), `AdminSeed__Password` (beta's own), `EmailSettings__Password` (same as live), `EmailSettings__ApplicationUrl` |
 | `backup.env` | `vps-backup.sh` | `BACKUP_SQL_USER`, `BACKUP_SQL_PASSWORD` (login `kunigi_backup`) |
 | `admin.env` | you (SSMS) | `SQL_ADMIN_USER`, `SQL_ADMIN_PASSWORD` (login `kunigi_admin`) |
 
 | SQL login | Rights | Purpose |
 |---|---|---|
 | `kunigi_app` | `db_owner` on `KunigiArchive` | the app (owner rights because migrations run at startup) |
+| `kunigi_beta` | `db_owner` on `KunigiArchiveV2` only | the beta site (Web2 runs its migrations at startup) |
 | `kunigi_backup` | `db_backupoperator` + `CREATE ANY DATABASE` (needed for `RESTORE VERIFYONLY`) | nightly backup |
 | `kunigi_admin` | `sysadmin` | manual administration / SSMS |
 | `sa` | `sysadmin` | nothing automated; rotate with `init-secrets.sh --rotate-sa` |
 
 Any `appsettings.json` key can be overridden in `app.env` with `Section__Key=value`. After editing `app.env`, recreate the app: `cd ~iperp/kunigi-archive && sudo docker compose up -d web`.
 
-To see a value: `ssh kunigi-vps 'sudo cat /opt/kunigi/admin.env'`.
+To see a value: `ssh kunigi-vps 'sudo cat /opt/kunigi/admin.env'`. The beta admin's password: `ssh kunigi-vps 'sudo grep AdminSeed /opt/kunigi/beta.env'` (it only seeds the first admin; change it later in the app).
+
+### Beta site setup
+
+Once, before the first Web2 deploy (and safe to re-run):
+
+```bash
+ssh kunigi-vps 'sudo bash ~iperp/kunigi-beta/ops/vps/init-secrets.sh --beta'
+```
+
+Then run the **Deploy beta** workflow. On its first start Web2 creates its tables and seeds the roles and the admin from `beta.env`. After editing `beta.env`, recreate the container: `cd ~iperp/kunigi-beta && sudo docker compose -f docker-compose.beta.yml up -d`.
 
 ## VPN (WireGuard) and SSMS
 
