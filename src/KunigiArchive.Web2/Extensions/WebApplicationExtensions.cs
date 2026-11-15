@@ -7,6 +7,21 @@ namespace KunigiArchive.Web2.Extensions;
 
 public static class WebApplicationExtensions
 {
+    // Beta holds test data: Robots:NoIndex keeps it out of search engines.
+    public static WebApplication UseNoIndex(this WebApplication app)
+    {
+        if (app.Configuration.GetValue<bool>("Robots:NoIndex"))
+        {
+            app.Use((context, next) =>
+            {
+                context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+                return next(context);
+            });
+        }
+
+        return app;
+    }
+
     // Stored paths are "media/...", so the media root is served under /media.
     public static WebApplication UseMediaFiles(this WebApplication app)
     {

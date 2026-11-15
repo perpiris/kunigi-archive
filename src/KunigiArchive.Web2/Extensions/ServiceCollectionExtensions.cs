@@ -4,6 +4,8 @@ using KunigiArchive.Web2.Authentication;
 using KunigiArchive.Web2.ErrorHandling;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
@@ -18,6 +20,31 @@ public static class ServiceCollectionExtensions
             .ReadFrom.Configuration(configuration)
             .ReadFrom.Services(serviceProvider)
             .Enrich.FromLogContext());
+
+        return services;
+    }
+
+    // Settings for running behind nginx-proxy in Docker; all of them are harmless locally.
+    public static IServiceCollection AddHosting(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Without a persisted key ring every restart invents new keys: everyone is signed out and open forms
+        // fail their antiforgery check. The container mounts a folder for them (docker-compose.beta.yml).
+        string? keysPath = configuration["DataProtection:KeysPath"];
+        IDataProtectionBuilder dataProtection = services.AddDataProtection().SetApplicationName("KunigiArchive.Web2");
+        if (!string.IsNullOrWhiteSpace(keysPath))
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
+
+        // nginx-proxy terminates TLS. Its X-Forwarded-* headers give the real scheme (https, so redirects,
+        // HSTS and secure cookies work) and client IP. Any sender is trusted because the container publishes
+        // no ports: the only way in is through the proxy on the Docker network.
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
 
         return services;
     }
