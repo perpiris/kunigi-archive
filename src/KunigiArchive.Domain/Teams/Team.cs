@@ -76,6 +76,14 @@ public sealed class Team
         Slug = slug;
     }
 
+    // Returns the previous image so the caller can delete its file once the change is saved.
+    public string? SetImage(string? path)
+    {
+        string? previous = Image;
+        Image = path;
+        return previous;
+    }
+
     public TeamMedia AddMedia(string path, string fileName, string originalFileName, DateTimeOffset uploadedAt)
     {
         TeamMedia media = new TeamMedia(Id, path, fileName, originalFileName, uploadedAt);

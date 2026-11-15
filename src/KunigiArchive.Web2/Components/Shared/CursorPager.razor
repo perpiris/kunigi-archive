@@ -1,12 +1,13 @@
+@using Microsoft.AspNetCore.WebUtilities
 @* Keyset paging only moves forward: "Αρχή" goes back to the first page, "Επόμενες" continues after the cursor. *@
 <nav class="d-flex gap-2" aria-label="Σελίδες">
     @if (IsFirstPage is false)
     {
-        <a class="btn btn-outline-secondary" href="@BaseUrl">Αρχή</a>
+        <a class="btn btn-outline-secondary" href="@PageUrl(null)">Αρχή</a>
     }
     @if (NextCursor is not null)
     {
-        <a class="btn btn-outline-secondary" href="@($"{BaseUrl}?after={NextCursor}")">Επόμενες</a>
+        <a class="btn btn-outline-secondary" href="@PageUrl(NextCursor)">Επόμενες</a>
     }
 </nav>
 
@@ -19,4 +20,19 @@
 
     [Parameter]
     public string? NextCursor { get; set; }
+
+    // A cursor is only valid with the search it came from, so every link keeps it.
+    [Parameter]
+    public string? Search { get; set; }
+
+    private string PageUrl(string? after)
+    {
+        Dictionary<string, string?> query = new()
+        {
+            ["search"] = string.IsNullOrWhiteSpace(Search) ? null : Search,
+            ["after"] = after
+        };
+
+        return QueryHelpers.AddQueryString(BaseUrl, query.Where(p => p.Value is not null));
+    }
 }

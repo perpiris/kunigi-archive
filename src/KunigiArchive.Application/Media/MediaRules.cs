@@ -8,7 +8,8 @@ public static class MediaRules
     public const long MaxRequestBytes = 250L * 1024 * 1024;
     public const string ThumbnailPrefix = "thumb_";
 
-    // PDFs are stored as a PNG of their first page, so everything kept on disk is an image.
+    // Uploads are stored as WebP (GIFs as they are) and PDFs as an image of their first page,
+    // so everything kept on disk is an image.
     public static readonly IReadOnlySet<string> AllowedExtensions =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf" };
 

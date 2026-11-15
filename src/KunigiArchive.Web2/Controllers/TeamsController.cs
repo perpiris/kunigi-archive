@@ -3,11 +3,13 @@ using KunigiArchive.Application.Media;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Application.Teams.AssignTeamManager;
 using KunigiArchive.Application.Teams.CreateTeam;
+using KunigiArchive.Application.Teams.DeleteTeam;
 using KunigiArchive.Application.Teams.DeleteTeamMedia;
 using KunigiArchive.Application.Teams.GetTeamById;
 using KunigiArchive.Application.Teams.GetTeamBySlug;
 using KunigiArchive.Application.Teams.GetTeams;
 using KunigiArchive.Application.Teams.RemoveTeamManager;
+using KunigiArchive.Application.Teams.SetTeamImage;
 using KunigiArchive.Application.Teams.UpdateTeam;
 using KunigiArchive.Application.Teams.UploadTeamMedia;
 using KunigiArchive.Web2.Contracts.Teams;
@@ -73,6 +75,52 @@ public sealed class TeamsController : ControllerBase
         CancellationToken cancellationToken)
     {
         TeamDetails team = await handler.HandleAsync(request.ToCommand(id), cancellationToken);
+        return Ok(team.ToResponse());
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
+    public async Task<IActionResult> DeleteTeam(
+        Guid id,
+        [FromServices] DeleteTeamHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/image")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType<TeamResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<IActionResult> SetTeamImage(
+        Guid id,
+        IFormFile image,
+        [FromServices] SetTeamImageHandler handler,
+        CancellationToken cancellationToken)
+    {
+        await using Stream content = image.OpenReadStream();
+        TeamDetails team = await handler.HandleAsync(
+            new SetTeamImageCommand(id, new MediaUpload(content, image.FileName, image.Length)),
+            cancellationToken);
+        return Ok(team.ToResponse());
+    }
+
+    [HttpDelete("{id:guid}/image")]
+    [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+    [ProducesResponseType<TeamResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<IActionResult> RemoveTeamImage(
+        Guid id,
+        [FromServices] SetTeamImageHandler handler,
+        CancellationToken cancellationToken)
+    {
+        TeamDetails team = await handler.HandleAsync(new SetTeamImageCommand(id, null), cancellationToken);
         return Ok(team.ToResponse());
     }
 

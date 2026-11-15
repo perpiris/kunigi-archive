@@ -37,7 +37,7 @@ public static class TeamMapper
     public static GetTeamsQuery ToQuery(this GetTeamsRequest request)
     {
         TeamsCursor.TryDecode(request.After, out TeamsCursor? after);
-        return new GetTeamsQuery(after);
+        return new GetTeamsQuery(after, request.Search);
     }
 
     public static TeamResponse ToResponse(this TeamDetails team)

@@ -1,6 +1,8 @@
+using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Mappers;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Domain.Common;
+using KunigiArchive.Domain.Games;
 using KunigiArchive.Domain.Teams;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,8 @@ namespace KunigiArchive.Infrastructure.Persistence.Queries;
 
 internal sealed class TeamQueries : ITeamQueries
 {
+    private const string SearchCollation = "Greek_100_CI_AI";
+
     private readonly KunigiArchiveDbContext _dbContext;
 
     public TeamQueries(KunigiArchiveDbContext dbContext)
@@ -46,9 +50,47 @@ internal sealed class TeamQueries : ITeamQueries
         return teams.Select(t => t.ToSummary()).ToList();
     }
 
-    public async Task<TeamsPage> GetPageAsync(TeamsCursor? after, int pageSize, CancellationToken cancellationToken)
+    public async Task<bool> IsManagedByAsync(Guid teamId, Guid userId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Teams
+            .AnyAsync(t => t.Id == teamId && t.Managers.Any(m => m.UserId == userId), cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<GameSummary>> GetHostedGamesAsync(Guid teamId, CancellationToken cancellationToken)
+    {
+        List<Game> games = await _dbContext.Games
+            .AsNoTracking()
+            .Where(g => g.HostId == teamId)
+            .OrderByDescending(g => g.Year)
+            .ToListAsync(cancellationToken);
+
+        return games.Select(g => g.ToSummary()).ToList();
+    }
+
+    public async Task<IReadOnlyList<GameSummary>> GetWonGamesAsync(Guid teamId, CancellationToken cancellationToken)
+    {
+        List<Game> games = await _dbContext.Games
+            .AsNoTracking()
+            .Where(g => g.WinnerId == teamId)
+            .OrderByDescending(g => g.Year)
+            .ToListAsync(cancellationToken);
+
+        return games.Select(g => g.ToSummary()).ToList();
+    }
+
+    public async Task<TeamsPage> GetPageAsync(
+        TeamsCursor? after,
+        string? search,
+        int pageSize,
+        CancellationToken cancellationToken)
     {
         IQueryable<Team> teams = _dbContext.Teams.AsNoTracking();
+
+        if (search is not null)
+        {
+            // Accent- and case-insensitive, so "ομαδα" finds "Ομάδα". EF escapes LIKE wildcards in the search text.
+            teams = teams.Where(t => EF.Functions.Collate(t.Name, SearchCollation).Contains(search));
+        }
 
         if (after is not null)
         {

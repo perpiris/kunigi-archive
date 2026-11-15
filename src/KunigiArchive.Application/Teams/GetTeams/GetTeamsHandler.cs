@@ -13,6 +13,12 @@ public sealed class GetTeamsHandler
 
     public async Task<TeamsPage> HandleAsync(GetTeamsQuery query, CancellationToken cancellationToken)
     {
-        return await _teamQueries.GetPageAsync(query.After, PageSize, cancellationToken);
+        string? search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim();
+        if (search?.Length > GetTeamsQuery.SearchMaxLength)
+        {
+            search = search[..GetTeamsQuery.SearchMaxLength];
+        }
+
+        return await _teamQueries.GetPageAsync(query.After, search, PageSize, cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
-﻿using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Domain.Games;
 using KunigiArchive.Domain.Teams;
 using KunigiArchive.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -13,6 +14,7 @@ public sealed class KunigiArchiveDbContext : IdentityDbContext<AppUser, AppRole,
     }
 
     public DbSet<Team> Teams => Set<Team>();
+    public DbSet<Game> Games => Set<Game>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
