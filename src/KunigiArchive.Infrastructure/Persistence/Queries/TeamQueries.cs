@@ -87,6 +87,12 @@ internal sealed class TeamQueries : ITeamQueries
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TeamRef>> GetRefsAsync(CancellationToken cancellationToken)
+    {
+        List<Team> teams = await _dbContext.Teams.AsNoTracking().OrderBy(t => t.Name).ToListAsync(cancellationToken);
+        return teams.Select(t => new TeamRef(t.Id, t.Name, t.Slug.Value)).ToList();
+    }
+
     public async Task<TeamsPage> GetPageAsync(
         TeamsCursor? after,
         string? search,

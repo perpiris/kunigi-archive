@@ -9,4 +9,10 @@ public interface IMediaStorage
     void Delete(string path);
 
     void DeleteDirectory(string directory);
+
+    // Everything under the media root.
+    MediaUsage GetTotalUsage();
+
+    // Each folder directly under a directory (e.g. "teams" gives one entry per team folder), keyed by folder name.
+    IReadOnlyDictionary<string, MediaUsage> GetUsageOfSubfolders(string directory);
 }

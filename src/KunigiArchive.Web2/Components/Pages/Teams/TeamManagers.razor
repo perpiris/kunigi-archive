@@ -10,7 +10,7 @@
 @inject GetTeamManagersHandler GetTeamManagersHandler
 @inject AssignTeamManagerHandler AssignTeamManagerHandler
 @inject RemoveTeamManagerHandler RemoveTeamManagerHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Διαχειριστές ομάδας</PageTitle>
 
@@ -133,7 +133,7 @@
         try
         {
             await action();
-            (_message, _isError) = (successMessage, false);
+            Reload(successMessage);
         }
         catch (Exception exception) when (exception is DomainException or ConflictException)
         {

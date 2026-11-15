@@ -10,7 +10,7 @@
 @inject GetUserDetailsHandler GetUserDetailsHandler
 @inject ChangeUserRoleHandler ChangeUserRoleHandler
 @inject SendTemporaryPasswordHandler SendTemporaryPasswordHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Χρήστης</PageTitle>
 
@@ -101,10 +101,6 @@
     [Parameter]
     public Guid Id { get; set; }
 
-    // Set by the create page: whether the account email went out.
-    [SupplyParameterFromQuery]
-    public string? Created { get; set; }
-
     [SupplyParameterFromForm(FormName = "change-role")]
     private string? Role { get; set; }
 
@@ -117,14 +113,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        (_message, _isError) = Created switch
-        {
-            "sent" => ("Ο χρήστης δημιουργήθηκε και του στάλθηκε email με τον προσωρινό κωδικό.", false),
-            "email-failed" => ("Ο χρήστης δημιουργήθηκε, αλλά το email με τον προσωρινό κωδικό δεν στάλθηκε. " +
-                               "Στείλτε νέο κωδικό από κάτω όταν το email λειτουργεί.", true),
-            _ => (null, false)
-        };
-
         await LoadAsync();
     }
 
@@ -133,7 +121,7 @@
         try
         {
             await ChangeUserRoleHandler.HandleAsync(new ChangeUserRoleCommand(Id, Role), CancellationToken.None);
-            (_message, _isError) = ("Ο ρόλος ενημερώθηκε.", false);
+            Reload("Ο ρόλος ενημερώθηκε.");
         }
         catch (InvalidRequestException exception)
         {
@@ -153,7 +141,7 @@
         try
         {
             await SendTemporaryPasswordHandler.HandleAsync(Id, CancellationToken.None);
-            (_message, _isError) = ("Στάλθηκε email με νέο προσωρινό κωδικό.", false);
+            Reload("Στάλθηκε email με νέο προσωρινό κωδικό.");
         }
         catch (EmailDeliveryException)
         {

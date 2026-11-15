@@ -1,9 +1,11 @@
 using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Media;
+using KunigiArchive.Application.Posts;
 using KunigiArchive.Application.Teams;
 using KunigiArchive.Application.Users;
 using KunigiArchive.Domain.Games;
+using KunigiArchive.Domain.Posts;
 using KunigiArchive.Domain.Teams;
 using KunigiArchive.Infrastructure.Email;
 using KunigiArchive.Infrastructure.Html;
@@ -39,6 +41,8 @@ public static class DependencyInjection
         services.AddScoped<ITeamQueries, TeamQueries>();
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IGameQueries, GameQueries>();
+        services.AddScoped<IPostRepository, PostRepository>();
+        services.AddScoped<IPostQueries, PostQueries>();
         services.AddScoped<IUserQueries, UserQueries>();
         services.AddScoped<IUserAccounts, UserAccounts>();
         services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();

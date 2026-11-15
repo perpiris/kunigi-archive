@@ -11,7 +11,7 @@
 @inject GetTeamForEditHandler GetTeamForEditHandler
 @inject UploadTeamMediaHandler UploadTeamMediaHandler
 @inject DeleteTeamMediaHandler DeleteTeamMediaHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Υλικό ομάδας</PageTitle>
 
@@ -102,7 +102,7 @@
             IReadOnlyList<TeamMediaDetails> added = await UploadTeamMediaHandler.HandleAsync(
                 new UploadTeamMediaCommand(_team.Id, uploads), CancellationToken.None);
             string uploaded = added.Count == 1 ? "Ανέβηκε 1 αρχείο." : $"Ανέβηκαν {added.Count} αρχεία.";
-            (_message, _isError) = (uploaded, false);
+            Reload(uploaded);
         }
         catch (Exception exception) when (exception is InvalidRequestException or DomainException)
         {
@@ -129,7 +129,7 @@
         try
         {
             await DeleteTeamMediaHandler.HandleAsync(new DeleteTeamMediaCommand(_team.Id, DeleteMediaId.Value), CancellationToken.None);
-            (_message, _isError) = ("Το αρχείο διαγράφηκε.", false);
+            Reload("Το αρχείο διαγράφηκε.");
         }
         catch (DomainException exception)
         {

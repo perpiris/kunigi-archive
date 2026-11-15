@@ -1,0 +1,215 @@
+@page "/games/{Slug}/posts/{PostId:guid}"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetGameForEdit
+@using KunigiArchive.Application.Media
+@using KunigiArchive.Application.Posts
+@using KunigiArchive.Application.Posts.DeletePostMedia
+@using KunigiArchive.Application.Posts.GetPostForEdit
+@using KunigiArchive.Application.Posts.UpdatePost
+@using KunigiArchive.Application.Posts.UploadPostMedia
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Web2.Forms.Posts
+@using KunigiArchive.Web2.Mappers
+@inject GetGameForEditHandler GetGameForEditHandler
+@inject GetPostForEditHandler GetPostForEditHandler
+@inject UpdatePostHandler UpdatePostHandler
+@inject UploadPostMediaHandler UploadPostMediaHandler
+@inject DeletePostMediaHandler DeletePostMediaHandler
+@inherits FormPage
+
+<PageTitle>Επεξεργασία ανάρτησης</PageTitle>
+
+<div class="k-form-page wide">
+
+@if (_game is not null && _post is not null && Form is not null)
+{
+    <header class="k-page-head">
+        <h1>Ανάρτηση</h1>
+        <a class="btn btn-outline-secondary" href="games/@_game.Slug/posts">Αναρτήσεις</a>
+    </header>
+    <p class="text-body-secondary"><GameName Order="_game.Order" Year="_game.Year" /> · <PostDate Value="_post.CreatedAt" /></p>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+    }
+
+    <EditForm Model="Form" FormName="edit-post" OnValidSubmit="SaveAsync" Enhance class="k-form wide">
+        <DataAnnotationsValidator />
+        <input type="hidden" name="Form.Id" value="@Form.Id" />
+        <PostFields Form="Form" />
+
+        <div class="k-form-actions">
+            <a class="btn btn-outline-secondary" href="games/@_game.Slug/posts">Ακύρωση</a>
+            <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+        </div>
+    </EditForm>
+
+    <section class="k-form wide">
+        <h2 class="k-form-title">Φωτογραφίες</h2>
+        <form method="post" enctype="multipart/form-data" @formname="upload-post-media" @onsubmit="UploadAsync">
+            <AntiforgeryToken />
+            <label for="files" class="form-label">Νέα αρχεία</label>
+            <div class="k-inline-form">
+                <input id="files" type="file" name="Files" multiple accept="@MediaRules.AcceptAttribute" class="form-control" />
+                <button type="submit" class="btn btn-primary">Ανέβασμα</button>
+            </div>
+            <div class="form-text">Εικόνες (JPG, PNG, GIF, WebP) ή PDF, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB το καθένα.</div>
+        </form>
+
+        @if (_post.Media.Count > 0)
+        {
+            <form method="post" @formname="delete-post-media" @onsubmit="DeleteMediaAsync" class="mt-3">
+                <AntiforgeryToken />
+                <div class="media-grid">
+                    @foreach (PostMediaDetails media in _post.Media)
+                    {
+                        <figure class="media-item">
+                            <a href="/@media.Path" data-gallery="post-media" aria-label="@media.OriginalFileName">
+                                <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
+                                     onerror="this.onerror=null;this.src='/@media.Path'" />
+                            </a>
+                            <figcaption class="small text-truncate" title="@media.OriginalFileName">@media.OriginalFileName</figcaption>
+                            <button type="submit" name="DeleteMediaId" value="@media.Id" class="btn btn-sm btn-outline-danger w-100"
+                                    onclick="return confirm('Διαγραφή του αρχείου;')">
+                                Διαγραφή
+                            </button>
+                        </figure>
+                    }
+                </div>
+            </form>
+        }
+    </section>
+}
+
+</div>
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [Parameter]
+    public Guid PostId { get; set; }
+
+    [SupplyParameterFromForm(FormName = "edit-post")]
+    private PostForm? Form { get; set; }
+
+    [SupplyParameterFromForm(FormName = "upload-post-media")]
+    private IReadOnlyList<IFormFile>? Files { get; set; }
+
+    [SupplyParameterFromForm(FormName = "delete-post-media")]
+    private Guid? DeleteMediaId { get; set; }
+
+    private GameDetails? _game;
+    private PostDetails? _post;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        // When the edit form was posted its fields are kept; otherwise it starts from the saved post.
+        Form ??= _post is null ? null : new PostForm { Id = _post.Id, Title = _post.Title, Content = _post.Content };
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_post is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await UpdatePostHandler.HandleAsync(new UpdatePostCommand(_post.Id, Form!.Title, Form.Content), CancellationToken.None);
+        }
+        catch (DomainException exception)
+        {
+            (_message, _isError) = (exception.Message, true);
+            return;
+        }
+
+        Done("Η ανάρτηση αποθηκεύτηκε.", $"/games/{_game!.Slug}/posts");
+    }
+
+    private async Task UploadAsync()
+    {
+        if (_post is null)
+        {
+            return;
+        }
+
+        List<MediaUpload> uploads = (Files ?? []).ToUploads();
+        try
+        {
+            IReadOnlyList<PostMediaDetails> added = await UploadPostMediaHandler.HandleAsync(
+                new UploadPostMediaCommand(_post.Id, uploads), CancellationToken.None);
+            string uploaded = added.Count == 1 ? "Ανέβηκε 1 αρχείο." : $"Ανέβηκαν {added.Count} αρχεία.";
+            Reload(uploaded);
+        }
+        catch (Exception exception) when (exception is InvalidRequestException or DomainException)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+        finally
+        {
+            foreach (MediaUpload upload in uploads)
+            {
+                await upload.Content.DisposeAsync();
+            }
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task DeleteMediaAsync()
+    {
+        if (_post is null || DeleteMediaId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DeletePostMediaHandler.HandleAsync(new DeletePostMediaCommand(_post.Id, DeleteMediaId.Value), CancellationToken.None);
+            Reload("Το αρχείο διαγράφηκε.");
+        }
+        catch (DomainException exception)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+            _post = await GetPostForEditHandler.HandleAsync(PostId, CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is GameNotFoundException or PostNotFoundException)
+        {
+            (_game, _post) = (null, null);
+            Navigation.NotFound();
+            return;
+        }
+        catch (ForbiddenException)
+        {
+            (_game, _post) = (null, null);
+            Navigation.NavigateTo("/access-denied");
+            return;
+        }
+
+        // The address names the game: a post of another game is not found here.
+        if (_post.GameId != _game.Id)
+        {
+            (_game, _post) = (null, null);
+            Navigation.NotFound();
+        }
+    }
+}

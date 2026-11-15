@@ -1,0 +1,21 @@
+@* Shows the one-time alert a page left before redirecting here (see Flash). *@
+@if (_flash is (string message, bool isError))
+{
+    <div class="alert k-flash @(isError ? "alert-danger" : "alert-success")" role="@(isError ? "alert" : "status")">@message</div>
+}
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private (string Message, bool IsError)? _flash;
+
+    protected override void OnInitialized()
+    {
+        // Only on page loads: a form post either shows its own error or redirects, and the alert waits for that page.
+        if (HttpContext is not null && HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            _flash = Flash.Take(HttpContext);
+        }
+    }
+}

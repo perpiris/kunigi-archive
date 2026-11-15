@@ -6,7 +6,7 @@
 @using KunigiArchive.Application.Teams.GetTeamForEdit
 @inject GetTeamForEditHandler GetTeamForEditHandler
 @inject DeleteTeamHandler DeleteTeamHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 @if (_team is not null)
 {
@@ -102,6 +102,6 @@
             return;
         }
 
-        Navigation.NavigateTo("/teams/manage");
+        Done($"Η ομάδα «{_team.Name}» διαγράφηκε.", "/teams/manage");
     }
 }

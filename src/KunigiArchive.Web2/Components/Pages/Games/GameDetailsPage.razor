@@ -1,7 +1,10 @@
 @page "/games/{Slug}"
 @using KunigiArchive.Application.Games
 @using KunigiArchive.Application.Games.GetGameBySlug
+@using KunigiArchive.Application.Posts
+@using KunigiArchive.Application.Posts.GetGamePosts
 @inject GetGameBySlugHandler GetGameBySlugHandler
+@inject GetGamePostsHandler GetGamePostsHandler
 @inject NavigationManager Navigation
 
 @if (_game is not null)
@@ -40,6 +43,30 @@
         </section>
     }
 
+    @if (_posts.Count > 0)
+    {
+        <section class="block">
+            <h2>Αναρτήσεις</h2>
+            @foreach (PostDetails post in _posts)
+            {
+                <article class="post">
+                    <header>
+                        <PostDate Value="post.CreatedAt" />
+                        @if (post.Title is not null)
+                        {
+                            <h3>@post.Title</h3>
+                        }
+                    </header>
+                    <RichText Html="@post.Content" />
+                    @if (post.Media.Count > 0)
+                    {
+                        <MediaSheet Items="Thumbs(post)" Gallery="@($"post-{post.Id}")" />
+                    }
+                </article>
+            }
+        </section>
+    }
+
     <section class="block">
         <h2>Υλικό @if (_game.Media.Count > 0) { <span class="count">@_game.Media.Count</span> }</h2>
         <MediaSheet Items="_mediaThumbs" Gallery="game" />
@@ -52,6 +79,7 @@
 
     private GameDetails? _game;
     private List<MediaSheet.Thumb> _mediaThumbs = [];
+    private IReadOnlyList<PostDetails> _posts = [];
 
     protected override async Task OnParametersSetAsync()
     {
@@ -67,5 +95,9 @@
         }
 
         _mediaThumbs = _game.Media.Select(m => new MediaSheet.Thumb(m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList();
+        _posts = await GetGamePostsHandler.HandleAsync(_game.Id, CancellationToken.None);
     }
+
+    private static List<MediaSheet.Thumb> Thumbs(PostDetails post) =>
+        post.Media.Select(m => new MediaSheet.Thumb(m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList();
 }

@@ -381,6 +381,82 @@ sup.ord {
     border-bottom: 2px solid var(--k-ink);
 }
 
+/* A table on a sheet, like the forms: it scrolls inside its own box (both ways), the header stays in view.
+   Tables with .k-sortable sort by clicking a header (site.js); cells can give data-sort-value. */
+.k-table {
+    background: var(--k-sheet);
+    border: 1px solid var(--k-rule);
+    max-height: 70vh;
+    overflow: auto;
+    margin-bottom: 1rem;
+}
+
+    .k-table .table {
+        margin-bottom: 0;
+    }
+
+    .k-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--k-sheet);
+        white-space: nowrap;
+    }
+
+    .k-table th:first-child,
+    .k-table td:first-child {
+        padding-left: 1rem;
+    }
+
+    .k-table th:last-child,
+    .k-table td:last-child {
+        padding-right: 1rem;
+    }
+
+    .k-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+/* The header's button: same look as the header text, with a mark for the current order. */
+.k-sort {
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+    .k-sort::after {
+        content: "↕";
+        opacity: .35;
+        letter-spacing: 0;
+    }
+
+    .k-sort:hover,
+    .k-sort:focus-visible {
+        color: var(--k-ink);
+    }
+
+th[aria-sort=ascending] .k-sort::after {
+    content: "↑";
+    opacity: 1;
+}
+
+th[aria-sort=descending] .k-sort::after {
+    content: "↓";
+    opacity: 1;
+}
+
+.k-flash {
+    margin-bottom: 1.25rem;
+}
+
 .badge {
     --bs-badge-font-weight: 700;
     letter-spacing: .06em;

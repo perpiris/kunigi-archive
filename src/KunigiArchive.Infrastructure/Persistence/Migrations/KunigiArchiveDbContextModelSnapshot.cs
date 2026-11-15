@@ -117,6 +117,65 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                     b.ToTable("GameMedia", (string)null);
                 });
 
+            modelBuilder.Entity("KunigiArchive.Domain.Posts.Post", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId", "CreatedAt");
+
+                    b.ToTable("Posts", (string)null);
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.Posts.PostMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("PostMedia", (string)null);
+                });
+
             modelBuilder.Entity("KunigiArchive.Domain.Teams.Team", b =>
                 {
                     b.Property<Guid>("Id")
@@ -436,6 +495,24 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("KunigiArchive.Domain.Posts.Post", b =>
+                {
+                    b.HasOne("KunigiArchive.Domain.Games.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.Posts.PostMedia", b =>
+                {
+                    b.HasOne("KunigiArchive.Domain.Posts.Post", null)
+                        .WithMany("Media")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("KunigiArchive.Domain.Teams.TeamManager", b =>
                 {
                     b.HasOne("KunigiArchive.Domain.Teams.Team", null)
@@ -512,6 +589,11 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("KunigiArchive.Domain.Games.Game", b =>
+                {
+                    b.Navigation("Media");
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.Posts.Post", b =>
                 {
                     b.Navigation("Media");
                 });

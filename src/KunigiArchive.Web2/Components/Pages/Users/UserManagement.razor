@@ -22,12 +22,13 @@
     }
     else
     {
-        <table class="table align-middle">
+        <div class="k-table">
+        <table class="table align-middle k-sortable">
             <thead>
                 <tr>
                     <th>Email</th>
                     <th>Ρόλος</th>
-                    <th class="text-end">Ενέργειες</th>
+                    <th class="text-end" data-no-sort>Ενέργειες</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,6 +48,7 @@
                 }
             </tbody>
         </table>
+        </div>
     }
 
     <CursorPager BaseUrl="users" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" Search="@Search" />

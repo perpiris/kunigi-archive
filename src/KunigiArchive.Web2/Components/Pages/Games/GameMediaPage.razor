@@ -11,7 +11,7 @@
 @inject GetGameForEditHandler GetGameForEditHandler
 @inject UploadGameMediaHandler UploadGameMediaHandler
 @inject DeleteGameMediaHandler DeleteGameMediaHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Υλικό παιχνιδιού</PageTitle>
 
@@ -101,7 +101,7 @@
             IReadOnlyList<GameMediaDetails> added = await UploadGameMediaHandler.HandleAsync(
                 new UploadGameMediaCommand(_game.Id, uploads), CancellationToken.None);
             string uploaded = added.Count == 1 ? "Ανέβηκε 1 αρχείο." : $"Ανέβηκαν {added.Count} αρχεία.";
-            (_message, _isError) = (uploaded, false);
+            Reload(uploaded);
         }
         catch (Exception exception) when (exception is InvalidRequestException or DomainException)
         {
@@ -128,7 +128,7 @@
         try
         {
             await DeleteGameMediaHandler.HandleAsync(new DeleteGameMediaCommand(_game.Id, DeleteMediaId.Value), CancellationToken.None);
-            (_message, _isError) = ("Το αρχείο διαγράφηκε.", false);
+            Reload("Το αρχείο διαγράφηκε.");
         }
         catch (DomainException exception)
         {

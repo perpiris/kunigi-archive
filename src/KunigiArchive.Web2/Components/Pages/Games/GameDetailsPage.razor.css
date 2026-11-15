@@ -85,3 +85,32 @@
         max-width: 240px;
     }
 }
+
+/* Posts read like dated entries in a logbook. */
+.post {
+    padding: 1.25rem 0 1.5rem;
+    border-top: 1px solid var(--k-rule);
+}
+
+    .post:first-of-type {
+        border-top: 0;
+        padding-top: .25rem;
+    }
+
+    .post header {
+        margin-bottom: .75rem;
+    }
+
+    .post ::deep time {
+        font-size: .875rem;
+        font-weight: 700;
+        color: var(--k-accent);
+    }
+
+    .post h3 {
+        margin: .2rem 0 0;
+    }
+
+    .post ::deep .prints {
+        margin-top: 1rem;
+    }

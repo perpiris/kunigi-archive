@@ -9,7 +9,7 @@
 @using KunigiArchive.Web2.Mappers
 @inject CreateGameHandler CreateGameHandler
 @inject GetTeamOptionsHandler GetTeamOptionsHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Νέο παιχνίδι</PageTitle>
 
@@ -62,6 +62,6 @@
             return;
         }
 
-        Navigation.NavigateTo("/games/manage");
+        Done("Το παιχνίδι δημιουργήθηκε.", "/games/manage");
     }
 }

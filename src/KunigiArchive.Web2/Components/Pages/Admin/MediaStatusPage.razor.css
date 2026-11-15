@@ -1,0 +1,34 @@
+.totals {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: .75rem;
+}
+
+.total {
+    background: var(--k-sheet);
+    border: 1px solid var(--k-rule);
+    border-top: 3px solid var(--k-accent);
+    padding: 1rem 1.25rem;
+}
+
+    .total .size {
+        font-family: var(--k-display);
+        font-size: 2rem;
+        line-height: 1.2;
+        font-variant-numeric: lining-nums tabular-nums;
+    }
+
+    .total .files {
+        color: var(--k-faded);
+    }
+
+td.text-end {
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+    .totals {
+        grid-template-columns: 1fr;
+    }
+}

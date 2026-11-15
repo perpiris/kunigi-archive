@@ -12,7 +12,7 @@
 @inject GetTeamForEditHandler GetTeamForEditHandler
 @inject UpdateTeamHandler UpdateTeamHandler
 @inject SetTeamImageHandler SetTeamImageHandler
-@inject NavigationManager Navigation
+@inherits FormPage
 
 <PageTitle>Επεξεργασία ομάδας</PageTitle>
 
@@ -196,7 +196,7 @@
         try
         {
             _team = await SetTeamImageHandler.HandleAsync(new SetTeamImageCommand(_team!.Id, image), CancellationToken.None);
-            (_message, _isError) = (success, false);
+            Reload(success);
         }
         catch (Exception exception) when (exception is InvalidRequestException or DomainException)
         {
@@ -247,6 +247,6 @@
             return;
         }
 
-        Navigation.NavigateTo($"/teams/{team.Slug}");
+        Done("Οι αλλαγές αποθηκεύτηκαν.", $"/teams/{team.Slug}/actions");
     }
 }
