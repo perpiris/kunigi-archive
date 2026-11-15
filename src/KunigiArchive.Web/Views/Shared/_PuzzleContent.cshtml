@@ -6,7 +6,7 @@
         @if (!string.IsNullOrEmpty(Model.Question))
         {
             <div class="mb-3">
-                @Html.Raw(Model.Question)
+                @Html.RichText(Model.Question)
             </div>
         }
 
@@ -57,7 +57,7 @@
         @if (!string.IsNullOrEmpty(Model.Answer))
         {
             <div class="mb-3">
-                @Html.Raw(Model.Answer)
+                @Html.RichText(Model.Answer)
             </div>
         }
 

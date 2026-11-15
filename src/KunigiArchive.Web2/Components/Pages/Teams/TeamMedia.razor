@@ -49,7 +49,7 @@
                 @foreach (TeamMediaDetails media in _team.Media)
                 {
                     <figure class="media-item">
-                        <a href="/@media.Path" target="_blank" rel="noopener">
+                        <a href="/@media.Path" data-gallery="team-media" aria-label="@media.OriginalFileName">
                             <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
                                  onerror="this.onerror=null;this.src='/@media.Path'" />
                         </a>

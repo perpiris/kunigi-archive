@@ -5,6 +5,7 @@ using KunigiArchive.Application.Users;
 using KunigiArchive.Domain.Games;
 using KunigiArchive.Domain.Teams;
 using KunigiArchive.Infrastructure.Email;
+using KunigiArchive.Infrastructure.Html;
 using KunigiArchive.Infrastructure.Identity;
 using KunigiArchive.Infrastructure.Media;
 using KunigiArchive.Infrastructure.Persistence;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUserQueries, UserQueries>();
         services.AddScoped<IUserAccounts, UserAccounts>();
+        services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();
 
         services.AddIdentity(configuration);
         services.AddMediaStorage(configuration);

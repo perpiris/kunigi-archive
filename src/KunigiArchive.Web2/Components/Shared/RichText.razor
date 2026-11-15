@@ -1,0 +1,23 @@
+@using KunigiArchive.Application.Abstractions
+@inject IRichTextSanitizer Sanitizer
+@* Rich text is sanitized when it's saved; it's sanitized again here so rows written before that, or by
+   the import, can never put markup on a page that the allowlist doesn't permit. *@
+@if (_html is not null)
+{
+    <div class="k-prose @Class">@((MarkupString)_html)</div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string? Html { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string? _html;
+
+    protected override void OnParametersSet()
+    {
+        _html = Sanitizer.Sanitize(Html);
+    }
+}

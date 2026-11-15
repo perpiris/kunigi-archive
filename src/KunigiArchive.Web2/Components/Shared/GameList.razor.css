@@ -1,0 +1,30 @@
+.game-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+    .game-list li {
+        display: grid;
+        grid-template-columns: 3.5rem minmax(0, 1fr);
+        gap: .75rem;
+        padding-block: .5rem;
+        border-bottom: 1px solid var(--k-rule);
+    }
+
+        .game-list li:last-child {
+            border-bottom: 0;
+        }
+
+.year {
+    font-family: var(--k-display);
+    font-size: 1.25rem;
+    line-height: 1.2;
+    color: var(--k-accent);
+    font-variant-numeric: lining-nums tabular-nums;
+}
+
+.game-list em {
+    display: block;
+    color: var(--k-faded);
+}

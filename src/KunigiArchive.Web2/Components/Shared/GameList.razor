@@ -2,19 +2,22 @@
 @* Plain text until the game pages exist; then each entry links to /games/{slug}. *@
 @if (Games.Count == 0)
 {
-    <p class="text-body-secondary">@Empty</p>
+    <p class="k-empty mb-0">@Empty</p>
 }
 else
 {
-    <ul class="list-unstyled">
+    <ul class="game-list">
         @foreach (GameSummary game in Games)
         {
             <li>
-                <strong>@game.Year</strong> · @game.OrderTitle
-                @if (game.Title is not null)
-                {
-                    <span class="text-body-secondary">— @game.Title</span>
-                }
+                <span class="year">@game.Year</span>
+                <span>
+                    <GameOrdinal Order="game.Order" />
+                    @if (game.Title is not null)
+                    {
+                        <em>@game.Title</em>
+                    }
+                </span>
             </li>
         }
     </ul>

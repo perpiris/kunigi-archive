@@ -1,0 +1,15 @@
+.intro {
+    max-width: 42rem;
+    padding-block: 2.5rem 1rem;
+}
+
+    .intro h1 {
+        margin: .5rem 0 1rem;
+        font-size: clamp(2.75rem, 8vw, 4.5rem);
+    }
+
+    .intro .lead {
+        color: var(--k-faded);
+        line-height: 1.6;
+        margin-bottom: 1.75rem;
+    }

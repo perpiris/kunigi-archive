@@ -1,0 +1,26 @@
+@* A team's picture as a framed print in its own shape. Without a picture, a stone-colored card with the team's initial. *@
+<div class="team-frame @(Image is null ? "empty" : null) @Class">
+    @if (Image is not null)
+    {
+        <img src="/@Image" alt="@Name" />
+    }
+    else
+    {
+        <span aria-hidden="true">@Initial</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Image { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string Initial => Name.FirstOrDefault(char.IsLetterOrDigit) is char c and not '\0'
+        ? char.ToUpper(c, System.Globalization.CultureInfo.GetCultureInfo("el-GR")).ToString()
+        : "·";
+}

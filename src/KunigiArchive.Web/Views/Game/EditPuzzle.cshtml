@@ -43,7 +43,7 @@
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Κείμενο Ερώτησης</label>
                                         <input asp-for="Question" type="hidden"/>
-                                        <div id="question-editor" style="height: 250px;">@Html.Raw(Model.Question)</div>
+                                        <div id="question-editor" style="height: 250px;">@Html.RichText(Model.Question)</div>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Αρχεία Ερώτησης</label>
@@ -97,7 +97,7 @@
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Κείμενο Απάντησης</label>
                                         <input asp-for="Answer" type="hidden"/>
-                                        <div id="answer-editor" style="height: 250px;">@Html.Raw(Model.Answer)</div>
+                                        <div id="answer-editor" style="height: 250px;">@Html.RichText(Model.Answer)</div>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Αρχεία Απάντησης</label>

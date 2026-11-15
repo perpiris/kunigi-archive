@@ -12,17 +12,20 @@ public sealed class UpdateTeamHandler
     private readonly ITeamRepository _teamRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IRichTextSanitizer _sanitizer;
     private readonly ILogger<UpdateTeamHandler> _logger;
 
     public UpdateTeamHandler(
         ITeamRepository teamRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
+        IRichTextSanitizer sanitizer,
         ILogger<UpdateTeamHandler> logger)
     {
         _teamRepository = teamRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _sanitizer = sanitizer;
         _logger = logger;
     }
 
@@ -35,11 +38,18 @@ public sealed class UpdateTeamHandler
 
         string previousName = team.Name;
 
+        // The archive keeps a team's name; renames are rare corrections, so only admins make them.
+        // Teams that split or start over are created as new teams.
+        if (command.Name.Trim() != previousName)
+        {
+            _currentUser.EnsureAdmin();
+        }
+
         team.Update(
             command.Name,
             command.IsActive,
             command.YearFounded,
-            command.Description,
+            _sanitizer.Sanitize(command.Description),
             command.Facebook,
             command.Instagram,
             command.Youtube,

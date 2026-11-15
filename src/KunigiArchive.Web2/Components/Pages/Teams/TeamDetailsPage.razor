@@ -8,81 +8,90 @@
 {
     <PageTitle>@_team.Name</PageTitle>
 
-    <div class="d-flex justify-content-between align-items-start mb-3">
+    <section class="record">
+        <TeamFrame Name="@_team.Name" Image="@_team.Image" />
         <div>
             <h1>@_team.Name</h1>
-            <span class="badge @(_team.IsActive ? "text-bg-success" : "text-bg-secondary")">
-                @(_team.IsActive ? "Ενεργή" : "Ανενεργή")
-            </span>
+            <dl class="facts">
+                @if (_team.YearFounded is not null)
+                {
+                    <dt>Ίδρυση</dt>
+                    <dd>@_team.YearFounded</dd>
+                }
+                <dt>Κατάσταση</dt>
+                <dd><span class="k-stamp @(_team.IsActive ? null : "muted")">@(_team.IsActive ? "Ενεργή" : "Ανενεργή")</span></dd>
+            </dl>
+            @if (_links.Count > 0)
+            {
+                <ul class="links">
+                    @foreach ((string label, string url) in _links)
+                    {
+                        <li><a href="@url" target="_blank" rel="noopener noreferrer">@label</a></li>
+                    }
+                </ul>
+            }
         </div>
-        @if (_profile!.CanEdit)
-        {
-            <a class="btn btn-outline-primary" href="teams/@_team.Slug/actions">Ενέργειες</a>
-        }
-    </div>
+    </section>
 
-    @if (_team.Image is not null)
-    {
-        <img class="team-image mb-3" src="/@_team.Image" alt="@_team.Name" />
-    }
-
-    @if (_team.YearFounded is not null)
-    {
-        <p><strong>Έτος ίδρυσης:</strong> @_team.YearFounded</p>
-    }
-
+    @* One column: history, the games, then the material full width, so any number of photos fits. *@
     @if (_team.Description is not null)
     {
-        <p class="team-description">@_team.Description</p>
+        <section class="block">
+            <h2>Η ιστορία της ομάδας</h2>
+            <RichText Html="@_team.Description" Class="history" />
+        </section>
     }
 
-    @if (_links.Count > 0)
-    {
-        <ul class="list-inline">
-            @foreach ((string label, string url) in _links)
+    <section class="block">
+        <h2>Στο αρχείο</h2>
+        <div class="ledger-grid">
+            <div class="ledger-col">
+                <h3 class="k-label">Διοργανώσεις</h3>
+                <GameList Games="_profile!.HostedGames" Empty="Δεν έχει διοργανώσει ακόμη Κυνήγι." />
+            </div>
+            <div class="ledger-col">
+                <h3 class="k-label">Νίκες</h3>
+                <GameList Games="_profile.WonGames" Empty="Δεν έχει καταγραφεί νίκη." />
+            </div>
+        </div>
+    </section>
+
+    <section class="block">
+        <h2>Υλικό @if (_team.Media.Count > 0) { <span class="count">@_team.Media.Count</span> }</h2>
+        @if (_team.Media.Count == 0)
+        {
+            <p class="k-empty">Δεν υπάρχει υλικό ακόμη.</p>
+        }
+        else
+        {
+            @* The first photos show; the rest open with "Όλο το υλικό". The lightbox still steps through all of them. *@
+            <div class="prints">
+                @foreach (TeamMediaDetails media in _team.Media.Take(MediaPreviewCount))
+                {
+                    @Print(media)
+                }
+            </div>
+            @if (_team.Media.Count > MediaPreviewCount)
             {
-                <li class="list-inline-item">
-                    <a href="@url" target="_blank" rel="noopener noreferrer">@label</a>
-                </li>
+                <details class="more-media">
+                    <summary>Όλο το υλικό (@_team.Media.Count)</summary>
+                    <div class="prints">
+                        @foreach (TeamMediaDetails media in _team.Media.Skip(MediaPreviewCount))
+                        {
+                            @Print(media)
+                        }
+                    </div>
+                </details>
             }
-        </ul>
-    }
-
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <h2 class="h4">Διοργανώσεις</h2>
-            <GameList Games="_profile.HostedGames" Empty="Δεν έχει διοργανώσει παιχνίδι." />
-        </div>
-        <div class="col-md-6">
-            <h2 class="h4">Νίκες</h2>
-            <GameList Games="_profile.WonGames" Empty="Δεν έχει κερδίσει παιχνίδι." />
-        </div>
-    </div>
-
-    <h2 class="h4 mt-4">Αρχεία</h2>
-    @if (_team.Media.Count == 0)
-    {
-        <p class="text-body-secondary">Δεν υπάρχουν αρχεία.</p>
-    }
-    else
-    {
-        <div class="media-grid">
-            @foreach (TeamMediaDetails media in _team.Media)
-            {
-                <a href="/@media.Path" target="_blank" rel="noopener">
-                    <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
-                         onerror="this.onerror=null;this.src='/@media.Path'" />
-                </a>
-            }
-        </div>
-    }
-
-    <p class="mt-4"><a href="teams">← Όλες οι ομάδες</a></p>
+        }
+    </section>
 }
 
 @code {
     [Parameter]
     public string Slug { get; set; } = string.Empty;
+
+    private const int MediaPreviewCount = 12;
 
     private TeamProfile? _profile;
     private TeamDetails? _team;
@@ -113,4 +122,10 @@
             .Select(link => (link.Label, link.Url!))
             .ToList();
     }
+
+    private static RenderFragment Print(TeamMediaDetails media) =>
+        @<a href="/@media.Path" data-gallery="team" aria-label="@media.OriginalFileName">
+            <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
+                 onerror="this.onerror=null;this.src='/@media.Path'" />
+        </a>;
 }

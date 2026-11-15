@@ -1,0 +1,29 @@
+.team-frame {
+    background: var(--k-sheet);
+    border: 6px solid var(--k-sheet);
+    box-shadow: 0 1px 0 var(--k-rule), 0 10px 22px var(--k-shadow);
+}
+
+    /* The frame takes the picture's own shape, so the whole picture shows. */
+    .team-frame img {
+        display: block;
+        width: 100%;
+        height: auto;
+        max-height: 70vh;
+        object-fit: contain;
+    }
+
+    .team-frame.empty {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 4 / 3;
+        background: linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
+    }
+
+    .team-frame span {
+        font-family: var(--k-display);
+        font-size: 3rem;
+        line-height: 1;
+        color: #fff;
+        opacity: .9;
+    }

@@ -19,7 +19,7 @@
                     <div class="mb-4">
                         <label asp-for="Description" class="form-label fw-semibold"></label>
                         <input asp-for="Description" type="hidden"/>
-                        <div id="editor-container" style="height: 400px;">@Html.Raw(Model.Description)</div>
+                        <div id="editor-container" style="height: 400px;">@Html.RichText(Model.Description)</div>
                         <span asp-validation-for="Description" class="text-danger small"></span>
                     </div>
 

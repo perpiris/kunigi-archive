@@ -1,0 +1,85 @@
+.team-grid {
+    list-style: none;
+    margin: 0 0 2rem;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+
+/* The stone print, with the team's name set in it over a faint watermark. Five watermarks take
+   turns: the compass, the harbour lighthouse and Rethymno landmarks (wwwroot/img/watermarks). */
+.team-card {
+    --watermark: url("/img/watermarks/compass.svg");
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 3 / 2;
+    padding: 1.25rem;
+    background: linear-gradient(165deg, var(--k-stone), color-mix(in srgb, var(--k-stone) 40%, var(--k-sea)));
+    border: 6px solid var(--k-sheet);
+    box-shadow: 0 1px 0 var(--k-rule), 0 10px 22px var(--k-shadow);
+    text-decoration: none;
+    transition: transform .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+
+    .team-card::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: 50%;
+        top: 50%;
+        width: 84%;
+        height: 86%;
+        translate: -50% -50%;
+        background: var(--watermark) center / contain no-repeat;
+        opacity: .32;
+        transition: rotate .4s ease-in-out;
+    }
+
+
+    .team-grid li:nth-child(5n+2) .team-card { --watermark: url("/img/watermarks/lighthouse.svg"); }
+    .team-grid li:nth-child(5n+3) .team-card { --watermark: url("/img/watermarks/fortezza.svg"); }
+    .team-grid li:nth-child(5n+4) .team-card { --watermark: url("/img/watermarks/minaret.svg"); }
+    .team-grid li:nth-child(5n+5) .team-card { --watermark: url("/img/watermarks/loggia.svg"); }
+
+    /* Only the compass turns. */
+    .team-grid li:nth-child(5n+1) .team-card:hover::before {
+        rotate: 20deg;
+    }
+
+    .team-card:hover,
+    .team-card:focus-visible {
+        transform: rotate(-1deg) translateY(-2px);
+        box-shadow: 0 1px 0 var(--k-rule), 0 14px 28px var(--k-shadow);
+    }
+
+.name {
+    font-family: var(--k-display);
+    font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+    line-height: 1.15;
+    text-align: center;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+    .team-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 460px) {
+    .team-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .team-card {
+        aspect-ratio: 5 / 2;
+    }
+}
