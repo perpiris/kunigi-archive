@@ -1,0 +1,30 @@
+@using KunigiArchive.Application.Media
+@* One piece of media as a link the lightbox opens (site.js, data-gallery): the thumbnail of an image, or for a
+   video the video itself, muted, showing its first frame. A missing thumbnail falls back to the full image
+   (data-fallback, handled in site.js, so there is no inline handler to block a CSP). *@
+<a href="/@Path" data-gallery="@Gallery" aria-label="@Name" class="k-thumb">
+    @if (MediaRules.IsVideo(Path))
+    {
+        <span class="k-video">
+            <video src="/@(Path)#t=0.1" preload="metadata" muted playsinline aria-hidden="true"></video>
+        </span>
+    }
+    else
+    {
+        <img src="/@ThumbnailPath" data-fallback="/@Path" alt="@Name" loading="lazy" />
+    }
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Path { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ThumbnailPath { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Gallery { get; set; } = string.Empty;
+}

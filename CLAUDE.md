@@ -28,6 +28,7 @@ src/KunigiArchive.Domain/          new: domain model (empty for now)
 src/KunigiArchive.Application/     new: use cases → Domain
 src/KunigiArchive.Infrastructure/  new: EF Core, files, email → Application, Domain
 src/KunigiArchive.Web2/            new: Blazor Web App + REST API, beta.tokinigi.gr (own Dockerfile) → Application, Infrastructure
+src/KunigiArchive.Import/          console: re-runnable import old DB + media → Web2 (#63); dry run unless --apply (usage in Program.cs)
 ops/vps/                           server scripts + README
 docker-compose.yml                 live stack (proxy, db, web)
 docker-compose.beta.yml            beta stack (own compose project, joins the live network)

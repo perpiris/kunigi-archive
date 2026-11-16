@@ -1,0 +1,40 @@
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.Media
+@* A puzzle as the archive shows it: the question beside its answer (one under the other on a phone). *@
+<div class="puzzle">
+    <div class="side">
+        <div class="k-label">Ερώτηση</div>
+        @Side(Puzzle.Question, Puzzle.QuestionMedia, "q")
+    </div>
+    <div class="side answer">
+        <div class="k-label">Απάντηση</div>
+        @Side(Puzzle.Answer, Puzzle.AnswerMedia, "a")
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PuzzleDetails Puzzle { get; set; } = null!;
+
+    private RenderFragment Side(string? text, IReadOnlyList<MediaDetails> media, string key) =>
+        @<text>
+            @if (text is null && media.Count == 0)
+            {
+                <p class="k-empty mb-0">—</p>
+            }
+            @if (text is not null)
+            {
+                <RichText Html="@text" />
+            }
+            @if (media.Count > 0)
+            {
+                <div class="@(media.Count == 1 ? "media single" : "media")">
+                    @foreach (MediaDetails item in media)
+                    {
+                        <MediaThumb Path="@item.Path" ThumbnailPath="@item.ThumbnailPath" Name="@item.OriginalFileName"
+                                    Gallery="@($"puzzle-{Puzzle.Id}-{key}")" />
+                    }
+                </div>
+            }
+        </text>;
+}

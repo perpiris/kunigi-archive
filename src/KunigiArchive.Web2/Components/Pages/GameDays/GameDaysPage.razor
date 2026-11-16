@@ -1,0 +1,157 @@
+@page "/games/{Slug}/days"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.GameDays.GetGameDays
+@using KunigiArchive.Application.GameDays.ManageGameDay
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetGameForEdit
+@using KunigiArchive.Domain.GameDays
+@inject GetGameForEditHandler GetGameForEditHandler
+@inject GetGameDayOptionsHandler GetGameDayOptionsHandler
+@inject SetGameDayEnabledHandler SetGameDayEnabledHandler
+@inherits FormPage
+
+@* The parts of the game: which ones it had (shown on its page), and the way into each one's text, media and puzzles. *@
+<PageTitle>Ημέρες παιχνιδιού</PageTitle>
+
+@if (_game is not null && _days is not null)
+{
+    <header class="k-page-head">
+        <h1>Ημέρες</h1>
+        <a class="btn btn-outline-secondary" href="games/@_game.Slug/actions">Ενέργειες παιχνιδιού</a>
+    </header>
+    <p class="text-body-secondary">
+        <GameName Order="_game.Order" Year="_game.Year" />. Ενεργοποιήστε τις ημέρες που είχε το παιχνίδι:
+        εμφανίζονται στη σελίδα του, με την περιγραφή, τους γρίφους και το υλικό τους.
+    </p>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert alert-danger" role="alert">@_message</div>
+    }
+
+    <form method="post" @formname="toggle-day" @onsubmit="ToggleAsync">
+        <AntiforgeryToken />
+        <div class="k-table">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Ημέρα</th>
+                        <th scope="col">Κατάσταση</th>
+                        <th scope="col">Γρίφοι</th>
+                        <th scope="col">Υλικό</th>
+                        <th scope="col" class="text-end"><span class="visually-hidden">Ενέργειες</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (GameDayOption option in _days)
+                    {
+                        GameDaySummary? day = option.Day;
+                        <tr>
+                            <td>
+                                <strong>@option.Label</strong>
+                                @if (day?.Title is not null)
+                                {
+                                    <div class="small text-body-secondary">@day.Title</div>
+                                }
+                            </td>
+                            <td>
+                                @if (day?.IsEnabled == true)
+                                {
+                                    <span class="k-stamp">Ενεργή</span>
+                                }
+                                else
+                                {
+                                    <span class="k-stamp muted">Ανενεργή</span>
+                                }
+                            </td>
+                            <td>@(day?.PuzzleCount ?? 0)</td>
+                            <td>@(day?.MediaCount ?? 0)</td>
+                            <td class="text-end text-nowrap">
+                                @if (day is not null)
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" href="games/@_game.Slug/days/@option.Slug/edit">Περιγραφή &amp; υλικό</a>
+                                    <a class="btn btn-sm btn-outline-primary" href="games/@_game.Slug/days/@option.Slug/puzzles">Γρίφοι</a>
+                                }
+                                @if (day?.IsEnabled == true)
+                                {
+                                    <button type="submit" name="Toggle" value="@($"{(byte)option.Type}:off")" class="btn btn-sm btn-outline-danger"
+                                            data-confirm="Απόκρυψη της ημέρας «@option.Label» από τη σελίδα του παιχνιδιού; Ό,τι έχει γραφτεί κρατιέται.">
+                                        Απενεργοποίηση
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="submit" name="Toggle" value="@($"{(byte)option.Type}:on")" class="btn btn-sm btn-primary">
+                                        Ενεργοποίηση
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </form>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    // "{type}:on" or "{type}:off", from the button that was pressed.
+    [SupplyParameterFromForm(FormName = "toggle-day")]
+    private string? Toggle { get; set; }
+
+    private GameDetails? _game;
+    private IReadOnlyList<GameDayOption>? _days;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task ToggleAsync()
+    {
+        if (_game is null || Toggle?.Split(':') is not [string typeText, string state]
+            || !byte.TryParse(typeText, out byte typeValue) || !GameDayTypes.IsDefined((GameDayType)typeValue))
+        {
+            return;
+        }
+
+        GameDayType type = (GameDayType)typeValue;
+        bool enabled = state == "on";
+        try
+        {
+            await SetGameDayEnabledHandler.HandleAsync(new SetGameDayEnabledCommand(_game.Id, type, enabled), CancellationToken.None);
+            Reload(enabled ? $"Η ημέρα «{type.Label()}» ενεργοποιήθηκε." : $"Η ημέρα «{type.Label()}» απενεργοποιήθηκε.");
+        }
+        catch (Exception exception) when (exception is GameDayNotFoundException or InvalidRequestException)
+        {
+            _message = exception.Message;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+            _days = await GetGameDayOptionsHandler.HandleAsync(_game.Id, CancellationToken.None);
+        }
+        catch (GameNotFoundException)
+        {
+            _game = null;
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            _game = null;
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+}

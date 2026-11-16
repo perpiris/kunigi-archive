@@ -1,18 +1,18 @@
 using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Authorization;
-using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Teams;
 
-namespace KunigiArchive.Application.Posts;
+namespace KunigiArchive.Application.Games;
 
-// A game's posts are edited by whoever edits the game: the admin, or a manager of the host team.
-public sealed class PostAccess
+// Whatever belongs to a game (posts, days, puzzles) is edited by whoever edits the game: the admin, or a
+// manager of the host team.
+public sealed class GameAccess
 {
     private readonly IGameQueries _gameQueries;
     private readonly ITeamQueries _teamQueries;
     private readonly ICurrentUser _currentUser;
 
-    public PostAccess(IGameQueries gameQueries, ITeamQueries teamQueries, ICurrentUser currentUser)
+    public GameAccess(IGameQueries gameQueries, ITeamQueries teamQueries, ICurrentUser currentUser)
     {
         _gameQueries = gameQueries;
         _teamQueries = teamQueries;
@@ -25,5 +25,11 @@ public sealed class PostAccess
             ?? throw new GameNotFoundException(gameId.ToString());
 
         await _currentUser.EnsureCanEditGameAsync(game.HostId, _teamQueries, cancellationToken);
+    }
+
+    // For pages that show more to editors (a disabled day, an edit link) without refusing anyone.
+    public async Task<bool> CanEditAsync(Guid? hostId, CancellationToken cancellationToken)
+    {
+        return await _currentUser.CanEditGameAsync(hostId, _teamQueries, cancellationToken);
     }
 }

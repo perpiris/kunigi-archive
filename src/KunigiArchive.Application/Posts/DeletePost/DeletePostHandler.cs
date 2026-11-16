@@ -1,3 +1,4 @@
+using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Media;
 using KunigiArchive.Domain.Posts;
@@ -8,20 +9,20 @@ namespace KunigiArchive.Application.Posts.DeletePost;
 public sealed class DeletePostHandler
 {
     private readonly IPostRepository _postRepository;
-    private readonly PostAccess _postAccess;
+    private readonly GameAccess _gameAccess;
     private readonly IMediaStorage _mediaStorage;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<DeletePostHandler> _logger;
 
     public DeletePostHandler(
         IPostRepository postRepository,
-        PostAccess postAccess,
+        GameAccess gameAccess,
         IMediaStorage mediaStorage,
         IUnitOfWork unitOfWork,
         ILogger<DeletePostHandler> logger)
     {
         _postRepository = postRepository;
-        _postAccess = postAccess;
+        _gameAccess = gameAccess;
         _mediaStorage = mediaStorage;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -32,7 +33,7 @@ public sealed class DeletePostHandler
         Post post = await _postRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new PostNotFoundException(id);
 
-        await _postAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
+        await _gameAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
 
         // Media rows go with the post (cascade); the files after, like every other delete.
         _postRepository.Remove(post);

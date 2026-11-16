@@ -1,0 +1,38 @@
+@* The media of a management page, each with its delete button. Goes inside the page's delete form: the
+   buttons post the media id under ButtonName. *@
+@if (Items.Count == 0)
+{
+    <p class="text-body-secondary">@Empty</p>
+}
+else
+{
+    <div class="media-grid">
+        @foreach (Item item in Items)
+        {
+            <figure class="media-item">
+                <MediaThumb Path="@item.Path" ThumbnailPath="@item.ThumbnailPath" Name="@item.Name" Gallery="@Gallery" />
+                <figcaption class="small text-truncate" title="@item.Name">@item.Name</figcaption>
+                <button type="submit" name="@ButtonName" value="@item.Id" class="btn btn-sm btn-outline-danger w-100"
+                        data-confirm="Διαγραφή του αρχείου;">
+                    Διαγραφή
+                </button>
+            </figure>
+        }
+    </div>
+}
+
+@code {
+    public sealed record Item(Guid Id, string Path, string ThumbnailPath, string Name);
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<Item> Items { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public string Gallery { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ButtonName { get; set; } = "DeleteMediaId";
+
+    [Parameter]
+    public string Empty { get; set; } = "Δεν υπάρχουν αρχεία.";
+}

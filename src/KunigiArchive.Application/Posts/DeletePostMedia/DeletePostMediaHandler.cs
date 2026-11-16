@@ -1,3 +1,4 @@
+using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Media;
 using KunigiArchive.Domain.Posts;
@@ -8,20 +9,20 @@ namespace KunigiArchive.Application.Posts.DeletePostMedia;
 public sealed class DeletePostMediaHandler
 {
     private readonly IPostRepository _postRepository;
-    private readonly PostAccess _postAccess;
+    private readonly GameAccess _gameAccess;
     private readonly IMediaStorage _mediaStorage;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<DeletePostMediaHandler> _logger;
 
     public DeletePostMediaHandler(
         IPostRepository postRepository,
-        PostAccess postAccess,
+        GameAccess gameAccess,
         IMediaStorage mediaStorage,
         IUnitOfWork unitOfWork,
         ILogger<DeletePostMediaHandler> logger)
     {
         _postRepository = postRepository;
-        _postAccess = postAccess;
+        _gameAccess = gameAccess;
         _mediaStorage = mediaStorage;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -32,7 +33,7 @@ public sealed class DeletePostMediaHandler
         Post post = await _postRepository.GetByIdAsync(command.PostId, cancellationToken)
             ?? throw new PostNotFoundException(command.PostId);
 
-        await _postAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
+        await _gameAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
 
         PostMedia media = post.RemoveMedia(command.MediaId);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

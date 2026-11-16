@@ -1,0 +1,59 @@
+.puzzle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
+}
+
+.side {
+    min-width: 0;
+}
+
+    .side .k-label {
+        margin-bottom: .5rem;
+    }
+
+.answer {
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--k-rule);
+}
+
+.media {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: .6rem;
+    margin-top: .75rem;
+}
+
+    /* One picture is usually the puzzle itself: show it whole and large. */
+    .media.single {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .media ::deep img,
+    .media ::deep video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        background: var(--k-sheet);
+    }
+
+    .media.single ::deep img,
+    .media.single ::deep video {
+        aspect-ratio: auto;
+        max-height: 70vh;
+        object-fit: contain;
+    }
+
+@media (max-width: 680px) {
+    .puzzle {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .answer {
+        padding-left: 0;
+        padding-top: 1rem;
+        border-left: 0;
+        border-top: 1px solid var(--k-rule);
+    }
+}

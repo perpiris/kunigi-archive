@@ -1,17 +1,28 @@
 @using Microsoft.AspNetCore.WebUtilities
-@* Keyset paging only moves forward: "Αρχή" goes back to the first page, "Επόμενες" continues after the cursor. *@
-<nav class="d-flex gap-2" aria-label="Σελίδες">
+@using Microsoft.Extensions.Primitives
+@inject NavigationManager Navigation
+@* Keyset paging: "Επόμενες" continues after the cursor. Going back needs the cursors of the earlier pages, so
+   every link carries them in "back" (dot-separated; "~" stands for the first page, which has none). The trail
+   is read from the current address, so pages only pass their next cursor. *@
+<nav class="d-flex flex-wrap gap-2" aria-label="Σελίδες">
     @if (IsFirstPage is false)
     {
-        <a class="btn btn-outline-secondary" href="@PageUrl(null)">Αρχή</a>
+        @if (_trail.Count > 1)
+        {
+            <a class="btn btn-outline-secondary" href="@PageUrl(null, [])">Αρχή</a>
+        }
+        <a class="btn btn-outline-secondary" href="@PreviousUrl()">Προηγούμενες</a>
     }
     @if (NextCursor is not null)
     {
-        <a class="btn btn-outline-secondary" href="@PageUrl(NextCursor)">Επόμενες</a>
+        <a class="btn btn-outline-secondary" href="@PageUrl(NextCursor, [.. _trail, _after ?? FirstPage])">Επόμενες</a>
     }
 </nav>
 
 @code {
+    private const string FirstPage = "~";
+    private const char Separator = '.';
+
     [Parameter, EditorRequired]
     public string BaseUrl { get; set; } = string.Empty;
 
@@ -25,12 +36,39 @@
     [Parameter]
     public string? Search { get; set; }
 
-    private string PageUrl(string? after)
+    private string? _after;
+    private List<string> _trail = [];
+
+    protected override void OnParametersSet()
+    {
+        Dictionary<string, StringValues> query =
+            QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+
+        _after = query.TryGetValue("after", out StringValues after) && !string.IsNullOrEmpty(after) ? after.ToString() : null;
+        _trail = query.TryGetValue("back", out StringValues back) && !string.IsNullOrEmpty(back)
+            ? back.ToString().Split(Separator, StringSplitOptions.RemoveEmptyEntries).ToList()
+            : [];
+    }
+
+    // The page before is the last one in the trail. Without a trail (an old or hand-made link), the first page.
+    private string PreviousUrl()
+    {
+        if (_trail.Count == 0)
+        {
+            return PageUrl(null, []);
+        }
+
+        string previous = _trail[^1];
+        return PageUrl(previous == FirstPage ? null : previous, _trail[..^1]);
+    }
+
+    private string PageUrl(string? after, List<string> trail)
     {
         Dictionary<string, string?> query = new()
         {
             ["search"] = string.IsNullOrWhiteSpace(Search) ? null : Search,
-            ["after"] = after
+            ["after"] = after,
+            ["back"] = after is null || trail.Count == 0 ? null : string.Join(Separator, trail)
         };
 
         return QueryHelpers.AddQueryString(BaseUrl, query.Where(p => p.Value is not null));

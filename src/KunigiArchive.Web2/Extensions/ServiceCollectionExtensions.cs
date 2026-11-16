@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Media;
 using KunigiArchive.Web2.Authentication;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;
 using Serilog;
 
 namespace KunigiArchive.Web2.Extensions;
@@ -89,6 +91,22 @@ public static class ServiceCollectionExtensions
         }
 
         return Task.CompletedTask;
+    }
+
+    // Pages and API responses (HTML, JSON). Static assets are precompressed at build (MapStaticAssets), media
+    // files are already compressed (WebP, MP4). Brotli first, gzip for older clients.
+    public static IServiceCollection AddCompression(this IServiceCollection services)
+    {
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.Providers.Add<GzipCompressionProvider>();
+        });
+        services.Configure<BrotliCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
+        services.Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
+
+        return services;
     }
 
     public static IServiceCollection AddApi(this IServiceCollection services)

@@ -35,38 +35,14 @@
             <input id="files" type="file" name="Files" multiple accept="@MediaRules.AcceptAttribute" class="form-control" />
             <button type="submit" class="btn btn-primary">Ανέβασμα</button>
         </div>
-        <div class="form-text">
-            Εικόνες (JPG, PNG, GIF, WebP) ή PDF, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB το καθένα.
-            Από τα PDF κρατιέται η πρώτη σελίδα ως εικόνα.
-        </div>
+        <UploadHint />
     </form>
 
-    @if (_game.Media.Count == 0)
-    {
-        <p class="text-body-secondary">Δεν υπάρχουν αρχεία.</p>
-    }
-    else
-    {
-        <form method="post" @formname="delete-media" @onsubmit="DeleteAsync">
-            <AntiforgeryToken />
-            <div class="media-grid">
-                @foreach (GameMediaDetails media in _game.Media)
-                {
-                    <figure class="media-item">
-                        <a href="/@media.Path" data-gallery="game-media" aria-label="@media.OriginalFileName">
-                            <img src="/@media.ThumbnailPath" alt="@media.OriginalFileName" loading="lazy"
-                                 onerror="this.onerror=null;this.src='/@media.Path'" />
-                        </a>
-                        <figcaption class="small text-truncate" title="@media.OriginalFileName">@media.OriginalFileName</figcaption>
-                        <button type="submit" name="DeleteMediaId" value="@media.Id" class="btn btn-sm btn-outline-danger w-100"
-                                onclick="return confirm('Διαγραφή του αρχείου;')">
-                            Διαγραφή
-                        </button>
-                    </figure>
-                }
-            </div>
-        </form>
-    }
+    <form method="post" @formname="delete-media" @onsubmit="DeleteAsync">
+        <AntiforgeryToken />
+        <MediaGrid Items="_game.Media.Select(m => new MediaGrid.Item(m.Id, m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList()"
+                   Gallery="game-media" />
+    </form>
 }
 
 @code {

@@ -46,7 +46,7 @@ public sealed class SetGameImageHandler
         StoredMedia? stored = null;
         if (command.Image is not null)
         {
-            MediaRules.Validate(command.Image);
+            MediaRules.ValidateImage(command.Image);
             stored = await _mediaStorage.SaveAsync(GameMediaPaths.Directory(game.Id), command.Image, cancellationToken);
         }
 

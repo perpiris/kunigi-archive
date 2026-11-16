@@ -76,10 +76,10 @@
                 <AntiforgeryToken />
                 <label for="image" class="form-label">@(_game.Image is null ? "Ανέβασμα αφίσας" : "Νέα αφίσα")</label>
                 <div class="k-inline-form">
-                    <input id="image" type="file" name="Image" accept="@MediaRules.AcceptAttribute" class="form-control" />
+                    <input id="image" type="file" name="Image" accept="@MediaRules.ImageAcceptAttribute" class="form-control" />
                     <button type="submit" class="btn btn-primary">@(_game.Image is null ? "Ανέβασμα" : "Αντικατάσταση")</button>
                 </div>
-                <div class="form-text">Εικόνα (JPG, PNG, GIF, WebP) ή PDF, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB. Από ένα PDF κρατιέται η πρώτη σελίδα.</div>
+                <UploadHint ImagesOnly="true" />
             </form>
         </div>
         @if (_game.Image is not null)
@@ -88,7 +88,7 @@
                 <AntiforgeryToken />
                 <input type="hidden" name="RemoveImage" value="true" />
                 <button type="submit" class="btn btn-outline-danger"
-                        onclick="return confirm('Αφαίρεση της αφίσας;')">Αφαίρεση αφίσας</button>
+                        data-confirm="Αφαίρεση της αφίσας;">Αφαίρεση αφίσας</button>
             </form>
         }
     </section>
