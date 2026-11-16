@@ -22,6 +22,131 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.GameDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId", "Type")
+                        .IsUnique();
+
+                    b.ToTable("GameDays", (string)null);
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.GameDayMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("GameDayId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameDayId");
+
+                    b.ToTable("GameDayMedia", (string)null);
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.Puzzle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Answer")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("GameDayId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("Group")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Question")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameDayId", "Order");
+
+                    b.ToTable("Puzzles", (string)null);
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.PuzzleMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("PuzzleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PuzzleId");
+
+                    b.ToTable("PuzzleMedia", (string)null);
+                });
+
             modelBuilder.Entity("KunigiArchive.Domain.Games.Game", b =>
                 {
                     b.Property<Guid>("Id")
@@ -370,6 +495,33 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("KunigiArchive.Infrastructure.Persistence.SlugRedirect", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte>("Owner")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Owner", "Slug")
+                        .IsUnique();
+
+                    b.ToTable("SlugRedirects", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
@@ -471,6 +623,42 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.GameDay", b =>
+                {
+                    b.HasOne("KunigiArchive.Domain.Games.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.GameDayMedia", b =>
+                {
+                    b.HasOne("KunigiArchive.Domain.GameDays.GameDay", null)
+                        .WithMany("Media")
+                        .HasForeignKey("GameDayId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.Puzzle", b =>
+                {
+                    b.HasOne("KunigiArchive.Domain.GameDays.GameDay", null)
+                        .WithMany("Puzzles")
+                        .HasForeignKey("GameDayId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.PuzzleMedia", b =>
+                {
+                    b.HasOne("KunigiArchive.Domain.GameDays.Puzzle", null)
+                        .WithMany("Media")
+                        .HasForeignKey("PuzzleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("KunigiArchive.Domain.Games.Game", b =>
@@ -586,6 +774,18 @@ namespace KunigiArchive.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.GameDay", b =>
+                {
+                    b.Navigation("Media");
+
+                    b.Navigation("Puzzles");
+                });
+
+            modelBuilder.Entity("KunigiArchive.Domain.GameDays.Puzzle", b =>
+                {
+                    b.Navigation("Media");
                 });
 
             modelBuilder.Entity("KunigiArchive.Domain.Games.Game", b =>

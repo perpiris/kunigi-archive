@@ -1,0 +1,17 @@
+@using KunigiArchive.Application.Media
+@* The note under a file input: what may be uploaded and how big. *@
+<div class="form-text">
+    @if (ImagesOnly)
+    {
+        @:Εικόνα (JPG, PNG, GIF, WebP) ή PDF, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB. Από ένα PDF κρατιέται η πρώτη σελίδα.
+    }
+    else
+    {
+        @:Εικόνες (JPG, PNG, GIF, WebP), PDF ή βίντεο MP4, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB το καθένα. Από τα PDF κρατιέται η πρώτη σελίδα ως εικόνα.
+    }
+</div>
+
+@code {
+    [Parameter]
+    public bool ImagesOnly { get; set; }
+}

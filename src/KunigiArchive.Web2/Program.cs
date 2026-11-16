@@ -4,6 +4,7 @@ using KunigiArchive.Infrastructure;
 using KunigiArchive.Web2.Authentication;
 using KunigiArchive.Web2.Components;
 using KunigiArchive.Web2.Extensions;
+using KunigiArchive.Web2.Middleware;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -22,6 +23,8 @@ try
         .AddInfrastructure(builder.Configuration)
         .AddHosting(builder.Configuration)
         .AddWebAuthentication()
+        .AddWebRateLimiting()
+        .AddCompression()
         .AddApi();
 
     builder.Services.AddRazorComponents()
@@ -29,17 +32,22 @@ try
 
     WebApplication app = builder.Build();
 
-    // First, so everything after it (logging, HTTPS redirect, cookies) sees the client's scheme and IP.
+    // First, so everything after it (logging, rate limits, HTTPS redirect, cookies) sees the client's scheme and IP.
     app.UseForwardedHeaders();
+
+    // Before the request log, so its line carries the request's id too.
+    app.UseMiddleware<RequestCorrelationMiddleware>();
 
     // Outermost after that, so it logs the final status code after errors have been turned into responses.
     app.UseSerilogRequestLogging();
+    app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseNoIndex();
+    app.UseResponseCompression();
 
+    // No UseHsts: nginx-proxy sends Strict-Transport-Security, and a second header from here only disagreed with it.
     if (!app.Environment.IsDevelopment())
     {
         app.UseExceptionHandler("/Error", createScopeForErrors: true);
-        app.UseHsts();
     }
 
     app.UseWhen(context => context.Request.IsApiRequest(), api =>
@@ -56,6 +64,9 @@ try
     // Explicit, so routing runs after the status code pages: a re-executed /not-found has to be routed again,
     // otherwise unknown URLs get an empty 404.
     app.UseRouting();
+
+    // After routing: the limits are per endpoint (the auth pages carry [EnableRateLimiting]).
+    app.UseRateLimiter();
 
     app.UseAuthentication();
     app.UseAuthorization();

@@ -1,0 +1,148 @@
+@page "/games/{Slug}/days/{DaySlug}/puzzles"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.GameDays.GetGameDays
+@using KunigiArchive.Application.GameDays.ManagePuzzles
+@inject GetGameDayForEditHandler GetGameDayForEditHandler
+@inject DeletePuzzleHandler DeletePuzzleHandler
+@inject MovePuzzleHandler MovePuzzleHandler
+@inherits FormPage
+
+<PageTitle>Γρίφοι</PageTitle>
+
+@if (_page is not null)
+{
+    GameDayDetails day = _page.Day;
+    <header class="k-page-head">
+        <h1>Γρίφοι: @day.Label</h1>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary" href="games/@Slug/days">Ημέρες</a>
+            <a class="btn btn-outline-secondary" href="games/@Slug/days/@DaySlug">Προβολή</a>
+            <a class="btn btn-primary" href="games/@Slug/days/@DaySlug/puzzles/create">Νέος γρίφος</a>
+        </div>
+    </header>
+    <p class="text-body-secondary">
+        <GameName Order="_page.Game.Order" Year="_page.Game.Year" />. Οι γρίφοι αριθμούνται με τη σειρά που παίχτηκαν·
+        όσοι έχουν τον ίδιο αριθμό πακέτου δόθηκαν μαζί.
+    </p>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert alert-danger" role="alert">@_message</div>
+    }
+
+    @if (day.Puzzles.Count == 0)
+    {
+        <p class="k-empty">Δεν υπάρχουν γρίφοι ακόμη.</p>
+    }
+    else
+    {
+        <form method="post" @formname="puzzle-action" @onsubmit="ActAsync">
+            <AntiforgeryToken />
+            <div class="k-table">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Πακέτο</th>
+                            <th scope="col">Ερώτηση</th>
+                            <th scope="col">Υλικό</th>
+                            <th scope="col" class="text-end"><span class="visually-hidden">Ενέργειες</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (PuzzleDetails puzzle in day.Puzzles)
+                        {
+                            <tr>
+                                <td><strong>@puzzle.Order</strong></td>
+                                <td>@(puzzle.Group?.ToString() ?? "—")</td>
+                                <td>@(TextExcerpt.FromHtml(puzzle.Question) ?? (puzzle.QuestionMedia.Count > 0 ? "(εικόνα)" : "—"))</td>
+                                <td class="text-nowrap">@puzzle.QuestionMedia.Count + @puzzle.AnswerMedia.Count</td>
+                                <td class="text-end text-nowrap">
+                                    <button type="submit" name="Action" value="up:@puzzle.Id" class="btn btn-sm btn-outline-secondary"
+                                            disabled="@(puzzle.Order == 1)" aria-label="Μετακίνηση του γρίφου @puzzle.Order πάνω">↑</button>
+                                    <button type="submit" name="Action" value="down:@puzzle.Id" class="btn btn-sm btn-outline-secondary"
+                                            disabled="@(puzzle.Order == day.Puzzles.Count)" aria-label="Μετακίνηση του γρίφου @puzzle.Order κάτω">↓</button>
+                                    <a class="btn btn-sm btn-outline-primary" href="games/@Slug/days/@DaySlug/puzzles/@puzzle.Id">Επεξεργασία</a>
+                                    <button type="submit" name="Action" value="delete:@puzzle.Id" class="btn btn-sm btn-outline-danger"
+                                            data-confirm="Διαγραφή του γρίφου @puzzle.Order και του υλικού του; Οι επόμενοι γρίφοι θα αλλάξουν αριθμό.">
+                                        Διαγραφή
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-text">Υλικό: αρχεία ερώτησης + αρχεία απάντησης.</p>
+        </form>
+    }
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DaySlug { get; set; } = string.Empty;
+
+    // "up:{id}", "down:{id}" or "delete:{id}", from the button that was pressed.
+    [SupplyParameterFromForm(FormName = "puzzle-action")]
+    private string? Action { get; set; }
+
+    private GameDayPage? _page;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task ActAsync()
+    {
+        if (_page is null || Action?.Split(':') is not [string verb, string idText] || !Guid.TryParse(idText, out Guid puzzleId))
+        {
+            return;
+        }
+
+        try
+        {
+            switch (verb)
+            {
+                case "up" or "down":
+                    await MovePuzzleHandler.HandleAsync(new MovePuzzleCommand(_page.Day.Id, puzzleId, verb == "up"), CancellationToken.None);
+                    Reload("Η σειρά άλλαξε.");
+                    break;
+                case "delete":
+                    await DeletePuzzleHandler.HandleAsync(new PuzzleRef(_page.Day.Id, puzzleId), CancellationToken.None);
+                    Reload("Ο γρίφος διαγράφηκε.");
+                    break;
+            }
+        }
+        catch (PuzzleNotFoundException exception)
+        {
+            _message = exception.Message;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _page = await GetGameDayForEditHandler.HandleAsync(Slug, DaySlug, CancellationToken.None);
+        }
+        catch (NotFoundException)
+        {
+            _page = null;
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            _page = null;
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+}

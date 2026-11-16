@@ -121,10 +121,10 @@
                 <AntiforgeryToken />
                 <label for="image" class="form-label">@(_team.Image is null ? "Ανέβασμα εικόνας" : "Νέα εικόνα")</label>
                 <div class="k-inline-form">
-                    <input id="image" type="file" name="Image" accept="@MediaRules.AcceptAttribute" class="form-control" />
+                    <input id="image" type="file" name="Image" accept="@MediaRules.ImageAcceptAttribute" class="form-control" />
                     <button type="submit" class="btn btn-primary">@(_team.Image is null ? "Ανέβασμα" : "Αντικατάσταση")</button>
                 </div>
-                <div class="form-text">Εικόνα (JPG, PNG, GIF, WebP) ή PDF, έως @(MediaRules.MaxFileBytes / 1024 / 1024) MB.</div>
+                <UploadHint ImagesOnly="true" />
             </form>
         </div>
         @if (_team.Image is not null)
@@ -133,7 +133,7 @@
                 <AntiforgeryToken />
                 <input type="hidden" name="RemoveImage" value="true" />
                 <button type="submit" class="btn btn-outline-danger"
-                        onclick="return confirm('Αφαίρεση της εικόνας;')">Αφαίρεση εικόνας</button>
+                        data-confirm="Αφαίρεση της εικόνας;">Αφαίρεση εικόνας</button>
             </form>
         }
     </section>

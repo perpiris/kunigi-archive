@@ -1,0 +1,170 @@
+@page "/games/{Slug}/days/{DaySlug}"
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.GameDays.GetGameDays
+@using KunigiArchive.Application.Common
+@inject GetGameDayHandler GetGameDayHandler
+@inject FindSlugRedirectHandler FindSlugRedirectHandler
+@inject NavigationManager Navigation
+
+@if (_page is not null)
+{
+    GameDayDetails day = _page.Day;
+    <PageTitle>@day.Label - @_page.Game.OrderTitle</PageTitle>
+
+    <nav class="crumb">
+        <a href="games/@Slug">← <GameName Order="_page.Game.Order" Year="_page.Game.Year" /></a>
+    </nav>
+
+    <header class="day-head">
+        <div class="year">@_page.Game.Year</div>
+        <h1>@day.Label</h1>
+        @if (day.Title is not null)
+        {
+            <p class="subtitle">«@day.Title»</p>
+        }
+        @if (_page.CanEdit)
+        {
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <a class="btn btn-sm btn-outline-secondary" href="games/@Slug/days/@DaySlug/edit">Επεξεργασία</a>
+                <a class="btn btn-sm btn-outline-secondary" href="games/@Slug/days/@DaySlug/puzzles">Γρίφοι</a>
+            </div>
+        }
+    </header>
+
+    @if (!day.IsEnabled)
+    {
+        <div class="alert alert-warning" role="status">
+            Η ημέρα είναι ανενεργή: τη βλέπετε επειδή μπορείτε να την επεξεργαστείτε, οι επισκέπτες όχι.
+        </div>
+    }
+
+    @if (day.Description is not null)
+    {
+        <section class="block">
+            <RichText Html="@day.Description" Class="story" />
+        </section>
+    }
+
+    <section class="block">
+        <h2>Γρίφοι @if (day.Puzzles.Count > 0) { <span class="count">@day.Puzzles.Count</span> }</h2>
+        @if (day.Puzzles.Count == 0)
+        {
+            <p class="k-empty">Δεν έχουν προστεθεί γρίφοι σε αυτή την ημέρα.</p>
+        }
+        else
+        {
+            <ol class="puzzles">
+                @foreach (Entry entry in _entries)
+                {
+                    @if (entry.Package is null)
+                    {
+                        PuzzleDetails puzzle = entry.Puzzles[0];
+                        <li class="entry" id="puzzle-@puzzle.Order">
+                            <div class="marker" aria-hidden="true">@puzzle.Order</div>
+                            <div class="body">
+                                <h3>@(puzzle.Order)<sup class="ord">ος</sup> γρίφος</h3>
+                                <PuzzleView Puzzle="puzzle" />
+                            </div>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="entry package">
+                            <div class="marker" aria-hidden="true">Π@(entry.Package)</div>
+                            <div class="body">
+                                <h3>Πακέτο @entry.Package</h3>
+                                <p class="text-body-secondary">Γρίφοι @string.Join(", ", entry.Puzzles.Select(p => p.Order)), δόθηκαν μαζί.</p>
+                                @foreach (PuzzleDetails puzzle in entry.Puzzles)
+                                {
+                                    <div class="member" id="puzzle-@puzzle.Order">
+                                        <h4>@(puzzle.Order)<sup class="ord">ος</sup> γρίφος</h4>
+                                        <PuzzleView Puzzle="puzzle" />
+                                    </div>
+                                }
+                            </div>
+                        </li>
+                    }
+                }
+            </ol>
+        }
+    </section>
+
+    @if (day.Media.Count > 0)
+    {
+        <section class="block">
+            <h2>Υλικό <span class="count">@day.Media.Count</span></h2>
+            <MediaSheet Items="day.Media.Select(m => new MediaSheet.Thumb(m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList()" Gallery="day" />
+        </section>
+    }
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DaySlug { get; set; } = string.Empty;
+
+    // A puzzle on its own, or a package (numbered 1, 2... in the order they come) with its puzzles.
+    private sealed record Entry(int? Package, List<PuzzleDetails> Puzzles);
+
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private GameDayPage? _page;
+    private List<Entry> _entries = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _page = await GetGameDayHandler.HandleAsync(Slug, DaySlug, CancellationToken.None);
+        }
+        catch (NotFoundException exception)
+        {
+            _page = null;
+            string? current = exception is KunigiArchive.Application.Games.GameNotFoundException
+                ? await FindSlugRedirectHandler.HandleAsync(SlugOwner.Game, Slug, CancellationToken.None)
+                : null;
+            if (current is null)
+            {
+                Navigation.NotFound();
+            }
+            else
+            {
+                PermanentRedirect.To(HttpContext, Navigation, $"/games/{current}/days/{DaySlug}");
+            }
+
+            return;
+        }
+
+        _entries = Group(_page.Day.Puzzles);
+    }
+
+    // A package appears where its first puzzle comes, with all its members.
+    private static List<Entry> Group(IReadOnlyList<PuzzleDetails> puzzles)
+    {
+        List<Entry> entries = [];
+        Dictionary<int, Entry> packages = [];
+        foreach (PuzzleDetails puzzle in puzzles)
+        {
+            if (puzzle.Group is not int group)
+            {
+                entries.Add(new Entry(null, [puzzle]));
+            }
+            else if (packages.TryGetValue(group, out Entry? package))
+            {
+                package.Puzzles.Add(puzzle);
+            }
+            else
+            {
+                package = new Entry(packages.Count + 1, [puzzle]);
+                packages[group] = package;
+                entries.Add(package);
+            }
+        }
+
+        return entries;
+    }
+}

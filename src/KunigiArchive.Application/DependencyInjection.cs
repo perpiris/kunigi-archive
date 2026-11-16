@@ -1,3 +1,9 @@
+using KunigiArchive.Application.Common;
+using KunigiArchive.Application.GameDays;
+using KunigiArchive.Application.GameDays.GetGameDays;
+using KunigiArchive.Application.GameDays.ManageGameDay;
+using KunigiArchive.Application.GameDays.ManagePuzzles;
+using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Games.CreateGame;
 using KunigiArchive.Application.Games.DeleteGame;
 using KunigiArchive.Application.Games.DeleteGameMedia;
@@ -76,8 +82,25 @@ public static class DependencyInjection
         services.AddScoped<DeleteGameHandler>();
 
         services.AddScoped<GetMediaStatusHandler>();
+        services.AddScoped<FindSlugRedirectHandler>();
 
-        services.AddScoped<PostAccess>();
+        services.AddScoped<GameDayEditor>();
+        services.AddScoped<GetGameDaysHandler>();
+        services.AddScoped<GetGameDayOptionsHandler>();
+        services.AddScoped<GetGameDayHandler>();
+        services.AddScoped<GetGameDayForEditHandler>();
+        services.AddScoped<SetGameDayEnabledHandler>();
+        services.AddScoped<UpdateGameDayHandler>();
+        services.AddScoped<UploadGameDayMediaHandler>();
+        services.AddScoped<DeleteGameDayMediaHandler>();
+        services.AddScoped<CreatePuzzleHandler>();
+        services.AddScoped<UpdatePuzzleHandler>();
+        services.AddScoped<DeletePuzzleHandler>();
+        services.AddScoped<MovePuzzleHandler>();
+        services.AddScoped<UploadPuzzleMediaHandler>();
+        services.AddScoped<DeletePuzzleMediaHandler>();
+
+        services.AddScoped<GameAccess>();
         services.AddScoped<GetGamePostsHandler>();
         services.AddScoped<GetPostForEditHandler>();
         services.AddScoped<CreatePostHandler>();

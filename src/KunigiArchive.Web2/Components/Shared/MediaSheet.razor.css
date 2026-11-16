@@ -5,26 +5,27 @@
     gap: .875rem;
 }
 
-    .prints a {
+    .prints ::deep a {
         display: block;
         border: 5px solid var(--k-sheet);
         box-shadow: 0 1px 3px var(--k-shadow);
         transition: transform .15s ease-in-out;
     }
 
-        .prints a:nth-child(odd) {
+        .prints ::deep a:nth-child(odd) {
             transform: rotate(-.8deg);
         }
 
-        .prints a:nth-child(even) {
+        .prints ::deep a:nth-child(even) {
             transform: rotate(.9deg);
         }
 
-        .prints a:hover {
+        .prints ::deep a:hover {
             transform: scale(1.03);
         }
 
-    .prints img {
+    .prints ::deep img,
+    .prints ::deep video {
         display: block;
         width: 100%;
         aspect-ratio: 1;

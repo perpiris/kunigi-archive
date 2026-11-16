@@ -1,10 +1,15 @@
 @page "/games/{Slug}"
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.GameDays.GetGameDays
 @using KunigiArchive.Application.Games
 @using KunigiArchive.Application.Games.GetGameBySlug
 @using KunigiArchive.Application.Posts
 @using KunigiArchive.Application.Posts.GetGamePosts
 @inject GetGameBySlugHandler GetGameBySlugHandler
 @inject GetGamePostsHandler GetGamePostsHandler
+@inject GetGameDaysHandler GetGameDaysHandler
+@inject FindSlugRedirectHandler FindSlugRedirectHandler
+@using KunigiArchive.Application.Common
 @inject NavigationManager Navigation
 
 @if (_game is not null)
@@ -43,6 +48,30 @@
         </section>
     }
 
+    @if (_days.Count > 0)
+    {
+        <section class="block">
+            <h2>Ημέρες</h2>
+            <ul class="days">
+                @foreach (GameDaySummary day in _days)
+                {
+                    <li>
+                        <a href="games/@_game.Slug/days/@day.Slug">
+                            <span class="day-name">@day.Label</span>
+                            @if (day.Title is not null)
+                            {
+                                <span class="day-title">«@day.Title»</span>
+                            }
+                            <span class="day-meta">
+                                @(day.PuzzleCount == 1 ? "1 γρίφος" : $"{day.PuzzleCount} γρίφοι")@(day.MediaCount > 0 ? $" · {day.MediaCount} υλικό" : null)
+                            </span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
     @if (_posts.Count > 0)
     {
         <section class="block">
@@ -77,9 +106,13 @@
     [Parameter]
     public string Slug { get; set; } = string.Empty;
 
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
     private GameDetails? _game;
     private List<MediaSheet.Thumb> _mediaThumbs = [];
     private IReadOnlyList<PostDetails> _posts = [];
+    private IReadOnlyList<GameDaySummary> _days = [];
 
     protected override async Task OnParametersSetAsync()
     {
@@ -90,12 +123,22 @@
         catch (GameNotFoundException)
         {
             _game = null;
-            Navigation.NotFound();
+            string? current = await FindSlugRedirectHandler.HandleAsync(SlugOwner.Game, Slug, CancellationToken.None);
+            if (current is null)
+            {
+                Navigation.NotFound();
+            }
+            else
+            {
+                PermanentRedirect.To(HttpContext, Navigation, $"/games/{current}");
+            }
+
             return;
         }
 
         _mediaThumbs = _game.Media.Select(m => new MediaSheet.Thumb(m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList();
         _posts = await GetGamePostsHandler.HandleAsync(_game.Id, CancellationToken.None);
+        _days = await GetGameDaysHandler.HandleAsync(_game.Id, CancellationToken.None);
     }
 
     private static List<MediaSheet.Thumb> Thumbs(PostDetails post) =>

@@ -3,7 +3,7 @@ using KunigiArchive.Domain.Common;
 
 namespace KunigiArchive.Domain.Games;
 
-// The game and its media; days, puzzles and posts come later.
+// The game and its media. Its days (with their puzzles) and its posts are aggregates of their own.
 public sealed class Game
 {
     public const short YearMin = 1900;

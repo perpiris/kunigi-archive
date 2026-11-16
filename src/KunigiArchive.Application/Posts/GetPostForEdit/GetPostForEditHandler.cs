@@ -1,14 +1,16 @@
+using KunigiArchive.Application.Games;
+
 namespace KunigiArchive.Application.Posts.GetPostForEdit;
 
 public sealed class GetPostForEditHandler
 {
     private readonly IPostQueries _postQueries;
-    private readonly PostAccess _postAccess;
+    private readonly GameAccess _gameAccess;
 
-    public GetPostForEditHandler(IPostQueries postQueries, PostAccess postAccess)
+    public GetPostForEditHandler(IPostQueries postQueries, GameAccess gameAccess)
     {
         _postQueries = postQueries;
-        _postAccess = postAccess;
+        _gameAccess = gameAccess;
     }
 
     public async Task<PostDetails> HandleAsync(Guid id, CancellationToken cancellationToken)
@@ -16,7 +18,7 @@ public sealed class GetPostForEditHandler
         PostDetails post = await _postQueries.GetAsync(id, cancellationToken)
             ?? throw new PostNotFoundException(id);
 
-        await _postAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
+        await _gameAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
 
         return post;
     }

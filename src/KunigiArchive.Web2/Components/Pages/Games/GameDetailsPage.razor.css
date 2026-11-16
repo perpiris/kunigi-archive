@@ -86,6 +86,55 @@
     }
 }
 
+/* The days: index cards, one per part of the game. */
+.days {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: .875rem;
+}
+
+    .days a {
+        display: flex;
+        flex-direction: column;
+        gap: .2rem;
+        height: 100%;
+        padding: .9rem 1.1rem;
+        border: 1px solid var(--k-ink);
+        background: var(--k-sheet);
+        color: inherit;
+        text-decoration: none;
+        box-shadow: 3px 3px 0 var(--k-shadow);
+        transition: transform .15s ease-in-out;
+    }
+
+        .days a:hover {
+            transform: translate(-2px, -2px);
+        }
+
+.day-name {
+    font-family: var(--k-display);
+    font-size: 1.375rem;
+    font-weight: 700;
+}
+
+.day-title {
+    font-style: italic;
+    color: var(--k-faded);
+}
+
+.day-meta {
+    margin-top: auto;
+    padding-top: .35rem;
+    font-size: .8125rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--k-accent);
+}
+
 /* Posts read like dated entries in a logbook. */
 .post {
     padding: 1.25rem 0 1.5rem;

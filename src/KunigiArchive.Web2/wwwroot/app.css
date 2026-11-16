@@ -813,6 +813,33 @@ k-rich-text {
     color: var(--k-ink);
 }
 
+/* A video thumbnail (MediaThumb): its first frame with a play mark. */
+.k-thumb {
+    display: block;
+}
+
+.k-video {
+    position: relative;
+    display: block;
+    background: #000;
+}
+
+    .k-video video {
+        pointer-events: none;
+    }
+
+    .k-video::after {
+        content: "";
+        position: absolute;
+        inset: 50% auto auto 50%;
+        width: 2.75rem;
+        height: 2.75rem;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background: rgba(0, 0, 0, .55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M6 4.5v7l5.5-3.5z'/%3E%3C/svg%3E") center / 70% no-repeat;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, .85);
+    }
+
 /* ---------- Blazor ---------- */
 
 .valid.modified:not([type=checkbox]) {

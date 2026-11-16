@@ -58,14 +58,24 @@ internal sealed class LocalMediaStorage : IMediaStorage
         string directoryPath = ResolveInsideRoot(directory);
         Directory.CreateDirectory(directoryPath);
 
-        await using MemoryStream buffer = Path.GetExtension(upload.FileName).Equals(".pdf", StringComparison.OrdinalIgnoreCase)
+        string id = RandomNumberGenerator.GetString(FileNameAlphabet, 11);
+
+        if (MediaRules.IsVideo(upload.FileName))
+        {
+            string videoName = await SaveVideoAsync(upload, directoryPath, id, cancellationToken);
+            return new StoredMedia($"{WebPrefix}{directory.Trim('/')}/{videoName}", videoName);
+        }
+
+        await using Stream buffer = Path.GetExtension(upload.FileName).Equals(".pdf", StringComparison.OrdinalIgnoreCase)
             ? RenderPdfFirstPage(await BufferAsync(upload, cancellationToken), upload.FileName)
             : await BufferAsync(upload, cancellationToken);
 
         ImageInfo info = await IdentifyAsync(buffer, upload.FileName, cancellationToken);
 
-        string id = RandomNumberGenerator.GetString(FileNameAlphabet, 11);
-        string fileName = info.Metadata.DecodedImageFormat == GifFormat.Instance
+        // Only an animated GIF is kept as it is (re-encoding would lose or bloat the animation); a still one is just
+        // a picture and is shrunk and encoded like any other.
+        bool isAnimatedGif = info.Metadata.DecodedImageFormat == GifFormat.Instance && info.FrameMetadataCollection.Count > 1;
+        string fileName = isAnimatedGif
             ? await SaveGifAsync(buffer, directoryPath, id, cancellationToken)
             : await SaveAsWebpAsync(buffer, info, directoryPath, id, upload.FileName, cancellationToken);
 
@@ -106,7 +116,7 @@ internal sealed class LocalMediaStorage : IMediaStorage
 
     // Only the image header is read here, which also rejects anything that isn't really one of the allowed formats
     // (a renamed HTML or script file can never end up being served from /media).
-    private static async Task<ImageInfo> IdentifyAsync(MemoryStream buffer, string fileName, CancellationToken cancellationToken)
+    private static async Task<ImageInfo> IdentifyAsync(Stream buffer, string fileName, CancellationToken cancellationToken)
     {
         ImageInfo info;
         try
@@ -135,7 +145,7 @@ internal sealed class LocalMediaStorage : IMediaStorage
 
     // Upright, shrunk, without camera metadata (it can include the GPS location), re-encoded as WebP.
     private async Task<string> SaveAsWebpAsync(
-        MemoryStream buffer,
+        Stream buffer,
         ImageInfo info,
         string directoryPath,
         string id,
@@ -220,7 +230,7 @@ internal sealed class LocalMediaStorage : IMediaStorage
     }
 
     // GIFs are kept byte for byte: re-encoding would lose or bloat animations.
-    private async Task<string> SaveGifAsync(MemoryStream buffer, string directoryPath, string id, CancellationToken cancellationToken)
+    private async Task<string> SaveGifAsync(Stream buffer, string directoryPath, string id, CancellationToken cancellationToken)
     {
         string fileName = $"{id}.gif";
         string fullPath = Path.Combine(directoryPath, fileName);
@@ -250,7 +260,7 @@ internal sealed class LocalMediaStorage : IMediaStorage
     }
 
     // The first page becomes an image and then goes through the same shrinking and encoding as any upload.
-    private static MemoryStream RenderPdfFirstPage(MemoryStream pdf, string fileName)
+    private static MemoryStream RenderPdfFirstPage(Stream pdf, string fileName)
     {
         using (pdf)
         {
@@ -276,12 +286,68 @@ internal sealed class LocalMediaStorage : IMediaStorage
         }
     }
 
-    private static async Task<MemoryStream> BufferAsync(MediaUpload upload, CancellationToken cancellationToken)
+    // A temporary file rather than memory: uploads go up to 100 MB each. It's deleted when the stream closes.
+    private static async Task<FileStream> BufferAsync(MediaUpload upload, CancellationToken cancellationToken)
     {
-        MemoryStream buffer = new MemoryStream();
-        await upload.Content.CopyToAsync(buffer, cancellationToken);
-        buffer.Position = 0;
-        return buffer;
+        FileStream buffer = new FileStream(
+            Path.Combine(Path.GetTempPath(), $"kunigi-upload-{Guid.NewGuid():N}"),
+            FileMode.CreateNew,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 81920,
+            FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+
+        try
+        {
+            await upload.Content.CopyToAsync(buffer, cancellationToken);
+            buffer.Position = 0;
+            return buffer;
+        }
+        catch
+        {
+            await buffer.DisposeAsync();
+            throw;
+        }
+    }
+
+    // An MP4 starts with an "ftyp" box: bytes 4-7. Anything else (a renamed HTML page, say) is refused.
+    // The file is copied as it is, straight from the upload: no buffering, no thumbnail.
+    private async Task<string> SaveVideoAsync(MediaUpload upload, string directoryPath, string id, CancellationToken cancellationToken)
+    {
+        byte[] header = new byte[8];
+        int read = await upload.Content.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false, cancellationToken);
+        if (read < header.Length || !"ftyp"u8.SequenceEqual(header.AsSpan(4, 4)))
+        {
+            throw new InvalidRequestException($"Το αρχείο '{upload.FileName}' δεν είναι έγκυρο βίντεο MP4.");
+        }
+
+        string fileName = $"{id}.mp4";
+        string fullPath = Path.Combine(directoryPath, fileName);
+        try
+        {
+            await using FileStream output = new FileStream(fullPath, FileMode.CreateNew);
+            await output.WriteAsync(header, cancellationToken);
+            await upload.Content.CopyToAsync(output, cancellationToken);
+        }
+        catch
+        {
+            TryDelete(fullPath);
+            throw;
+        }
+
+        return fileName;
+    }
+
+    private void TryDelete(string fullPath)
+    {
+        try
+        {
+            File.Delete(fullPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(exception, "Failed to remove the partial file {Path}", fullPath);
+        }
     }
 
     public MediaUsage GetTotalUsage()

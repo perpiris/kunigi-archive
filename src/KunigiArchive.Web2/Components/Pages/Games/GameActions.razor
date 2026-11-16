@@ -20,7 +20,8 @@
     <div class="row g-3">
         <ActionTile Href="@($"games/{_game.Slug}")" Title="Προβολή" Description="Η δημόσια σελίδα του παιχνιδιού." />
         <ActionTile Href="@($"games/{_game.Slug}/edit")" Title="Επεξεργασία" Description="Τίτλος, σημείωση, ιστορία, αφίσα." />
-        <ActionTile Href="@($"games/{_game.Slug}/media")" Title="Υλικό" Description="Φωτογραφίες και αρχεία του παιχνιδιού." />
+        <ActionTile Href="@($"games/{_game.Slug}/days")" Title="Ημέρες" Description="Χορός, Σάββατο, Κυριακή...: περιγραφή, γρίφοι, υλικό." />
+        <ActionTile Href="@($"games/{_game.Slug}/media")" Title="Υλικό" Description="Φωτογραφίες, βίντεο και αρχεία του παιχνιδιού." />
         <ActionTile Href="@($"games/{_game.Slug}/posts")" Title="Αναρτήσεις" Description="Ανακοινώσεις και νέα του παιχνιδιού." />
         <AuthorizeView Roles="@Roles.Admin">
             <ActionTile Href="@($"games/{_game.Id}/edit")" Title="Στοιχεία"
@@ -37,7 +38,7 @@
                     <AntiforgeryToken />
                     <input type="hidden" name="ConfirmDelete" value="true" />
                     <button type="submit" class="btn btn-danger"
-                            onclick="return confirm('Οριστική διαγραφή του παιχνιδιού και όλου του υλικού του;')">
+                            data-confirm="Οριστική διαγραφή του παιχνιδιού και όλου του υλικού του;">
                         Διαγραφή παιχνιδιού
                     </button>
                 </form>

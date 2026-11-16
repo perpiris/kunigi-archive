@@ -42,8 +42,5 @@ else
     public string Empty { get; set; } = "Δεν υπάρχει υλικό ακόμη.";
 
     private RenderFragment Print(Thumb item) =>
-        @<a href="/@item.Path" data-gallery="@Gallery" aria-label="@item.Name">
-            <img src="/@item.ThumbnailPath" alt="@item.Name" loading="lazy"
-                 onerror="this.onerror=null;this.src='/@item.Path'" />
-        </a>;
+        @<MediaThumb Path="@item.Path" ThumbnailPath="@item.ThumbnailPath" Name="@item.Name" Gallery="@Gallery" />;
 }

@@ -39,7 +39,7 @@ public sealed class SetTeamImageHandler
         StoredMedia? stored = null;
         if (command.Image is not null)
         {
-            MediaRules.Validate(command.Image);
+            MediaRules.ValidateImage(command.Image);
             stored = await _mediaStorage.SaveAsync(TeamMediaPaths.Directory(team.Id), command.Image, cancellationToken);
         }
 

@@ -1,3 +1,4 @@
+using KunigiArchive.Application.Games;
 using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Abstractions.Exceptions;
 using KunigiArchive.Application.Mappers;
@@ -10,7 +11,7 @@ namespace KunigiArchive.Application.Posts.UploadPostMedia;
 public sealed class UploadPostMediaHandler
 {
     private readonly IPostRepository _postRepository;
-    private readonly PostAccess _postAccess;
+    private readonly GameAccess _gameAccess;
     private readonly IMediaStorage _mediaStorage;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
@@ -18,14 +19,14 @@ public sealed class UploadPostMediaHandler
 
     public UploadPostMediaHandler(
         IPostRepository postRepository,
-        PostAccess postAccess,
+        GameAccess gameAccess,
         IMediaStorage mediaStorage,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         ILogger<UploadPostMediaHandler> logger)
     {
         _postRepository = postRepository;
-        _postAccess = postAccess;
+        _gameAccess = gameAccess;
         _mediaStorage = mediaStorage;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
@@ -39,7 +40,7 @@ public sealed class UploadPostMediaHandler
         Post post = await _postRepository.GetByIdAsync(command.PostId, cancellationToken)
             ?? throw new PostNotFoundException(command.PostId);
 
-        await _postAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
+        await _gameAccess.EnsureCanEditAsync(post.GameId, cancellationToken);
 
         if (command.Files.Count == 0)
         {

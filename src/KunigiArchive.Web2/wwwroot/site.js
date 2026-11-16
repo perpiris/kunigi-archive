@@ -344,6 +344,26 @@
         });
     };
 
+    // ---------- Confirmations and image fallbacks ----------
+    // <button data-confirm="Διαγραφή;">: asks before the form is sent. <img data-fallback="/full.webp">: shows the
+    // full image when the thumbnail is missing. Delegated from the document (no inline handlers, so a strict CSP
+    // works), which also covers content that enhanced navigation swaps in.
+    document.addEventListener("click", event => {
+        const button = event.target.closest?.("[data-confirm]");
+        if (button && !window.confirm(button.dataset.confirm)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+    }, true);
+
+    // Image errors don't bubble, so this listens in the capture phase.
+    document.addEventListener("error", event => {
+        const image = event.target;
+        if (image instanceof HTMLImageElement && image.dataset.fallback && image.src !== new URL(image.dataset.fallback, location.href).href) {
+            image.src = image.dataset.fallback;
+        }
+    }, true);
+
     const mount = () => {
         remountEditors();
         mountGallery();

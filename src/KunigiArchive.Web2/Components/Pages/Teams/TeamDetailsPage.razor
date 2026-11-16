@@ -1,7 +1,9 @@
 @page "/teams/{Slug}"
 @using KunigiArchive.Application.Teams
 @using KunigiArchive.Application.Teams.GetTeamProfile
+@using KunigiArchive.Application.Common
 @inject GetTeamProfileHandler GetTeamProfileHandler
+@inject FindSlugRedirectHandler FindSlugRedirectHandler
 @inject NavigationManager Navigation
 
 @if (_team is not null)
@@ -70,6 +72,9 @@
     [Parameter]
     public string Slug { get; set; } = string.Empty;
 
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
     private TeamProfile? _profile;
     private TeamDetails? _team;
     private List<(string Label, string Url, SocialIcon.Kind Icon)> _links = [];
@@ -85,7 +90,16 @@
         catch (TeamNotFoundException)
         {
             (_profile, _team) = (null, null);
-            Navigation.NotFound();
+            string? current = await FindSlugRedirectHandler.HandleAsync(SlugOwner.Team, Slug, CancellationToken.None);
+            if (current is null)
+            {
+                Navigation.NotFound();
+            }
+            else
+            {
+                PermanentRedirect.To(HttpContext, Navigation, $"/teams/{current}");
+            }
+
             return;
         }
 

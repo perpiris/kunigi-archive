@@ -1,5 +1,6 @@
 using KunigiArchive.Application.Abstractions;
 using KunigiArchive.Application.Authorization;
+using KunigiArchive.Application.Common;
 using KunigiArchive.Application.Mappers;
 using KunigiArchive.Domain.Common;
 using KunigiArchive.Domain.Teams;
@@ -13,6 +14,7 @@ public sealed class UpdateTeamHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IRichTextSanitizer _sanitizer;
+    private readonly ISlugHistory _slugHistory;
     private readonly ILogger<UpdateTeamHandler> _logger;
 
     public UpdateTeamHandler(
@@ -20,12 +22,14 @@ public sealed class UpdateTeamHandler
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
         IRichTextSanitizer sanitizer,
+        ISlugHistory slugHistory,
         ILogger<UpdateTeamHandler> logger)
     {
         _teamRepository = teamRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _sanitizer = sanitizer;
+        _slugHistory = slugHistory;
         _logger = logger;
     }
 
@@ -86,6 +90,8 @@ public sealed class UpdateTeamHandler
             throw new SlugAlreadyTakenException(slug);
         }
 
+        // The old address keeps working: it redirects to the new one.
+        await _slugHistory.RecordAsync(SlugOwner.Team, team.Slug.Value, team.Id, cancellationToken);
         team.ChangeSlug(slug);
     }
 }

@@ -1,4 +1,5 @@
 using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Domain.GameDays;
 using KunigiArchive.Domain.Games;
 using KunigiArchive.Domain.Posts;
 using KunigiArchive.Domain.Teams;
@@ -18,6 +19,8 @@ public sealed class KunigiArchiveDbContext : IdentityDbContext<AppUser, AppRole,
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<Game> Games => Set<Game>();
     public DbSet<Post> Posts => Set<Post>();
+    public DbSet<GameDay> GameDays => Set<GameDay>();
+    internal DbSet<SlugRedirect> SlugRedirects => Set<SlugRedirect>();
 
     // Identity's stores use this same scoped context, so their saves join the transaction too.
     public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
