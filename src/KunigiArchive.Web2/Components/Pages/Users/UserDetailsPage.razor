@@ -71,7 +71,7 @@
                 <ul class="mb-0">
                     @foreach (TeamSummary team in _user.ManagedTeams)
                     {
-                        <li><a href="teams/@team.Slug/managers">@team.Name</a></li>
+                        <li>@team.Name</li>
                     }
                 </ul>
             }
