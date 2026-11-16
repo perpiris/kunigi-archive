@@ -38,8 +38,8 @@
                         <tr>
                             <td class="text-nowrap">@game.Year</td>
                             <td data-sort-value="@game.Year"><GameName Order="game.Order" Year="game.Year" /></td>
-                            <td><TeamLink Team="game.Host" /></td>
-                            <td><TeamLink Team="game.Winner" /></td>
+                            <td>@(game.Host?.Name ?? "—")</td>
+                            <td>@(game.Winner?.Name ?? "—")</td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-primary" href="games/@game.Slug/actions">Ενέργειες</a>
                             </td>

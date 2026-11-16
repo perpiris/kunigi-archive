@@ -1,22 +1,22 @@
+/* One game per row, like a catalogue: the poster large on the left, the record beside it. */
 .game-grid {
     list-style: none;
     margin: 0 0 2rem;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
 }
 
-/* A catalogue card: the poster in its own shape on the left, the record on the right. */
 .game-card {
     display: grid;
-    grid-template-columns: 9.5rem minmax(0, 1fr);
-    gap: 1.25rem;
-    align-items: start;
+    grid-template-columns: minmax(12rem, 22rem) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: center;
     background: var(--k-sheet);
     border: 1px solid var(--k-rule);
     border-top: 3px solid var(--k-accent);
-    padding: 1rem;
+    padding: 1.25rem;
 }
 
 .poster {
@@ -24,16 +24,17 @@
 }
 
 .year {
-    font-size: .8125rem;
+    font-family: var(--k-display);
+    font-size: clamp(2.25rem, 5vw, 3.25rem);
     font-weight: 700;
-    letter-spacing: .1em;
+    line-height: 1;
     color: var(--k-accent);
 }
 
 .name {
-    font-size: 1.4rem;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
     line-height: 1.15;
-    margin: .2rem 0 0;
+    margin: .5rem 0 0;
 }
 
     .name a {
@@ -47,17 +48,19 @@
         }
 
 .subtitle {
+    font-family: var(--k-display);
+    font-size: 1.25rem;
     font-style: italic;
     color: var(--k-faded);
-    margin: .2rem 0 0;
+    margin: .35rem 0 0;
 }
 
 .facts {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    gap: .2rem .9rem;
-    margin: .8rem 0 0;
-    font-size: .9375rem;
+    gap: .4rem 1.1rem;
+    margin: 1.25rem 0 0;
+    font-size: 1.0625rem;
 }
 
     .facts dt {
@@ -70,24 +73,22 @@
     }
 
 .note {
-    margin: .6rem 0 0;
-    padding-top: .5rem;
+    margin: 1rem 0 0;
+    padding-top: .75rem;
     border-top: 1px solid var(--k-rule);
-    font-size: .875rem;
     font-style: italic;
     color: var(--k-faded);
 }
 
-@media (max-width: 900px) {
-    .game-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 460px) {
+/* On a phone the poster goes on top, full width of the card. */
+@media (max-width: 640px) {
     .game-card {
-        grid-template-columns: 6.5rem minmax(0, 1fr);
-        gap: .9rem;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+        padding: 1rem;
     }
 
+    .poster {
+        max-width: 22rem;
+    }
 }

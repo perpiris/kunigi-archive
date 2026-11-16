@@ -12,7 +12,8 @@
 @inject SetGameDayEnabledHandler SetGameDayEnabledHandler
 @inherits FormPage
 
-@* The parts of the game: which ones it had (shown on its page), and the way into each one's text, media and puzzles. *@
+@* The parts of the game: which ones it had (shown on its page). Each enabled day is then edited from the game's
+   actions page, like in the old app. *@
 <PageTitle>Ημέρες παιχνιδιού</PageTitle>
 
 @if (_game is not null && _days is not null)
@@ -23,7 +24,7 @@
     </header>
     <p class="text-body-secondary">
         <GameName Order="_game.Order" Year="_game.Year" />. Ενεργοποιήστε τις ημέρες που είχε το παιχνίδι:
-        εμφανίζονται στη σελίδα του, με την περιγραφή, τους γρίφους και το υλικό τους.
+        εμφανίζονται στη σελίδα του, και η περιγραφή, οι γρίφοι και το υλικό τους συμπληρώνονται από τις ενέργειες του παιχνιδιού.
     </p>
 
     @if (_message is not null)
@@ -69,11 +70,6 @@
                             <td>@(day?.PuzzleCount ?? 0)</td>
                             <td>@(day?.MediaCount ?? 0)</td>
                             <td class="text-end text-nowrap">
-                                @if (day is not null)
-                                {
-                                    <a class="btn btn-sm btn-outline-primary" href="games/@_game.Slug/days/@option.Slug/edit">Περιγραφή &amp; υλικό</a>
-                                    <a class="btn btn-sm btn-outline-primary" href="games/@_game.Slug/days/@option.Slug/puzzles">Γρίφοι</a>
-                                }
                                 @if (day?.IsEnabled == true)
                                 {
                                     <button type="submit" name="Toggle" value="@($"{(byte)option.Type}:off")" class="btn btn-sm btn-outline-danger"

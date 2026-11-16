@@ -13,12 +13,19 @@ public static class GameFormMapper
 
     public static CreateGameCommand ToCreateCommand(this GameRecordForm form)
     {
-        return new CreateGameCommand(form.Year!.Value, ParseOrder(form.Order), form.HostId, form.WinnerId);
+        return new CreateGameCommand(form.Year!.Value, ParseOrder(form.Order), ParseTeam(form.HostId), ParseTeam(form.WinnerId));
     }
 
     public static UpdateGameRecordCommand ToUpdateCommand(this GameRecordForm form)
     {
-        return new UpdateGameRecordCommand(form.Id, form.Year!.Value, ParseOrder(form.Order), form.HostId, form.WinnerId);
+        return new UpdateGameRecordCommand(
+            form.Id, form.Year!.Value, ParseOrder(form.Order), ParseTeam(form.HostId), ParseTeam(form.WinnerId));
+    }
+
+    // Empty is "no team". Anything that isn't an id is treated the same; the handler checks the team exists.
+    private static Guid? ParseTeam(string? id)
+    {
+        return Guid.TryParse(id, out Guid teamId) ? teamId : null;
     }
 
     public static GameDetailsForm ToDetailsForm(this GameDetails game)
@@ -38,8 +45,8 @@ public static class GameFormMapper
             Id = game.Id,
             Year = game.Year,
             Order = game.Order?.ToString("0.#", Greek),
-            HostId = game.HostId,
-            WinnerId = game.WinnerId
+            HostId = game.HostId?.ToString(),
+            WinnerId = game.WinnerId?.ToString()
         };
     }
 

@@ -38,16 +38,18 @@
                         <th scope="col">Είδος</th>
                         <th scope="col" class="text-end">Αρχεία</th>
                         <th scope="col" class="text-end" aria-sort="descending">Μέγεθος</th>
+                        <th scope="col" class="text-end" data-no-sort><span class="visually-hidden">Ενέργειες</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (Row row in _rows)
                     {
                         <tr>
-                            <td data-sort-value="@row.SortName"><a href="@row.Href">@row.Name</a></td>
+                            <td data-sort-value="@row.SortName">@row.Name</td>
                             <td>@row.Kind</td>
                             <td class="text-end">@row.Usage.Files</td>
                             <td class="text-end text-nowrap" data-sort-value="@row.Usage.Bytes">@Size(row.Usage.Bytes)</td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="@row.Href">Ενέργειες</a></td>
                         </tr>
                     }
                 </tbody>
@@ -107,9 +109,9 @@
         _rows =
         [
             .. _status.GameRows.Where(r => r.Usage.Files > 0)
-                .Select(r => new Row(Game(r.Game), r.Game.Year.ToString(CultureInfo.InvariantCulture), "Παιχνίδι", $"games/{r.Game.Slug}", r.Usage)),
+                .Select(r => new Row(Game(r.Game), r.Game.Year.ToString(CultureInfo.InvariantCulture), "Παιχνίδι", $"games/{r.Game.Slug}/actions", r.Usage)),
             .. _status.TeamRows.Where(r => r.Usage.Files > 0)
-                .Select(r => new Row(Text(r.Team.Name), r.Team.Name, "Ομάδα", $"teams/{r.Team.Slug}", r.Usage))
+                .Select(r => new Row(Text(r.Team.Name), r.Team.Name, "Ομάδα", $"teams/{r.Team.Slug}/actions", r.Usage))
         ];
         _rows = _rows.OrderByDescending(r => r.Usage.Bytes).ToList();
 

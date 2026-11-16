@@ -6,6 +6,9 @@
 @using KunigiArchive.Application.Games.GetGameForEdit
 @inject GetGameForEditHandler GetGameForEditHandler
 @inject DeleteGameHandler DeleteGameHandler
+@inject GetGameDaysHandler GetGameDaysHandler
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.GameDays.GetGameDays
 @inherits FormPage
 
 @if (_game is not null)
@@ -20,7 +23,7 @@
     <div class="row g-3">
         <ActionTile Href="@($"games/{_game.Slug}")" Title="Προβολή" Description="Η δημόσια σελίδα του παιχνιδιού." />
         <ActionTile Href="@($"games/{_game.Slug}/edit")" Title="Επεξεργασία" Description="Τίτλος, σημείωση, ιστορία, αφίσα." />
-        <ActionTile Href="@($"games/{_game.Slug}/days")" Title="Ημέρες" Description="Χορός, Σάββατο, Κυριακή...: περιγραφή, γρίφοι, υλικό." />
+        <ActionTile Href="@($"games/{_game.Slug}/days")" Title="Ημέρες" Description="Ποιες ημέρες είχε το παιχνίδι: Χορός, Σάββατο, Κυριακή..." />
         <ActionTile Href="@($"games/{_game.Slug}/media")" Title="Υλικό" Description="Φωτογραφίες, βίντεο και αρχεία του παιχνιδιού." />
         <ActionTile Href="@($"games/{_game.Slug}/posts")" Title="Αναρτήσεις" Description="Ανακοινώσεις και νέα του παιχνιδιού." />
         <AuthorizeView Roles="@Roles.Admin">
@@ -28,6 +31,19 @@
                         Description="Χρονιά, αριθμός, διοργάνωση και νικητής." />
         </AuthorizeView>
     </div>
+
+    @* Each enabled day: its description and media, and from there its puzzles. *@
+    @if (_days.Count > 0)
+    {
+        <h2 class="h4 mt-5 mb-3">Ημέρες</h2>
+        <div class="row g-3">
+            @foreach (GameDaySummary day in _days)
+            {
+                <ActionTile Href="@($"games/{_game.Slug}/days/{day.Slug}/edit")" Title="@day.Label"
+                            Description="@($"Περιγραφή, υλικό και γρίφοι ({day.PuzzleCount}).")" />
+            }
+        </div>
+    }
 
     <AuthorizeView Roles="@Roles.Admin">
         <section class="card border-danger mt-5">
@@ -55,12 +71,14 @@
     private bool ConfirmDelete { get; set; }
 
     private GameDetails? _game;
+    private IReadOnlyList<GameDaySummary> _days = [];
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+            _days = await GetGameDaysHandler.HandleAsync(_game.Id, CancellationToken.None);
         }
         catch (GameNotFoundException)
         {

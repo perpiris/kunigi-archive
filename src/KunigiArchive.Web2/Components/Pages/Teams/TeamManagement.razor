@@ -34,7 +34,7 @@
                 @foreach (TeamSummary team in _page.Items)
                 {
                     <tr>
-                        <td><a href="teams/@team.Slug">@team.Name</a></td>
+                        <td>@team.Name</td>
                         <td>
                             <span class="badge @(team.IsActive ? "text-bg-success" : "text-bg-secondary")">
                                 @(team.IsActive ? "Ενεργή" : "Ανενεργή")

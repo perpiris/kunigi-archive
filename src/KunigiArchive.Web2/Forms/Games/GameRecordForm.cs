@@ -16,7 +16,9 @@ public sealed record GameRecordForm
     [RegularExpression(@"^\s*\d{1,3}([.,]\d)?\s*$", ErrorMessage = "Γράψτε έναν αριθμό, π.χ. 34 ή 31,5.")]
     public string? Order { get; set; }
 
-    public Guid? HostId { get; set; }
+    // Text, not Guid?: "Χωρίς ομάδα" posts an empty value, which the form binding can't turn into a Guid? (the
+    // form was silently invalid and a game without a host couldn't be saved). GameFormMapper parses them.
+    public string? HostId { get; set; }
 
-    public Guid? WinnerId { get; set; }
+    public string? WinnerId { get; set; }
 }

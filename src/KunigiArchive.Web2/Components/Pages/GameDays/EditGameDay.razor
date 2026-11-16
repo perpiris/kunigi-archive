@@ -26,7 +26,7 @@
     <header class="k-page-head">
         <h1>@day.Label</h1>
         <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-outline-secondary" href="games/@Slug/days">Ημέρες</a>
+            <a class="btn btn-outline-secondary" href="games/@Slug/actions">Ενέργειες παιχνιδιού</a>
             <a class="btn btn-outline-secondary" href="games/@Slug/days/@DaySlug/puzzles">Γρίφοι</a>
         </div>
     </header>
@@ -58,7 +58,7 @@
         </div>
 
         <div class="k-form-actions">
-            <a class="btn btn-outline-secondary" href="games/@Slug/days">Ακύρωση</a>
+            <a class="btn btn-outline-secondary" href="games/@Slug/actions">Ακύρωση</a>
             <button type="submit" class="btn btn-primary">Αποθήκευση</button>
         </div>
     </EditForm>
@@ -129,7 +129,7 @@
             return;
         }
 
-        Done("Η ημέρα αποθηκεύτηκε.", $"/games/{Slug}/days");
+        Done("Η ημέρα αποθηκεύτηκε.", $"/games/{Slug}/actions");
     }
 
     private async Task UploadAsync()

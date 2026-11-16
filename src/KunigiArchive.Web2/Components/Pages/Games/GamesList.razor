@@ -33,11 +33,12 @@
                         {
                             <p class="subtitle">«@game.Title»</p>
                         }
+                        @* Plain names: the card is about the game; the team pages are linked from the game's page. *@
                         <dl class="facts">
                             <dt>Διοργάνωση</dt>
-                            <dd><TeamLink Team="game.Host" /></dd>
+                            <dd>@(game.Host?.Name ?? "—")</dd>
                             <dt>Νικητής</dt>
-                            <dd><TeamLink Team="game.Winner" /></dd>
+                            <dd>@(game.Winner?.Name ?? "—")</dd>
                         </dl>
                         @if (game.Note is not null)
                         {

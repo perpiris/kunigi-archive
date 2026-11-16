@@ -7,8 +7,8 @@
     gap: 1.5rem;
 }
 
-/* The stone print, with the team's name set in it over a faint watermark. Five watermarks take
-   turns: the compass, the harbour lighthouse and Rethymno landmarks (wwwroot/img/watermarks). */
+/* The stone print, with the team's name set in it over a faint compass watermark, the same for every team.
+   (wwwroot/img/watermarks also has the lighthouse and Rethymno landmarks, unused for now.) */
 .team-card {
     --watermark: url("/img/watermarks/compass.svg");
     position: relative;
@@ -39,14 +39,8 @@
         transition: rotate .4s ease-in-out;
     }
 
-
-    .team-grid li:nth-child(5n+2) .team-card { --watermark: url("/img/watermarks/lighthouse.svg"); }
-    .team-grid li:nth-child(5n+3) .team-card { --watermark: url("/img/watermarks/fortezza.svg"); }
-    .team-grid li:nth-child(5n+4) .team-card { --watermark: url("/img/watermarks/minaret.svg"); }
-    .team-grid li:nth-child(5n+5) .team-card { --watermark: url("/img/watermarks/loggia.svg"); }
-
-    /* Only the compass turns. */
-    .team-grid li:nth-child(5n+1) .team-card:hover::before {
+    /* The compass turns a little on hover. */
+    .team-card:hover::before {
         rotate: 20deg;
     }
 
