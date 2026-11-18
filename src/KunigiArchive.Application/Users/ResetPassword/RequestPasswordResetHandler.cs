@@ -30,14 +30,8 @@ public sealed class RequestPasswordResetHandler
             return;
         }
 
-        try
-        {
-            await _accountEmails.SendPasswordResetAsync(reset.Email, reset.Code, cancellationToken);
-            _logger.LogInformation("Password reset link sent to user {UserId}", reset.UserId);
-        }
-        catch (EmailDeliveryException exception)
-        {
-            _logger.LogError(exception, "Password reset email to user {UserId} could not be sent", reset.UserId);
-        }
+        // Queued, so a known email answers as fast as an unknown one (#20).
+        await _accountEmails.SendPasswordResetAsync(reset.Email, reset.Code, cancellationToken);
+        _logger.LogInformation("Password reset link queued for user {UserId}", reset.UserId);
     }
 }

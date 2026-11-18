@@ -40,6 +40,6 @@ public static class UserMapper
 
     public static CreateUserResponse ToResponse(this CreateUserResult result)
     {
-        return new CreateUserResponse(result.UserId, result.EmailSent);
+        return new CreateUserResponse(result.UserId);
     }
 }

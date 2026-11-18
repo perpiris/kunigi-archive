@@ -51,16 +51,8 @@ public sealed class CreateUserHandler
 
         _logger.LogInformation("User {UserId} created with role {Role}", userId, role ?? "(none)");
 
-        // The account stays even if the email fails; the admin is told and can send a new temporary password.
-        try
-        {
-            await _accountEmails.SendAccountCreatedAsync(email, password, cancellationToken);
-            return new CreateUserResult(userId, EmailSent: true);
-        }
-        catch (EmailDeliveryException exception)
-        {
-            _logger.LogError(exception, "Account email to user {UserId} could not be sent", userId);
-            return new CreateUserResult(userId, EmailSent: false);
-        }
+        // Queued, sent in the background (#20). If it keeps failing, the admin can send a new temporary password.
+        await _accountEmails.SendAccountCreatedAsync(email, password, cancellationToken);
+        return new CreateUserResult(userId);
     }
 }
