@@ -15,7 +15,8 @@
     }
 
 .year {
-    font-size: .875rem;
+    font-size: 1.5rem;
+    line-height: 1.2;
     font-weight: 700;
     letter-spacing: .1em;
     color: var(--k-accent);
@@ -55,15 +56,6 @@
 
 .block {
     padding-top: 2.25rem;
-}
-
-.block ::deep .story > p:first-child::first-letter {
-    font-family: var(--k-display);
-    font-size: 3.3em;
-    float: left;
-    line-height: .9;
-    padding: 4px 8px 0 0;
-    color: var(--k-accent);
 }
 
 .count {

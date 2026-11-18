@@ -19,6 +19,6 @@ public sealed class GetTeamsHandler
             search = search[..GetTeamsQuery.SearchMaxLength];
         }
 
-        return await _teamQueries.GetPageAsync(query.After, search, PageSize, cancellationToken);
+        return await _teamQueries.GetPageAsync(query.After, search, Math.Clamp(query.PageSize ?? PageSize, 1, GetTeamsQuery.MaxPageSize), cancellationToken);
     }
 }

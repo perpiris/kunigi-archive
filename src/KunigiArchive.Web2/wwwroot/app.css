@@ -118,8 +118,13 @@
 
 /* ---------- Base ---------- */
 
+/* Everything is sized in rem, so this one value scales the whole site (16px → 18px). */
+html {
+    font-size: 112.5%;
+}
+
 .k-wrap {
-    max-width: 1080px;
+    max-width: 1200px;
     margin-inline: auto;
     padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
 }
@@ -233,6 +238,38 @@ sup.ord {
     --bs-btn-border-radius: var(--bs-border-radius);
     --bs-btn-focus-box-shadow: 0 0 0 .2rem var(--bs-focus-ring-color);
     letter-spacing: .01em;
+}
+
+/* A submitted form's button (site.js): a spinner in front of the label, disabled until the page answers. */
+.btn.is-busy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5em;
+    cursor: progress;
+}
+
+    .btn.is-busy::before {
+        content: "";
+        flex: none;
+        width: 1em;
+        height: 1em;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: k-spin .7s linear infinite;
+    }
+
+@keyframes k-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn.is-busy::before {
+        animation-duration: 2s;
+    }
 }
 
 .btn-primary {
@@ -635,7 +672,6 @@ k-combobox {
 .k-prose {
     line-height: 1.75;
     font-size: 1.0625rem;
-    max-width: 64ch;
     overflow-wrap: anywhere;
 }
 

@@ -64,7 +64,8 @@ public sealed class UpdateTeamHandler
             throw new TeamNameAlreadyTakenException(team.Name);
         }
 
-        if (command.Slug is not null)
+        // An empty field keeps the current slug (#82).
+        if (!string.IsNullOrWhiteSpace(command.Slug))
         {
             await ChangeSlugAsync(team, Slug.FromName(command.Slug), cancellationToken);
         }

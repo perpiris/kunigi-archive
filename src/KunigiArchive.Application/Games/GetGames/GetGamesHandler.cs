@@ -19,6 +19,6 @@ public sealed class GetGamesHandler
             search = search[..GetGamesQuery.SearchMaxLength];
         }
 
-        return await _gameQueries.GetPageAsync(query.After, search, PageSize, cancellationToken);
+        return await _gameQueries.GetPageAsync(query.After, search, Math.Clamp(query.PageSize ?? PageSize, 1, GetGamesQuery.MaxPageSize), cancellationToken);
     }
 }
