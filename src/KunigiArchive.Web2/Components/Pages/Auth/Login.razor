@@ -87,6 +87,13 @@
             return;
         }
 
+        // A disabled account (DisabledUserConfirmation, #24).
+        if (result.IsNotAllowed)
+        {
+            _error = "Ο λογαριασμός έχει απενεργοποιηθεί. Επικοινωνήστε με τον διαχειριστή.";
+            return;
+        }
+
         if (!result.Succeeded)
         {
             _error = "Το email ή ο κωδικός δεν ταιριάζουν.";

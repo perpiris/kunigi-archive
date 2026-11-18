@@ -1,12 +1,16 @@
 #!/bin/bash
 # ==============================================================================
 # Kunigi Archive - nightly backup (root crontab: 0 2 * * *)
-# Backs up the SQL Server database and the uploaded media into one archive:
+# Backs up the SQL Server databases, the uploaded media and the sign-in keys into one archive:
 #   kunigi_backup_<timestamp>.tar.gz
-#     backup_<timestamp>/database.bak
-#     backup_<timestamp>/media/...
-#     backup_<timestamp>/config/*.env     (secrets from /opt/kunigi)
+#     backup_<timestamp>/databases/<name>.bak
+#     backup_<timestamp>/<folder>/...       (see FOLDERS)
+#     backup_<timestamp>/config/*.env       (secrets from /opt/kunigi)
 # Old archives are deleted only after a new one has been created and verified.
+#
+# Both sites are covered (#85): the old app (KunigiArchive, kunigi_media) and Web2 (KunigiArchiveV2,
+# kunigi_beta_media, kunigi_beta_keys). A database or folder that doesn't exist is logged as a WARNING and
+# skipped, so retiring the old app doesn't break the backup; anything else that fails aborts it.
 # ==============================================================================
 set -euo pipefail
 
@@ -15,11 +19,18 @@ KEEP=3                                  # number of archives to keep locally
 READ_GROUP="iperp"                      # group allowed to read archives (off-site backup action downloads as this user)
 SECRETS_DIR="/opt/kunigi"
 DB_CONTAINER="kunigi_db"
-WEB_CONTAINER="kunigi_web"
-DB_NAME="KunigiArchive"
 SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
 
-# SQL login with db_backupoperator rights (created by ops/vps/init-secrets.sh)
+DATABASES=(KunigiArchive KunigiArchiveV2)
+
+# host folder -> name inside the archive
+FOLDERS=(
+    "/home/iperp/kunigi_media:media"                # old app's uploads
+    "/home/iperp/kunigi_beta_media:media_v2"        # Web2's uploads
+    "/home/iperp/kunigi_beta_keys:keys_v2"          # Web2's Data Protection keys (sign-in cookies, forms)
+)
+
+# SQL login with db_backupoperator rights on each database (created by ops/vps/init-secrets.sh)
 # shellcheck source=/dev/null
 source "$SECRETS_DIR/backup.env"
 DB_USER="${BACKUP_SQL_USER:?BACKUP_SQL_USER missing in $SECRETS_DIR/backup.env}"
@@ -29,45 +40,58 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 WORK_DIR="$BACKUP_DIR/backup_$TIMESTAMP"
 ARCHIVE="$BACKUP_DIR/kunigi_backup_$TIMESTAMP.tar.gz"
 TMP_ARCHIVE="$ARCHIVE.partial"
-CONTAINER_BAK="/var/opt/mssql/data/db_backup_$TIMESTAMP.bak"
+WARNINGS=0
 
 log() { echo "[$(date +"%F %T")] $*"; }
+warn() { log "WARNING: $*"; WARNINGS=$((WARNINGS + 1)); }
 
 cleanup() {
     rm -rf "$WORK_DIR" "$TMP_ARCHIVE"
-    docker exec "$DB_CONTAINER" rm -f "$CONTAINER_BAK" 2>/dev/null || true
+    docker exec "$DB_CONTAINER" sh -c "rm -f /var/opt/mssql/data/db_backup_${TIMESTAMP}_*.bak" 2>/dev/null || true
 }
 trap cleanup EXIT
 trap 'log "BACKUP FAILED (line $LINENO)"; exit 1' ERR
 
 sql() {
-    docker exec "$DB_CONTAINER" "$SQLCMD" -S localhost -U "$DB_USER" -P "$DB_PASS" -C -b -Q "$1"
+    docker exec "$DB_CONTAINER" "$SQLCMD" -S localhost -U "$DB_USER" -P "$DB_PASS" -C -b -h -1 -W -Q "SET NOCOUNT ON; $1"
 }
 
 log "Starting backup $TIMESTAMP"
-mkdir -p "$WORK_DIR"
+mkdir -p "$WORK_DIR/databases"
 
-# 1. Database: full backup with checksums, then verify it is restorable
-log "Backing up database..."
-sql "BACKUP DATABASE [$DB_NAME] TO DISK = N'$CONTAINER_BAK' WITH FORMAT, INIT, CHECKSUM"
-sql "RESTORE VERIFYONLY FROM DISK = N'$CONTAINER_BAK' WITH CHECKSUM"
-docker cp "$DB_CONTAINER:$CONTAINER_BAK" "$WORK_DIR/database.bak"
+# 1. Databases: full backup with checksums, then verify each is restorable
+for db in "${DATABASES[@]}"; do
+    if [ "$(sql "SELECT COUNT(*) FROM sys.databases WHERE name = N'$db'")" != "1" ]; then
+        warn "database $db not found, skipped"
+        continue
+    fi
 
-DB_SIZE=$(stat -c %s "$WORK_DIR/database.bak")
-if [ "$DB_SIZE" -lt 1048576 ]; then
-    log "database.bak is only $DB_SIZE bytes, aborting"
-    exit 1
-fi
-log "database.bak: $DB_SIZE bytes (verified)"
+    container_bak="/var/opt/mssql/data/db_backup_${TIMESTAMP}_$db.bak"
+    log "Backing up database $db..."
+    sql "BACKUP DATABASE [$db] TO DISK = N'$container_bak' WITH FORMAT, INIT, CHECKSUM" > /dev/null
+    sql "RESTORE VERIFYONLY FROM DISK = N'$container_bak' WITH CHECKSUM" > /dev/null
+    docker cp "$DB_CONTAINER:$container_bak" "$WORK_DIR/databases/$db.bak"
+    docker exec "$DB_CONTAINER" rm -f "$container_bak"
 
-# 2. Media: read straight from the host folder mounted at /app/media
-MEDIA_SRC=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/app/media"}}{{.Source}}{{end}}{{end}}' "$WEB_CONTAINER")
-if [ -z "$MEDIA_SRC" ] || [ ! -d "$MEDIA_SRC" ]; then
-    log "Could not find the media folder mounted at /app/media, aborting"
-    exit 1
-fi
-MEDIA_FILES=$(find "$MEDIA_SRC" -type f | wc -l)
-log "Media: $MEDIA_SRC ($MEDIA_FILES files)"
+    size=$(stat -c %s "$WORK_DIR/databases/$db.bak")
+    if [ "$size" -lt 1048576 ]; then
+        log "$db.bak is only $size bytes, aborting"
+        exit 1
+    fi
+    log "$db.bak: $size bytes (verified)"
+done
+
+# 2. Folders: linked into the work dir and archived through the links (tar -h)
+for entry in "${FOLDERS[@]}"; do
+    src="${entry%%:*}"
+    name="${entry##*:}"
+    if [ ! -d "$src" ]; then
+        warn "folder $src not found, skipped"
+        continue
+    fi
+    ln -s "$src" "$WORK_DIR/$name"
+    log "Folder $name: $src ($(find "$src" -type f | wc -l) files)"
+done
 
 # 3. Secrets: needed to bring a restored server back up
 mkdir -p "$WORK_DIR/config"
@@ -76,12 +100,10 @@ log "Config: $(ls "$WORK_DIR/config" | tr '\n' ' ')"
 
 # 4. Archive (written to a temp name, renamed only when complete)
 log "Compressing..."
-tar -czf "$TMP_ARCHIVE" \
-    -C "$BACKUP_DIR" "backup_$TIMESTAMP" \
-    -C "$(dirname "$MEDIA_SRC")" --transform "s,^$(basename "$MEDIA_SRC"),backup_$TIMESTAMP/media," "$(basename "$MEDIA_SRC")"
+tar -czhf "$TMP_ARCHIVE" -C "$BACKUP_DIR" "backup_$TIMESTAMP"
 tar -tzf "$TMP_ARCHIVE" > /dev/null
 chown "root:$READ_GROUP" "$TMP_ARCHIVE"
-chmod 640 "$TMP_ARCHIVE"                # archives contain secrets (config/*.env)
+chmod 640 "$TMP_ARCHIVE"                # archives contain secrets (config/*.env) and the sign-in keys
 mv "$TMP_ARCHIVE" "$ARCHIVE"
 log "Archive: $ARCHIVE ($(du -h "$ARCHIVE" | cut -f1))"
 
@@ -91,4 +113,8 @@ ls -1t "$BACKUP_DIR"/kunigi_backup_*.tar.gz | tail -n +$((KEEP + 1)) | while rea
     rm -f "$old"
 done
 
-log "Backup completed successfully"
+if [ "$WARNINGS" -gt 0 ]; then
+    log "Backup completed with $WARNINGS warning(s)"
+else
+    log "Backup completed successfully"
+fi

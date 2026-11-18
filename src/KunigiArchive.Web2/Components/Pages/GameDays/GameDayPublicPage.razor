@@ -12,6 +12,7 @@
 {
     GameDayDetails day = _page.Day;
     <PageTitle>@day.Label - @_page.Game.OrderTitle</PageTitle>
+    <PageMeta Title="@($"{day.Label} - {_page.Game.OrderTitle}")" Description="@($"{day.Label} του {_page.Game.OrderTitle} ({_page.Game.Year}): {(day.Puzzles.Count == 1 ? "1 γρίφος" : $"{day.Puzzles.Count} γρίφοι")} με τις λύσεις τους.")" Image="@_page.Game.Image" Type="article" />
 
     <nav class="crumb">
         <a href="games/@Slug">← <GameName Order="_page.Game.Order" Year="_page.Game.Year" /></a>

@@ -19,7 +19,7 @@ internal sealed class UserAccounts : IUserAccounts
     public async Task<Guid> CreateAsync(string email, string password, string? role, CancellationToken cancellationToken)
     {
         // Admins create the accounts and the password goes to that address, so it counts as confirmed.
-        AppUser user = new AppUser { UserName = email, Email = email, EmailConfirmed = true };
+        AppUser user = new AppUser { UserName = email, Email = email, EmailConfirmed = true, MustChangePassword = true };
 
         EnsureSucceeded(await _userManager.CreateAsync(user, password));
 
@@ -56,6 +56,25 @@ internal sealed class UserAccounts : IUserAccounts
 
         EnsureSucceeded(await _userManager.SetLockoutEndDateAsync(user, null));
         EnsureSucceeded(await _userManager.ResetAccessFailedCountAsync(user));
+
+        user.MustChangePassword = true;
+        EnsureSucceeded(await _userManager.UpdateAsync(user));
+    }
+
+    public async Task SetDisabledAsync(Guid userId, bool disabled, CancellationToken cancellationToken)
+    {
+        AppUser user = await FindAsync(userId);
+        user.IsDisabled = disabled;
+        EnsureSucceeded(await _userManager.UpdateAsync(user));
+
+        // Sign-in refuses a disabled account (DisabledUserConfirmation); a new stamp also ends open sessions.
+        EnsureSucceeded(await _userManager.UpdateSecurityStampAsync(user));
+    }
+
+    public async Task DeleteAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        AppUser user = await FindAsync(userId);
+        EnsureSucceeded(await _userManager.DeleteAsync(user));
     }
 
     public async Task ChangeEmailAsync(Guid userId, string currentPassword, string newEmail, CancellationToken cancellationToken)
@@ -83,6 +102,18 @@ internal sealed class UserAccounts : IUserAccounts
         {
             throw new InvalidRequestException(PasswordRules.Message);
         }
+
+        await ClearMustChangePasswordAsync(user);
+    }
+
+    // The user chose their own password: a temporary one no longer has to be replaced.
+    private async Task ClearMustChangePasswordAsync(AppUser user)
+    {
+        if (user.MustChangePassword)
+        {
+            user.MustChangePassword = false;
+            EnsureSucceeded(await _userManager.UpdateAsync(user));
+        }
     }
 
     private async Task EnsurePasswordAsync(AppUser user, string password)
@@ -98,7 +129,7 @@ internal sealed class UserAccounts : IUserAccounts
     public async Task<PasswordResetCode?> CreatePasswordResetCodeAsync(string email, CancellationToken cancellationToken)
     {
         AppUser? user = await _userManager.FindByEmailAsync(email);
-        if (user?.Email is null)
+        if (user?.Email is null || user.IsDisabled)
         {
             return null;
         }
@@ -114,7 +145,7 @@ internal sealed class UserAccounts : IUserAccounts
         string email, string code, string newPassword, CancellationToken cancellationToken)
     {
         AppUser? user = await _userManager.FindByEmailAsync(email);
-        if (user is null || !TryDecode(code, out string token))
+        if (user is null || user.IsDisabled || !TryDecode(code, out string token))
         {
             return null;
         }
@@ -132,6 +163,7 @@ internal sealed class UserAccounts : IUserAccounts
 
         EnsureSucceeded(await _userManager.SetLockoutEndDateAsync(user, null));
         EnsureSucceeded(await _userManager.ResetAccessFailedCountAsync(user));
+        await ClearMustChangePasswordAsync(user);
 
         return user.Id;
     }

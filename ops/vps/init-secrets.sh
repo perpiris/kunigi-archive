@@ -18,7 +18,7 @@
 #   database KunigiArchiveV2, login kunigi_beta (db_owner on it only),
 #   /opt/kunigi/beta.env     connection string, first admin, SMTP password,
 #                            email link base URL                     (kunigi_beta)
-#   /home/iperp/kunigi_beta_media and /home/iperp/kunigi_beta_keys, owned by
+#   /home/iperp/kunigi_beta_media, kunigi_beta_keys and kunigi_beta_logs, owned by
 #   the container user (uid 1654)
 #
 # Usage (as root on the VPS):
@@ -196,14 +196,17 @@ EOF
 
     BETA_PASSWORD=$(env_get "$SECRETS_DIR/beta.env" ConnectionStrings__KunigiArchive | grep -oP 'Password=\K[^;]+')
     ensure_login kunigi_beta "$BETA_PASSWORD" db_owner "$BETA_DB_NAME"
+    # The nightly backup covers this database too (#85).
+    ensure_login kunigi_backup "$BACKUP_PASSWORD" db_backupoperator "$BETA_DB_NAME"
 
-    for dir in kunigi_beta_media kunigi_beta_keys; do
+    for dir in kunigi_beta_media kunigi_beta_keys kunigi_beta_logs; do
         log "Folder $BETA_DATA_DIR/$dir (owner $BETA_APP_UID)"
         mkdir -p "$BETA_DATA_DIR/$dir"
         chown "$BETA_APP_UID:$BETA_APP_UID" "$BETA_DATA_DIR/$dir"
     done
     chmod 755 "$BETA_DATA_DIR/kunigi_beta_media"
     chmod 700 "$BETA_DATA_DIR/kunigi_beta_keys"
+    chmod 750 "$BETA_DATA_DIR/kunigi_beta_logs"
 fi
 
 # --- optional: rotate sa ----------------------------------------------------------

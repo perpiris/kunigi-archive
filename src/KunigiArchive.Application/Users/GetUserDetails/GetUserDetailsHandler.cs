@@ -26,6 +26,6 @@ public sealed class GetUserDetailsHandler
 
         IReadOnlyList<TeamSummary> teams = await _teamQueries.GetManagedByAsync(user.Id, cancellationToken);
 
-        return new UserDetails(user.Id, user.Email, user.Role, teams, user.Id == _currentUser.Id);
+        return new UserDetails(user.Id, user.Email, user.Role, user.IsDisabled, teams, user.Id == _currentUser.Id);
     }
 }

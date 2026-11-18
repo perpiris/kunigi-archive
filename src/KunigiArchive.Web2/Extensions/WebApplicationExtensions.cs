@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+using KunigiArchive.Application.Sitemap;
 using KunigiArchive.Infrastructure.Media;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
@@ -18,6 +20,40 @@ public static class WebApplicationExtensions
                 return next(context);
             });
         }
+
+        return app;
+    }
+
+    // robots.txt and sitemap.xml (#27). URLs use the request's scheme and host, which the forwarded headers make
+    // the public ones (https://tokinigi.gr). With Robots:NoIndex (beta) robots.txt turns everything away.
+    public static WebApplication MapSearchEngineFiles(this WebApplication app)
+    {
+        bool noIndex = app.Configuration.GetValue<bool>("Robots:NoIndex");
+
+        app.MapGet("/robots.txt", (HttpRequest request) =>
+        {
+            string body = noIndex
+                ? "User-agent: *\nDisallow: /\n"
+                : "User-agent: *\n" +
+                  "Disallow: /auth/\n" +
+                  "Disallow: /account\n" +
+                  "Disallow: /admin\n" +
+                  "Disallow: /users\n" +
+                  "Disallow: /my-teams\n" +
+                  $"\nSitemap: {request.Scheme}://{request.Host}/sitemap.xml\n";
+            return Results.Text(body, "text/plain; charset=utf-8");
+        });
+
+        app.MapGet("/sitemap.xml", async (HttpRequest request, GetSitemapHandler handler, CancellationToken cancellationToken) =>
+        {
+            string root = $"{request.Scheme}://{request.Host}/";
+            XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
+            IReadOnlyList<string> paths = await handler.HandleAsync(cancellationToken);
+            XDocument sitemap = new XDocument(
+                new XDeclaration("1.0", "utf-8", null),
+                new XElement(ns + "urlset", paths.Select(path => new XElement(ns + "url", new XElement(ns + "loc", root + path)))));
+            return Results.Text(sitemap.Declaration + "\n" + sitemap.Root, "application/xml; charset=utf-8");
+        });
 
         return app;
     }

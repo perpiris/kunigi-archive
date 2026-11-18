@@ -99,32 +99,43 @@ ssh kunigi-vps 'sudo kunigi-wireguard add phone && sudo cat /etc/wireguard/clien
 
 ## Backups
 
-The nightly `vps-backup.sh`:
-- takes `BACKUP DATABASE ... WITH CHECKSUM`, then runs `RESTORE VERIFYONLY`
-- aborts if `database.bak` is under 1 MB
-- archives the DB backup together with the media folder
+The nightly `vps-backup.sh` (#85) covers both sites:
+- databases `KunigiArchive` (old app) and `KunigiArchiveV2` (Web2): `BACKUP DATABASE ... WITH CHECKSUM`, then `RESTORE VERIFYONLY`; aborts if a `.bak` is under 1 MB
+- folders `kunigi_media` (old app), `kunigi_beta_media` (Web2 uploads) and `kunigi_beta_keys` (Web2 sign-in keys)
+- the env files from `/opt/kunigi`
+- a missing database or folder is logged as `WARNING` and skipped (so removing the old app doesn't break it); any other error aborts with `BACKUP FAILED`
 - keeps the newest 3 archives; old ones are deleted only after a successful run
+
+The lists are at the top of the script. After changing it, install it again with `sudo bash ops/vps/setup.sh` (or `sudo install -o root -g root -m 700 ops/vps/backup/vps-backup.sh /opt/kunigi-backups/`) and run it once by hand: `sudo /opt/kunigi-backups/vps-backup.sh`.
 
 Archive layout:
 
 ```
 kunigi_backup_<ts>.tar.gz
 └── backup_<ts>/
-    ├── database.bak
-    └── media/...
+    ├── databases/
+    │   ├── KunigiArchive.bak
+    │   └── KunigiArchiveV2.bak
+    ├── media/...        (old app)
+    ├── media_v2/...     (Web2)
+    ├── keys_v2/...      (Web2)
+    └── config/*.env
 ```
 
 Off-site copies are made by the manual **Off-site backup** GitHub Action. It keeps one encrypted artifact. Decrypt it with `gpg --decrypt <file>.gpg > <file>`, using the `BACKUP_PASSPHRASE` secret.
 
-### Restore (outline, not yet rehearsed — see #5)
+### Restore Web2 (outline, not yet rehearsed — see #38)
 
-1. Stop the app: `docker stop kunigi_web`
+1. Stop the site's container.
 2. Extract the archive: `tar -xzf kunigi_backup_<ts>.tar.gz`
 3. Database:
-   `docker cp backup_<ts>/database.bak kunigi_db:/var/opt/mssql/data/restore.bak`, then
-   `RESTORE DATABASE [KunigiArchive] FROM DISK = N'/var/opt/mssql/data/restore.bak' WITH REPLACE`
-4. Media: `rsync -a --delete backup_<ts>/media/ /home/iperp/kunigi_media/`
-5. Start the app: `docker start kunigi_web`
+   `docker cp backup_<ts>/databases/KunigiArchiveV2.bak kunigi_db:/var/opt/mssql/data/restore.bak`, then
+   `RESTORE DATABASE [KunigiArchiveV2] FROM DISK = N'/var/opt/mssql/data/restore.bak' WITH REPLACE`
+4. Files: `rsync -a --delete backup_<ts>/media_v2/ /home/iperp/kunigi_beta_media/` and
+   `rsync -a --delete backup_<ts>/keys_v2/ /home/iperp/kunigi_beta_keys/`, then `chown -R 1654:1654` both (the container user).
+5. Start the container again.
+
+The old app restores the same way from `KunigiArchive.bak` and `media/` into `/home/iperp/kunigi_media/`.
 
 ## Access
 

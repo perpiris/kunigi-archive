@@ -17,12 +17,20 @@ services:
       - VIRTUAL_PORT=8080
       - ASPNETCORE_URLS=http://+:8080
       - DataProtection__KeysPath=/app/keys
+      - LogFile__Path=/app/logs/web2-.log
       - Robots__NoIndex=true
     volumes:
-      # Beta's own uploads and sign-in keys, never the live site's. The container runs as uid 1654 (APP_UID),
-      # so both folders must be writable by it.
+      # Beta's own uploads, sign-in keys and log files, never the live site's. The container runs as uid 1654
+      # (APP_UID), so the folders must be writable by it (ops/vps/init-secrets.sh --beta creates them).
       - ../kunigi_beta_media:/app/media
       - ../kunigi_beta_keys:/app/keys
+      - ../kunigi_beta_logs:/app/logs
+    # `docker logs` output rotates too (#40); the files in kunigi_beta_logs keep 30 days.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: always
 
 # The live stack's network: reach nginx-proxy (routing/TLS) and the db service.

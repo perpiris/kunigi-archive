@@ -1,4 +1,5 @@
 using KunigiArchive.Application.Abstractions;
+using KunigiArchive.Application.Abstractions.Exceptions;
 using KunigiArchive.Application.Authorization;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +36,11 @@ public sealed class SendTemporaryPasswordHandler
 
         UserAccount user = await _userQueries.GetAsync(userId, cancellationToken)
             ?? throw new UserNotFoundException(userId);
+
+        if (user.IsDisabled)
+        {
+            throw new InvalidRequestException("Ο λογαριασμός είναι απενεργοποιημένος. Ενεργοποιήστε τον πρώτα.");
+        }
 
         string password = TemporaryPassword.Generate();
         await _userAccounts.SetPasswordAsync(user.Id, password, cancellationToken);

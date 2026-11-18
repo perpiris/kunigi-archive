@@ -7,5 +7,6 @@ public sealed record UserDetails(
     Guid Id,
     string Email,
     string? Role,
+    bool IsDisabled,
     IReadOnlyList<TeamSummary> ManagedTeams,
     bool IsCurrentUser);

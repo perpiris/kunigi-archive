@@ -47,11 +47,11 @@ dotnet watch run --project src/KunigiArchive.Web   # with hot reload
 ```
 
 - Launch profiles: `http` → http://localhost:5000, `https` → https://localhost:5001
-- Local dev needs a SQL Server reachable via `ConnectionStrings:DefaultConnection` in `appsettings.Development.json` (`localhost`, user `sa`).
+- Local dev needs a SQL Server on `localhost:1433` (user `sa`, see `appsettings.Development.json`): `docker compose -f docker-compose.dev.yml up -d` (#47).
 - The dev SMTP password is in **user-secrets** (`dotnet user-secrets set EmailSettings:Password <value>` in `src/KunigiArchive.Web`).
 - The dev admin is seeded from `AdminSeed` in `appsettings.Development.json` (`admin@test.com`). There's also a dev-only manager, `manager@test.com`.
-- CI (`.github/workflows/ci.yml`) builds with `-warnaserror` (exempt: `NU1901–NU1904` vulnerable-package warnings and `CA1416`, see #28) and runs `dotnet test`. Reproduce locally:
-  `dotnet build KunigiArchive.slnx -c Release -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904,CA1416`
+- CI (`.github/workflows/ci.yml`) builds with `-warnaserror` (exempt: `NU1901–NU1904` vulnerable-package warnings) and runs `dotnet test`. Reproduce locally:
+  `dotnet build KunigiArchive.slnx -c Release -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904`
 
 ## Database & Migrations
 
@@ -70,7 +70,7 @@ Migrations live in `Data/Migrations` (namespace `KunigiArchive.Web.Data.Migratio
 - Production values come from environment variables (`Section__Key`) in `/opt/kunigi/app.env` on the VPS, loaded through `env_file` in `docker-compose.yml`.
 - The app refuses to start if `ConnectionStrings:DefaultConnection` is empty.
 - `MediaDirectory` is where uploads are stored (`Utilities/MediaStorage.ResolveRoot`). It's required, and relative paths resolve against the project folder. In development it's `../../kunigi_media` (`<repo>/kunigi_media`). In production it's `/app/media`, bind-mounted from `/home/iperp/kunigi_media`.
-- JSON comments are allowed in the appsettings files. `appsettings.Development.json` only contains overrides. Config arrays merge **by index** (e.g. `Serilog:WriteTo:0` overrides the Console sink).
+- JSON comments are allowed in the appsettings files. `appsettings.Development.json` only contains overrides. Config arrays merge **by index**, which is why Web2 sets its Serilog sinks in code (`AddSerilogLogging`): coloured text in development, JSON lines in production, rotating files where `LogFile:Path` is set.
 - `EmailSettings` binds to `Settings/EmailSettings.cs`. `ApplicationUrl` is used to build links in emails.
 
 ## Deployment & Operations

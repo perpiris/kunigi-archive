@@ -1,0 +1,59 @@
+# Local development only. Never use this file on the server.
+#
+# SQL Server on 127.0.0.1:1433, matching the connection strings in appsettings.Development.json
+# (sa / Your_password123, a dev-only password). Run the app with `dotnet run` against it:
+#
+#   docker compose -f docker-compose.dev.yml up -d                       start SQL Server
+#   docker compose -f docker-compose.dev.yml stop                        stop it, keeping the data
+#
+# Or run Web2 in a container too (the production image, Development settings), on http://localhost:8080:
+#
+#   docker compose -f docker-compose.dev.yml --profile app up -d --build
+#
+# Nothing here restarts on its own when Docker starts. Data lives in named volumes (kunigi-dev_*); uploads and
+# emails (.eml files) go to kunigi_media_v2/ and kunigi_mail_v2/ in the repo, as with `dotnet run`.
+name: kunigi-dev
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_password123"
+    ports:
+      - "127.0.0.1:1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  web2:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: src/KunigiArchive.Web2/Dockerfile
+    depends_on:
+      sql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__KunigiArchive: "Server=sql;Database=KunigiArchiveV2;User Id=sa;Password=Your_password123;TrustServerCertificate=True"
+      MediaStorage__RootPath: /app/media
+      EmailSettings__PickupDirectory: /app/mail
+      EmailSettings__ApplicationUrl: http://localhost:8080
+      DataProtection__KeysPath: /app/keys
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./kunigi_media_v2:/app/media
+      - ./kunigi_mail_v2:/app/mail
+      - web2_keys:/app/keys
+
+volumes:
+  sql_data:
+  web2_keys:

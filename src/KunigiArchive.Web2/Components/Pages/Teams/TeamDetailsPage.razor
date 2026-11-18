@@ -10,6 +10,7 @@
 @if (_team is not null)
 {
     <PageTitle>@_team.Name</PageTitle>
+    <PageMeta Title="@_team.Name" Description="@TeamDescription()" Image="@_team.Image" Type="profile" />
 
     <section class="record">
         <TeamFrame Name="@_team.Name" Image="@_team.Image" />
@@ -94,6 +95,15 @@
     private TeamDetails? _team;
     private List<(string Label, string Url, SocialIcon.Kind Icon)> _links = [];
     private List<MediaSheet.Thumb> _mediaThumbs = [];
+
+    // The search result / share text: a sentence built from the record, not the rich-text history.
+    private string TeamDescription()
+    {
+        string founded = _team!.YearFounded is null ? "" : $", από το {_team.YearFounded}";
+        string hosted = _profile!.HostedGames.Count switch { 0 => "", 1 => " Διοργάνωσε 1 Κυνήγι.", int n => $" Διοργάνωσε {n} Κυνήγια." };
+        string won = _profile.WonGames.Count switch { 0 => "", 1 => " Κέρδισε 1 φορά.", int n => $" Κέρδισε {n} φορές." };
+        return $"{_team.Name}: ομάδα του Κυνηγιού Θησαυρού του Ρεθύμνου{founded}.{hosted}{won}";
+    }
 
     protected override async Task OnParametersSetAsync()
     {

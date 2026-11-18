@@ -23,6 +23,14 @@
         <h1>Ο λογαριασμός μου</h1>
     </header>
 
+    @* MustChangePasswordMiddleware keeps the user on this page until the temporary password is replaced (#24). *@
+    @if (HttpContext.User.HasClaim(c => c.Type == AppClaims.MustChangePassword))
+    {
+        <div class="alert alert-warning k-form-alert" role="alert">
+            Συνδεθήκατε με προσωρινό κωδικό. Ορίστε παρακάτω τον δικό σας κωδικό για να συνεχίσετε.
+        </div>
+    }
+
     @if (_emailError is not null)
     {
         <div class="alert alert-danger k-form-alert" role="alert">@_emailError</div>

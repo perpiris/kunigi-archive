@@ -16,6 +16,7 @@
 @if (_game is not null)
 {
     <PageTitle>@(_game.Title is null ? _game.OrderTitle : $"{_game.OrderTitle} «{_game.Title}»")</PageTitle>
+    <PageMeta Title="@(_game.Title is null ? _game.OrderTitle : $"{_game.OrderTitle} «{_game.Title}»")" Description="@GameDescription()" Image="@_game.Image" Type="article" />
 
     <section class="record">
         <div class="poster">
@@ -124,6 +125,15 @@
 
     private GameDetails? _game;
     private List<MediaSheet.Thumb> _mediaThumbs = [];
+
+    // The search result / share text: a sentence built from the record, not the rich-text story.
+    private string GameDescription()
+    {
+        string title = _game!.Title is null ? "" : $" «{_game.Title}»";
+        string host = _game.Host is null ? "" : $" Διοργάνωση: {_game.Host.Name}.";
+        string winner = _game.Winner is null ? "" : $" Νικητής: {_game.Winner.Name}.";
+        return $"{_game.OrderTitle}{title}, Κυνήγι Θησαυρού του Ρεθύμνου {_game.Year}.{host}{winner}";
+    }
     private IReadOnlyList<PostDetails> _posts = [];
     private IReadOnlyList<GameDaySummary> _days = [];
 
