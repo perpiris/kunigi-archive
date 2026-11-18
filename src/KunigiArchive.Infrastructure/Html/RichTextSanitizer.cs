@@ -88,6 +88,10 @@ internal sealed partial class RichTextSanitizer : IRichTextSanitizer
         string input = html.Contains('<') ? html : FromPlainText(html);
         string clean = _sanitizer.Sanitize(input).Trim();
 
+        // Empty paragraphs and headings the editor leaves at the start or end ("<p><br></p>", "<h2><br></h2>")
+        // only add blank space on the page. Empty lines between paragraphs stay: those are deliberate.
+        clean = TrailingEmptyBlocks().Replace(LeadingEmptyBlocks().Replace(clean, string.Empty), string.Empty);
+
         // An emptied editor still sends "<p><br></p>".
         return HasText(clean) ? clean : null;
     }
@@ -114,4 +118,13 @@ internal sealed partial class RichTextSanitizer : IRichTextSanitizer
 
     [GeneratedRegex("<[^>]*>")]
     private static partial Regex Tag();
+
+    // A block with nothing in it but whitespace, line breaks or non-breaking spaces.
+    private const string EmptyBlock = @"<(p|h[1-6]|blockquote)>(?:\s|<br>|&nbsp;)*</\1>";
+
+    [GeneratedRegex(@"^(?:\s*" + EmptyBlock + @")+\s*")]
+    private static partial Regex LeadingEmptyBlocks();
+
+    [GeneratedRegex(@"\s*(?:" + EmptyBlock + @"\s*)+$")]
+    private static partial Regex TrailingEmptyBlocks();
 }

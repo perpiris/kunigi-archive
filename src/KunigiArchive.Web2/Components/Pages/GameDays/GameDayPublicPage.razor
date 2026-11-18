@@ -12,7 +12,7 @@
 {
     GameDayDetails day = _page.Day;
     <PageTitle>@day.Label - @_page.Game.OrderTitle</PageTitle>
-    <PageMeta Title="@($"{day.Label} - {_page.Game.OrderTitle}")" Description="@($"{day.Label} του {_page.Game.OrderTitle} ({_page.Game.Year}): {(day.Puzzles.Count == 1 ? "1 γρίφος" : $"{day.Puzzles.Count} γρίφοι")} με τις λύσεις τους.")" Image="@_page.Game.Image" Type="article" />
+    <PageMeta Title="@($"{day.Label} - {_page.Game.OrderTitle}")" Description="@DayDescription(day)" Image="@_page.Game.Image" Type="article" />
 
     <nav class="crumb">
         <a href="games/@Slug">← <GameName Order="_page.Game.Order" Year="_page.Game.Year" /></a>
@@ -101,6 +101,19 @@
 @code {
     [Parameter]
     public string Slug { get; set; } = string.Empty;
+
+    // The search result / share text. No inflected forms: the game's name is nominative ("34ο Κυνήγι Θησαυρού").
+    private string DayDescription(GameDayDetails day)
+    {
+        string content = day.Puzzles.Count switch
+        {
+            0 when day.Media.Count > 0 => " Φωτογραφίες και υλικό της ημέρας.",
+            0 => "",
+            1 => " 1 γρίφος.",
+            int n => $" {n} γρίφοι."
+        };
+        return $"{day.Label} · {_page!.Game.OrderTitle}, Ρέθυμνο {_page.Game.Year}.{content}";
+    }
 
     [Parameter]
     public string DaySlug { get; set; } = string.Empty;
