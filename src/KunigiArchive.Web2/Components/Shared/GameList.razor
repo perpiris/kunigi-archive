@@ -1,32 +1,22 @@
 @using KunigiArchive.Application.Games
-@* A team's games (hosted or won), each linking to its game page. *@
-@if (Games.Count == 0)
-{
-    <p class="k-empty mb-0">@Empty</p>
-}
-else
-{
-    <ul class="game-list">
-        @foreach (GameSummary game in Games)
-        {
-            <li>
-                <span class="year">@game.Year</span>
-                <span>
-                    <a href="games/@game.Slug"><GameName Order="game.Order" Year="game.Year" /></a>
-                    @if (game.Title is not null)
-                    {
-                        <em>@game.Title</em>
-                    }
-                </span>
-            </li>
-        }
-    </ul>
-}
+@* A team's games (hosted or won), each linking to its game page. The page leaves out an empty list. *@
+<ul class="game-list">
+    @foreach (GameSummary game in Games)
+    {
+        <li>
+            <span class="year">@game.Year</span>
+            <span>
+                <a href="games/@game.Slug"><GameName Order="game.Order" Year="game.Year" /></a>
+                @if (game.Title is not null)
+                {
+                    <em>@game.Title</em>
+                }
+            </span>
+        </li>
+    }
+</ul>
 
 @code {
     [Parameter, EditorRequired]
     public IReadOnlyList<GameSummary> Games { get; set; } = [];
-
-    [Parameter]
-    public string Empty { get; set; } = string.Empty;
 }

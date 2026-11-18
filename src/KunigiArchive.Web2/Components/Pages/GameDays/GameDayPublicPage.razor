@@ -6,6 +6,7 @@
 @inject GetGameDayHandler GetGameDayHandler
 @inject FindSlugRedirectHandler FindSlugRedirectHandler
 @inject NavigationManager Navigation
+@inject KunigiArchive.Application.Abstractions.IRichTextSanitizer Sanitizer
 
 @if (_page is not null)
 {
@@ -39,21 +40,17 @@
         </div>
     }
 
-    @if (day.Description is not null)
+    @if (Sanitizer.Sanitize(day.Description) is not null)
     {
         <section class="block">
             <RichText Html="@day.Description" Class="story" />
         </section>
     }
 
-    <section class="block">
-        <h2>Γρίφοι @if (day.Puzzles.Count > 0) { <span class="count">@day.Puzzles.Count</span> }</h2>
-        @if (day.Puzzles.Count == 0)
-        {
-            <p class="k-empty">Δεν έχουν προστεθεί γρίφοι σε αυτή την ημέρα.</p>
-        }
-        else
-        {
+    @if (day.Puzzles.Count > 0)
+    {
+        <section class="block">
+            <h2>Γρίφοι <span class="count">@day.Puzzles.Count</span></h2>
             <ol class="puzzles">
                 @foreach (Entry entry in _entries)
                 {
@@ -87,8 +84,8 @@
                     }
                 }
             </ol>
-        }
-    </section>
+        </section>
+    }
 
     @* The day's own media (photos of the day). Puzzle pictures are only shown with their puzzle above. *@
     @if (day.Media.Count > 0)

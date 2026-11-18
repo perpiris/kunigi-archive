@@ -66,6 +66,6 @@
     protected override async Task OnParametersSetAsync()
     {
         _after = TeamsCursor.TryDecode(After, out TeamsCursor? after) ? after : null;
-        _page = await GetTeamsHandler.HandleAsync(new GetTeamsQuery(_after, Search), CancellationToken.None);
+        _page = await GetTeamsHandler.HandleAsync(new GetTeamsQuery(_after, Search, GetTeamsQuery.MaxPageSize), CancellationToken.None);
     }
 }

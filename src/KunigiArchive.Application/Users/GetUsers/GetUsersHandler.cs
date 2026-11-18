@@ -5,7 +5,8 @@ namespace KunigiArchive.Application.Users.GetUsers;
 
 public sealed class GetUsersHandler
 {
-    private const int PageSize = 20;
+    // Admin-only and small: one page keeps the in-browser column sort correct (#80).
+    private const int PageSize = 500;
 
     private readonly IUserQueries _userQueries;
     private readonly ICurrentUser _currentUser;

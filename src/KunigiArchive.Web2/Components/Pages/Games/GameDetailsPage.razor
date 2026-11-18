@@ -11,6 +11,7 @@
 @inject FindSlugRedirectHandler FindSlugRedirectHandler
 @using KunigiArchive.Application.Common
 @inject NavigationManager Navigation
+@inject KunigiArchive.Application.Abstractions.IRichTextSanitizer Sanitizer
 
 @if (_game is not null)
 {
@@ -27,12 +28,21 @@
             {
                 <p class="subtitle">«@_game.Title»</p>
             }
-            <dl class="facts">
-                <dt>Διοργάνωση</dt>
-                <dd><TeamLink Team="_game.Host" /></dd>
-                <dt>Νικητής</dt>
-                <dd><TeamLink Team="_game.Winner" /></dd>
-            </dl>
+            @if (_game.Host is not null || _game.Winner is not null)
+            {
+                <dl class="facts">
+                    @if (_game.Host is not null)
+                    {
+                        <dt>Διοργάνωση</dt>
+                        <dd><TeamLink Team="_game.Host" /></dd>
+                    }
+                    @if (_game.Winner is not null)
+                    {
+                        <dt>Νικητής</dt>
+                        <dd><TeamLink Team="_game.Winner" /></dd>
+                    }
+                </dl>
+            }
             @if (_game.Note is not null)
             {
                 <p class="note">@_game.Note</p>
@@ -40,7 +50,7 @@
         </div>
     </section>
 
-    @if (_game.Description is not null)
+    @if (Sanitizer.Sanitize(_game.Description) is not null)
     {
         <section class="block">
             <h2>Το παιχνίδι</h2>
@@ -96,10 +106,13 @@
         </section>
     }
 
-    <section class="block">
-        <h2>Υλικό @if (_game.Media.Count > 0) { <span class="count">@_game.Media.Count</span> }</h2>
-        <MediaSheet Items="_mediaThumbs" Gallery="game" />
-    </section>
+    @if (_game.Media.Count > 0)
+    {
+        <section class="block">
+            <h2>Υλικό <span class="count">@_game.Media.Count</span></h2>
+            <MediaSheet Items="_mediaThumbs" Gallery="game" />
+        </section>
+    }
 }
 
 @code {

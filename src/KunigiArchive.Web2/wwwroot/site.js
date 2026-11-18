@@ -356,6 +356,42 @@
         }
     }, true);
 
+    // ---------- Busy buttons ----------
+    // While a POST form is on its way (uploads and emails can take a while) its submit buttons show a spinner and
+    // are disabled, so nobody clicks twice. They're disabled on the next tick: by then the browser (or Blazor's
+    // enhanced form handling) has already read the clicked button's name/value, which a disabled button would lose.
+    // A cancelled confirm never submits, so it never gets here.
+    const busyButtons = form => form.querySelectorAll("button[type=submit], button:not([type])");
+
+    document.addEventListener("submit", event => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== "post") {
+            return;
+        }
+        if (form.dataset.busy) {
+            event.preventDefault();
+            return;
+        }
+        form.dataset.busy = "true";
+        const submitter = event.submitter ?? busyButtons(form)[0];
+        submitter?.classList.add("is-busy");
+        submitter?.setAttribute("aria-busy", "true");
+        setTimeout(() => busyButtons(form).forEach(button => { button.disabled = true; }));
+    }, true);
+
+    // Enhanced forms update the page in place and Back can restore a cached page: free whatever is still busy.
+    const resetBusy = () => {
+        document.querySelectorAll("form[data-busy]").forEach(form => {
+            delete form.dataset.busy;
+            busyButtons(form).forEach(button => {
+                button.disabled = false;
+                button.classList.remove("is-busy");
+                button.removeAttribute("aria-busy");
+            });
+        });
+    };
+    window.addEventListener("pageshow", resetBusy);
+
     // Image errors don't bubble, so this listens in the capture phase.
     document.addEventListener("error", event => {
         const image = event.target;
@@ -365,6 +401,7 @@
     }, true);
 
     const mount = () => {
+        resetBusy();
         remountEditors();
         mountGallery();
         document.querySelectorAll("k-combobox").forEach(combobox => combobox.mount());
