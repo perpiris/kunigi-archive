@@ -28,8 +28,8 @@ public sealed class SendTemporaryPasswordHandler
         _logger = logger;
     }
 
-    // Throws EmailDeliveryException when the email fails. The password has changed by then, so the admin
-    // should simply try again: each attempt replaces it with a new one.
+    // The email is queued and sent in the background (#20). If it never arrives, the admin can simply send
+    // another: each one replaces the password with a new one.
     public async Task HandleAsync(Guid userId, CancellationToken cancellationToken)
     {
         _currentUser.EnsureAdmin();

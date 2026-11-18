@@ -60,7 +60,7 @@ public static class DependencyInjection
         return services;
     }
 
-    // Not validated on start: the site runs without email settings, only sending fails (and the admin is told).
+    // Not validated on start: the site runs without email settings, only sending fails (logged as an error).
     private static void AddEmail(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<EmailOptions>()
@@ -73,7 +73,11 @@ public static class DependencyInjection
                 }
             });
 
-        services.AddScoped<IAccountEmails, SmtpAccountEmails>();
+        // Account emails are queued and sent in the background, with retries (#20).
+        services.AddSingleton<EmailQueue>();
+        services.AddSingleton<SmtpEmailSender>();
+        services.AddSingleton<IAccountEmails, QueuedAccountEmails>();
+        services.AddHostedService<EmailSendingService>();
     }
 
     public static async Task InitializeDatabaseAsync(this IServiceProvider services)

@@ -202,12 +202,7 @@
         try
         {
             await SendTemporaryPasswordHandler.HandleAsync(Id, CancellationToken.None);
-            Reload("Στάλθηκε email με νέο προσωρινό κωδικό.");
-        }
-        catch (EmailDeliveryException)
-        {
-            (_message, _isError) = ("Το email δεν στάλθηκε. Ο κωδικός άλλαξε ήδη, οπότε δοκιμάστε ξανά: " +
-                                    "κάθε αποστολή ορίζει νέο κωδικό.", true);
+            Reload("Ορίστηκε νέος προσωρινός κωδικός. Το email στέλνεται σε λίγα δευτερόλεπτα.");
         }
         catch (InvalidRequestException exception)
         {

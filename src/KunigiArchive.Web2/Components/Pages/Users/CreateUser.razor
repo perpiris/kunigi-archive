@@ -63,10 +63,9 @@
 
     private async Task CreateAsync()
     {
-        CreateUserResult result;
         try
         {
-            result = await CreateUserHandler.HandleAsync(Form.ToCommand(), CancellationToken.None);
+            await CreateUserHandler.HandleAsync(Form.ToCommand(), CancellationToken.None);
         }
         catch (Exception exception) when (exception is InvalidRequestException or ConflictException)
         {
@@ -74,15 +73,6 @@
             return;
         }
 
-        if (result.EmailSent)
-        {
-            Done("Ο χρήστης δημιουργήθηκε και του στάλθηκε email με τον προσωρινό κωδικό.", "/users");
-            return;
-        }
-
-        // The account exists but the email failed: its page is where a new temporary password is sent.
-        Flash.Error(HttpContext, "Ο χρήστης δημιουργήθηκε, αλλά το email με τον προσωρινό κωδικό δεν στάλθηκε. " +
-                                 "Στείλτε νέο κωδικό από κάτω όταν το email λειτουργεί.");
-        Navigation.NavigateTo($"/users/{result.UserId}");
+        Done("Ο χρήστης δημιουργήθηκε. Το email με τον προσωρινό κωδικό στέλνεται σε λίγα δευτερόλεπτα.", "/users");
     }
 }

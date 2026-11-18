@@ -1,6 +1,7 @@
 namespace KunigiArchive.Application.Users;
 
-// Throws EmailDeliveryException when the email can't be sent.
+// Queues the account emails and returns at once; they're sent in the background, with retries (#20).
+// A send that keeps failing is logged as an error; the admin can send a new temporary password.
 public interface IAccountEmails
 {
     Task SendAccountCreatedAsync(string email, string temporaryPassword, CancellationToken cancellationToken);
