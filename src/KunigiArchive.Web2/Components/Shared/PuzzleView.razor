@@ -1,20 +1,31 @@
 @using KunigiArchive.Application.GameDays
 @using KunigiArchive.Application.Media
-@* A puzzle as the archive shows it: the question beside its answer (one under the other on a phone). *@
-<div class="puzzle">
-    <div class="side">
-        <div class="k-label">Ερώτηση</div>
+@* A puzzle as the archive shows it: the question, and beside it (under it on a phone) the answer in a card that
+   starts closed, so readers can try the puzzle first. A native <details>: no script needed, keyboard friendly.
+   Without an answer there's no card and the question takes the whole width. *@
+<div class="puzzle @(HasAnswer ? null : "no-answer")">
+    <div class="question">
         @Side(Puzzle.Question, Puzzle.QuestionMedia, "q")
     </div>
-    <div class="side answer">
-        <div class="k-label">Απάντηση</div>
-        @Side(Puzzle.Answer, Puzzle.AnswerMedia, "a")
-    </div>
+    @if (HasAnswer)
+    {
+        <details class="answer">
+            <summary>
+                <span class="when-closed">Εμφάνιση απάντησης</span>
+                <span class="when-open">Απόκρυψη απάντησης</span>
+            </summary>
+            <div class="answer-body">
+                @Side(Puzzle.Answer, Puzzle.AnswerMedia, "a")
+            </div>
+        </details>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired]
     public PuzzleDetails Puzzle { get; set; } = null!;
+
+    private bool HasAnswer => Puzzle.Answer is not null || Puzzle.AnswerMedia.Count > 0;
 
     private RenderFragment Side(string? text, IReadOnlyList<MediaDetails> media, string key) =>
         @<text>

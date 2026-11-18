@@ -2,20 +2,87 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1.5rem;
+    align-items: start;
 }
 
-.side {
+    .puzzle.no-answer {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+.question {
     min-width: 0;
 }
 
-    .side .k-label {
-        margin-bottom: .5rem;
+/* The answer: a card that starts closed. */
+.answer {
+    min-width: 0;
+    background: var(--k-sheet);
+    border: 1px solid var(--k-rule);
+    border-left: 3px solid var(--k-accent);
+}
+
+    .answer summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .75rem 1rem;
+        cursor: pointer;
+        list-style: none;
+        font-weight: 600;
+        color: var(--k-accent);
+        user-select: none;
     }
 
-.answer {
-    padding-left: 1.5rem;
-    border-left: 1px solid var(--k-rule);
+        /* The browser's own triangle is replaced by a chevron on the right. */
+        .answer summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .answer summary::after {
+            content: "";
+            flex: none;
+            width: .55rem;
+            height: .55rem;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            transform: translateY(-25%) rotate(45deg);
+            transition: transform .15s ease;
+        }
+
+        .answer summary:hover {
+            color: var(--k-ink);
+        }
+
+        .answer summary:focus-visible {
+            outline: 2px solid var(--k-accent);
+            outline-offset: 2px;
+        }
+
+    .answer[open] summary {
+        border-bottom: 1px solid var(--k-rule);
+    }
+
+        .answer[open] summary::after {
+            transform: translateY(25%) rotate(-135deg);
+        }
+
+    .answer .when-open,
+    .answer[open] .when-closed {
+        display: none;
+    }
+
+    .answer[open] .when-open {
+        display: inline;
+    }
+
+.answer-body {
+    padding: 1rem;
 }
+
+    .answer-body > ::deep :last-child {
+        margin-bottom: 0;
+    }
 
 .media {
     display: grid;
@@ -45,15 +112,15 @@
         object-fit: contain;
     }
 
+@media (prefers-reduced-motion: reduce) {
+    .answer summary::after {
+        transition: none;
+    }
+}
+
 @media (max-width: 680px) {
     .puzzle {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .answer {
-        padding-left: 0;
-        padding-top: 1rem;
-        border-left: 0;
-        border-top: 1px solid var(--k-rule);
+        gap: 1rem;
     }
 }

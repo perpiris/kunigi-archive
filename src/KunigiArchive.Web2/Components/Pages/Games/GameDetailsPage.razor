@@ -132,8 +132,10 @@
         string title = _game!.Title is null ? "" : $" «{_game.Title}»";
         string host = _game.Host is null ? "" : $" Διοργάνωση: {_game.Host.Name}.";
         string winner = _game.Winner is null ? "" : $" Νικητής: {_game.Winner.Name}.";
-        return $"{_game.OrderTitle}{title}, Κυνήγι Θησαυρού του Ρεθύμνου {_game.Year}.{host}{winner}";
+        // No inflected forms: the game's name is nominative ("34ο Κυνήγι Θησαυρού").
+        return $"{_game.OrderTitle}{title}, Ρέθυμνο {_game.Year}.{host}{winner}";
     }
+
     private IReadOnlyList<PostDetails> _posts = [];
     private IReadOnlyList<GameDaySummary> _days = [];
 
