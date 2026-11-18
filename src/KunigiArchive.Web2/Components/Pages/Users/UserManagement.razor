@@ -40,6 +40,10 @@
                             <span class="badge @(user.Role is null ? "text-bg-secondary" : "text-bg-primary")">
                                 @RoleOptions.Label(user.Role)
                             </span>
+                            @if (user.IsDisabled)
+                            {
+                                <span class="badge text-bg-secondary">Απενεργοποιημένος</span>
+                            }
                         </td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-primary" href="users/@user.Id">Λεπτομέρειες</a>

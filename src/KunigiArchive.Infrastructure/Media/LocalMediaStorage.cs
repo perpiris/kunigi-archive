@@ -273,16 +273,22 @@ internal sealed class LocalMediaStorage : IMediaStorage
             pdf.Position = 0;
             try
             {
-                using SKBitmap firstPage = Conversion.ToImage(pdf, page: 0);
-                MemoryStream png = new MemoryStream();
-                firstPage.Encode(png, SKEncodedImageFormat.Png, quality: 100);
-                png.Position = 0;
-                return png;
+                // PDFium only runs on these (CA1416, #28). The analyzer needs the call inside a positive check.
+                if (OperatingSystem.IsLinux() || OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
+                {
+                    using SKBitmap firstPage = Conversion.ToImage(pdf, page: 0);
+                    MemoryStream png = new MemoryStream();
+                    firstPage.Encode(png, SKEncodedImageFormat.Png, quality: 100);
+                    png.Position = 0;
+                    return png;
+                }
             }
             catch (Exception exception) when (exception is not OperationCanceledException and not IOException)
             {
                 throw new InvalidRequestException($"Το PDF '{fileName}' δεν μπόρεσε να μετατραπεί σε εικόνα.");
             }
+
+            throw new InvalidRequestException($"Το PDF '{fileName}' δεν μπόρεσε να μετατραπεί σε εικόνα.");
         }
     }
 

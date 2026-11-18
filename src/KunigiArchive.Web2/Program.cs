@@ -18,7 +18,7 @@ try
     builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = MediaRules.MaxRequestBytes);
 
     builder.Services
-        .AddSerilogLogging(builder.Configuration)
+        .AddSerilogLogging(builder.Configuration, builder.Environment)
         .AddApplication()
         .AddInfrastructure(builder.Configuration)
         .AddHosting(builder.Configuration)
@@ -70,6 +70,7 @@ try
 
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseMiddleware<MustChangePasswordMiddleware>();
     app.UseAntiforgery();
 
     if (app.Environment.IsDevelopment())
@@ -79,6 +80,7 @@ try
     }
 
     app.MapStaticAssets();
+    app.MapSearchEngineFiles();
     app.MapControllers();
     app.MapAuthEndpoints();
     app.MapRazorComponents<App>()

@@ -13,7 +13,7 @@ name: Off-site backup
 #
 # Restore: download the artifact, then
 #   gpg --decrypt kunigi_backup_<date>.tar.gz.gpg > kunigi_backup_<date>.tar.gz
-#   tar -xzf kunigi_backup_<date>.tar.gz   # → backup_<ts>/database.bak + backup_<ts>/media/
+#   tar -xzf kunigi_backup_<date>.tar.gz   # → backup_<ts>/databases/*.bak, media_v2/, keys_v2/, ... (ops/vps/README.md)
 on:
   workflow_dispatch:
 
@@ -65,26 +65,27 @@ jobs:
         run: |
           tar -tzvf "$BACKUP_FILE" > listing.txt
 
-          DB_SIZE=$(awk '$NF ~ /\/database\.bak$/ {print $3}' listing.txt | head -1)
-          MEDIA_FILES=$(awk '$1 !~ /^d/ && $NF ~ /\/media\// {n++} END {print n+0}' listing.txt)
+          # Web2 is the live site (#85): its database and uploads must be there.
+          DB_SIZE=$(awk '$NF ~ /\/databases\/KunigiArchiveV2\.bak$/ {print $3}' listing.txt | head -1)
+          MEDIA_FILES=$(awk '$1 !~ /^d/ && $NF ~ /\/media_v2\// {n++} END {print n+0}' listing.txt)
 
-          echo "database.bak size: ${DB_SIZE:-missing}"
-          echo "media files: $MEDIA_FILES"
+          echo "KunigiArchiveV2.bak size: ${DB_SIZE:-missing}"
+          echo "media_v2 files: $MEDIA_FILES"
 
           if [ -z "$DB_SIZE" ] || [ "$DB_SIZE" -lt 1048576 ]; then
-            echo "::error::database.bak is missing or smaller than 1 MB, refusing to replace the previous off-site backup"
+            echo "::error::databases/KunigiArchiveV2.bak is missing or smaller than 1 MB, refusing to replace the previous off-site backup"
             exit 1
           fi
           if [ "$MEDIA_FILES" -lt 1 ]; then
-            echo "::error::No media files in backup, refusing to replace the previous off-site backup"
+            echo "::error::No Web2 media files in backup, refusing to replace the previous off-site backup"
             exit 1
           fi
 
           {
             echo "## Backup"
             echo "- File: \`$BACKUP_FILE\` ($(du -h "$BACKUP_FILE" | cut -f1))"
-            echo "- database.bak: $DB_SIZE bytes"
-            echo "- media files: $MEDIA_FILES"
+            echo "- KunigiArchiveV2.bak: $DB_SIZE bytes"
+            echo "- media_v2 files: $MEDIA_FILES"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Encrypt backup

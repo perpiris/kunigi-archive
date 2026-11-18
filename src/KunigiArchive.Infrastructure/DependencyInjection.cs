@@ -117,8 +117,13 @@ public static class DependencyInjection
                 options.Password.RequireUppercase = true;
                 options.Password.RequireLowercase = true;
                 options.Password.RequireNonAlphanumeric = false;
+
+                // Not about email: DisabledUserConfirmation refuses disabled accounts (#24).
+                options.SignIn.RequireConfirmedAccount = true;
             })
             .AddRoles<AppRole>()
+            .AddClaimsPrincipalFactory<AppUserClaimsFactory>()
+            .AddUserConfirmation<DisabledUserConfirmation>()
             .AddEntityFrameworkStores<KunigiArchiveDbContext>()
             .AddSignInManager()
             .AddDefaultTokenProviders();

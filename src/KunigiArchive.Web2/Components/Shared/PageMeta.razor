@@ -1,0 +1,39 @@
+@inject NavigationManager Navigation
+@* A public page's description, canonical link and share preview (Open Graph, #27). Image is a stored media path
+   ("media/..."); without one the site's icon is used. URLs are absolute, from the request's public address. *@
+<HeadContent>
+    <meta name="description" content="@Description" />
+    <link rel="canonical" href="@_url" />
+    <meta property="og:site_name" content="Το Κυνήγι Θησαυρού" />
+    <meta property="og:locale" content="el_GR" />
+    <meta property="og:type" content="@Type" />
+    <meta property="og:title" content="@Title" />
+    <meta property="og:description" content="@Description" />
+    <meta property="og:url" content="@_url" />
+    <meta property="og:image" content="@_image" />
+    <meta name="twitter:card" content="@(Image is null ? "summary" : "summary_large_image")" />
+</HeadContent>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Image { get; set; }
+
+    [Parameter]
+    public string Type { get; set; } = "website";
+
+    private string _url = string.Empty;
+    private string _image = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        // Without the query string, so ?after=... pages share one canonical address.
+        _url = Navigation.Uri.Split('?', '#')[0];
+        _image = Navigation.ToAbsoluteUri(Image ?? "apple-touch-icon.png").ToString();
+    }
+}

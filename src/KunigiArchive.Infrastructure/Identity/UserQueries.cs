@@ -99,7 +99,8 @@ internal sealed class UserQueries : IUserQueries
             _dbContext.UserRoles
                 .Where(ur => ur.UserId == u.Id)
                 .Join(_dbContext.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
-                .FirstOrDefault()));
+                .FirstOrDefault(),
+            u.IsDisabled));
     }
 
     private IQueryable<AppUser> UsersInRole(string role)

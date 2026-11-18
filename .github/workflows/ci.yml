@@ -33,11 +33,10 @@ jobs:
 
       # Warnings fail the build, except:
       # - NU1901-NU1904: vulnerable-package warnings (package updates are done locally, #15)
-      # - CA1416: platform check on PDFtoImage call in DirectoryService (tracked in #28)
       - name: Build
         run: >
           dotnet build KunigiArchive.slnx -c Release --no-restore
-          -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904,CA1416
+          -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904
 
       - name: Test
         run: dotnet test KunigiArchive.slnx -c Release --no-build

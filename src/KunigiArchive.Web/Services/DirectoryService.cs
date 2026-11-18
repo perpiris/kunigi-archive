@@ -130,7 +130,10 @@ public class DirectoryService : IDirectoryService
             try
             {
                 using Stream inputStream = mediaFile.OpenReadStream();
+                // The old app runs only on Linux (container) and Windows (dev); it goes away at cutover (#28, #63).
+#pragma warning disable CA1416
                 using SKBitmap bitmap = Conversion.ToImage(inputStream, page: 0);
+#pragma warning restore CA1416
 
                 imageStream = new MemoryStream();
                 bitmap.Encode(imageStream, SKEncodedImageFormat.Png, quality: 100);

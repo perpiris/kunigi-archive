@@ -11,17 +11,57 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
 using Serilog;
+using Serilog.Formatting.Compact;
+using Serilog.Sinks.SystemConsole.Themes;
 
 namespace KunigiArchive.Web2.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddSerilogLogging(this IServiceCollection services, IConfiguration configuration)
+    // Same setup as the owner's other apps (pulse-wallet): levels, overrides and properties come from appsettings;
+    // the sinks and their format are chosen here. (Configuration merges WriteTo arrays by index, so sinks set per
+    // environment in appsettings get mixed up.)
+    public static IServiceCollection AddSerilogLogging(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
-        services.AddSerilog((serviceProvider, logger) => logger
-            .ReadFrom.Configuration(configuration)
-            .ReadFrom.Services(serviceProvider)
-            .Enrich.FromLogContext());
+        services.AddSerilog((serviceProvider, logger) =>
+        {
+            logger
+                .ReadFrom.Configuration(configuration)
+                .ReadFrom.Services(serviceProvider)
+                .Enrich.FromLogContext();
+
+            if (environment.IsDevelopment())
+            {
+                // Readable, coloured text for a person watching the terminal.
+                logger.WriteTo.Console(
+                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} <cid:{CorrelationId}>{NewLine}{Exception}",
+                    theme: AnsiConsoleTheme.Code);
+            }
+            else
+            {
+                // One JSON object per line: every property (CorrelationId, RequestPath, ids...) is a searchable
+                // field, and there are no colour codes in the container logs (`docker logs`).
+                logger.WriteTo.Console(new RenderedCompactJsonFormatter());
+            }
+
+            // Rotating files, as the old site had: a file a day, a new one past 10 MB, the last 30 kept. Only where
+            // LogFile:Path is set (the server, on a mounted folder, so the files outlive a redeploy).
+            string? path = configuration["LogFile:Path"];
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                logger.WriteTo.File(
+                    new RenderedCompactJsonFormatter(),
+                    path,
+                    rollingInterval: RollingInterval.Day,
+                    fileSizeLimitBytes: 10 * 1024 * 1024,
+                    rollOnFileSizeLimit: true,
+                    retainedFileCountLimit: 30,
+                    flushToDiskInterval: TimeSpan.FromSeconds(1));
+            }
+        });
 
         return services;
     }
