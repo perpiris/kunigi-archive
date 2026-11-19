@@ -13,7 +13,6 @@
     <Project Path="src/KunigiArchive.Application/KunigiArchive.Application.csproj" />
     <Project Path="src/KunigiArchive.Domain/KunigiArchive.Domain.csproj" />
     <Project Path="src/KunigiArchive.Infrastructure/KunigiArchive.Infrastructure.csproj" />
-    <Project Path="src/KunigiArchive.Import/KunigiArchive.Import.csproj" />
     <Project Path="src/KunigiArchive.Web/KunigiArchive.Web.csproj" />
   </Folder>
 </Solution>

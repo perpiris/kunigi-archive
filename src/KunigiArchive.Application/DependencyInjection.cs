@@ -89,6 +89,7 @@ public static class DependencyInjection
 
         services.AddScoped<GetMediaStatusHandler>();
         services.AddScoped<FindSlugRedirectHandler>();
+        services.AddScoped<FindLegacyDayPathHandler>();
 
         services.AddScoped<GameDayEditor>();
         services.AddScoped<GetGameDaysHandler>();

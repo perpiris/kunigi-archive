@@ -1,3 +1,13 @@
-# Shell scripts run on Linux: always LF
+# Text files are stored with LF in the repo; Git picks the checkout line ending per machine (#41).
+* text=auto
+
+# Shell scripts run on Linux: always LF, also in a Windows checkout
 *.sh text eol=lf
 .githooks/* text eol=lf
+
+# Never touched
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.webp binary

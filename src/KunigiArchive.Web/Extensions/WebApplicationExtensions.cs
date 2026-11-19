@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using KunigiArchive.Application.Common;
 using KunigiArchive.Application.Sitemap;
 using KunigiArchive.Infrastructure.Media;
 using Microsoft.Extensions.FileProviders;
@@ -20,6 +21,22 @@ public static class WebApplicationExtensions
                 return next(context);
             });
         }
+
+        return app;
+    }
+
+    // The old MVC site's day links, /games/{slug}/day/{numeric id}: a permanent redirect to the day's current address
+    // (#91). An id the archive doesn't know goes to the game's page (which 404s if the slug is unknown too).
+    public static WebApplication MapLegacyRedirects(this WebApplication app)
+    {
+        app.MapGet("/games/{slug}/day/{oldId:long}",
+            async (string slug, long oldId, FindLegacyDayPathHandler handler, CancellationToken cancellationToken) =>
+            {
+                string? path = await handler.HandleAsync(oldId, cancellationToken);
+                return path is null
+                    ? Results.Redirect($"/games/{Uri.EscapeDataString(slug)}")
+                    : Results.Redirect("/" + path, permanent: true);
+            });
 
         return app;
     }

@@ -1,7 +1,15 @@
+# Images are pinned to release tags (#39): upgrade on purpose by changing the tag here, backup first for db.
+# Every container's `docker logs` output rotates (#40): 5 files of 10 MB each.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   # 1. Reverse Proxy (Nginx)
   nginx-proxy:
-    image: nginxproxy/nginx-proxy:alpine
+    image: nginxproxy/nginx-proxy:1.11.6-alpine
     container_name: nginx-proxy
     ports:
       - "80:80"
@@ -13,11 +21,12 @@ services:
       - certs:/etc/nginx/certs:ro
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - ./nginx-limits.conf:/etc/nginx/conf.d/nginx-limits.conf:ro
+    logging: *logging
     restart: always
 
   # 2. Automated SSL Certificates (Let's Encrypt Certbot)
   acme-companion:
-    image: nginxproxy/acme-companion
+    image: nginxproxy/acme-companion:2.8.2
     container_name: nginx-acme-companion
     environment:
       - DEFAULT_EMAIL=hello@tokinigi.gr
@@ -31,14 +40,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - nginx-proxy
+    logging: *logging
     restart: always
 
   # 3. Database (SQL Server)
   db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04
     container_name: kunigi_db
     # MSSQL_SA_PASSWORD only applies when the volume is first created;
-    # change it on an existing database with ops/vps/init-secrets.sh --rotate-sa.
+    # sa itself is disabled (#46); ops/vps/init-secrets.sh --rotate-sa still changes its password.
     env_file:
       - /opt/kunigi/db.env
     # Docker bypasses ufw; the DOCKER-USER rules from ops/vps/setup.sh limit this to the WireGuard VPN.
@@ -46,6 +56,7 @@ services:
       - "1433:1433"
     volumes:
       - db_data:/var/opt/mssql
+    logging: *logging
     restart: always
 
   # 4. The site (src/KunigiArchive.Web). Its settings and secrets (connection string, SMTP password, first admin,
@@ -71,12 +82,8 @@ services:
       - ../kunigi_web_media:/app/media
       - ../kunigi_web_keys:/app/keys
       - ../kunigi_web_logs:/app/logs
-    # `docker logs` output rotates too (#40); the files in kunigi_web_logs keep 30 days.
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
+    # `docker logs` output rotates too; the files in kunigi_web_logs keep 30 days.
+    logging: *logging
     depends_on:
       - db
     restart: always

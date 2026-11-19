@@ -11,7 +11,7 @@ Everything about the production server that isn't the app itself.
 |---|---|
 | `setup.sh` | Idempotent host configuration (journal cap, cache prune, backup script + cron, optional SQL tuning). Safe to re-run. |
 | `wireguard.sh` | VPN helper, installed as `/usr/local/sbin/kunigi-wireguard` (`init`, `add <name>`, `list`). |
-| `init-secrets.sh` | Creates the env files in `/opt/kunigi` (if missing), the database, the SQL logins they use and the site's data folders. `--rotate-sa` gives `sa` a new password. Safe to re-run. |
+| `init-secrets.sh` | Creates the env files in `/opt/kunigi` (if missing), the database, the SQL logins they use and the site's data folders, all as `kunigi_admin`, and keeps `sa` disabled (#46). `--rotate-sa` gives `sa` a new password. Safe to re-run. |
 | `rotate-smtp.sh` | Replaces the SMTP password (Mailtrap token) in `web.env` without showing it, and recreates the site container (#37). |
 | `backup/vps-backup.sh` | Nightly backup script. Installed to `/opt/kunigi-backups/vps-backup.sh` by `setup.sh`. |
 | `sql/tune.sql` | SQL Server settings (SIMPLE recovery, smaller diagnostic traces). Applied by `setup.sh --sql`. |
@@ -27,7 +27,7 @@ ssh kunigi-vps 'sudo ~iperp/kunigi-archive/ops/vps/setup.sh --sql'
 | What | Where |
 |---|---|
 | Deployed repo / compose project | `/home/iperp/kunigi-archive` (compose project `kunigi-archive`); replaced as a whole by every **Deploy web** |
-| Containers | `kunigi_web` (the site, :8080), `kunigi_db` (SQL Server 2022), `nginx-proxy`, `nginx-acme-companion` |
+| Containers | `kunigi_web` (the site, :8080, health at `/healthz`), `kunigi_db` (SQL Server 2022 CU28), `nginx-proxy` (1.11.6), `nginx-acme-companion` (2.8.2). Images are pinned in `docker-compose.yml` (#39); every container's `docker logs` rotates at 5 × 10 MB (#40). |
 | **Database** | Docker volume `kunigi-archive_db_data` (`/var/lib/docker/volumes/kunigi-archive_db_data/_data`), DB `KunigiArchiveV2` (the name is historical: it was the new app's database while the old site still ran) |
 | **Uploaded media** | `/home/iperp/kunigi_web_media` → `/app/media` in `kunigi_web` |
 | Sign-in keys | `/home/iperp/kunigi_web_keys` → `/app/keys` (Data Protection; losing them signs everyone out) |
@@ -58,7 +58,7 @@ Secrets exist **only on the VPS**, in `/opt/kunigi`. The dir is `root:iperp 750`
 | `kunigi_beta` | `db_owner` on `KunigiArchiveV2` only | the site (owner rights because migrations run at startup). The name is historical; a new server gets `kunigi_web` (`init-secrets.sh` uses whatever `web.env` names). |
 | `kunigi_backup` | `db_backupoperator` on `KunigiArchiveV2` + `CREATE ANY DATABASE` (needed for `RESTORE VERIFYONLY`); default database `master` | nightly backup |
 | `kunigi_admin` | `sysadmin` | manual administration / SSMS |
-| `sa` | `sysadmin` | `init-secrets.sh` only (#46); rotate with `init-secrets.sh --rotate-sa` |
+| `sa` | `sysadmin`, **disabled** (#46) | nothing. On a new server `init-secrets.sh` uses it once to create `kunigi_admin`. Emergency: `ALTER LOGIN [sa] ENABLE;` as `kunigi_admin`. |
 
 Any `appsettings.json` key can be overridden in `web.env` with `Section__Key=value`. After editing `web.env`, recreate the site: `cd ~iperp/kunigi-archive && sudo docker compose up -d --no-build web`.
 
@@ -128,10 +128,10 @@ Off-site copies are made by the manual **Off-site backup** GitHub Action. It kee
 
 ## Access
 
-- Owner: `iperp`
+- Owner: `iperp`. Still signs in with a password; once a key is added, turn passwords off (#18).
+- SSH: port 22 only (the `OpenSSH` ufw rule), no root login (`/etc/ssh/sshd_config.d/10-kunigi.conf`), fail2ban on sshd.
 - Maintenance user `claude`: key-only SSH, passwordless sudo via `/etc/sudoers.d/90-claude`, docker group. Added 2026-11-14.
   Remove with `sudo deluser --remove-home claude && sudo rm /etc/sudoers.d/90-claude`.
-- `antigravity`: sudo user of unknown purpose (#19).
 
 Local SSH alias (`~/.ssh/config`):
 
@@ -144,6 +144,13 @@ Host kunigi-vps
 ```
 
 ## Change log
+
+### 2026-11-19 — updates and hardening (#17, #18, #19, #46)
+
+- Backup, then `apt full-upgrade` (Docker 29.10.0, Compose 5.8.0, containerd) and a reboot onto kernel 6.12.117 (up 22 weeks before). Fresh images: SQL Server 2022 CU25 → CU28, nginx-proxy 1.11.6, acme-companion 2.8.2. Everything came back on its own.
+- User `antigravity` removed (last login 2026-09-21; nothing in use). Its two old copies of the old site's data were kept in `/opt/kunigi-backups/from-antigravity-2026-09-21` (root only).
+- SSH: root login off, the stale `2222/tcp` ufw rule removed. Password login stays on until the owner has a key for `iperp`.
+- `sa` disabled; `init-secrets.sh` and `setup.sh --sql` work as `kunigi_admin`. Backup checked afterwards.
 
 ### 2026-11-19 — old site's data removed (#89)
 

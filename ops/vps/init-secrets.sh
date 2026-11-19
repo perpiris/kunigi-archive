@@ -20,7 +20,7 @@
 #
 # Usage (as root on the VPS):
 #   init-secrets.sh                 create missing files, ensure logins and folders
-#   init-secrets.sh --rotate-sa     also give sa a new random password
+#   init-secrets.sh --rotate-sa     also give sa (disabled) a new random password
 #
 # Optional inputs, only used when web.env is created for the first time:
 #   SMTP_PASSWORD   SMTP password (the Mailtrap API token)
@@ -71,8 +71,12 @@ genpw() {
 
 env_get() { grep -m1 "^$2=" "$1" 2>/dev/null | cut -d= -f2- || true; }
 
-sql_as_sa() {
-    docker exec -i "$DB_CONTAINER" "$SQLCMD" -S localhost -U sa -P "$SA_PASSWORD" -C -b -h -1
+# Runs SQL as SQL_USER/SQL_PASSWORD (the password goes through the environment, not the command line).
+# Everything runs as kunigi_admin; sa is only used once, on a new server, to create it, and stays disabled (#46).
+SQL_USER=""
+SQL_PASSWORD=""
+sql() {
+    docker exec -i -e SQLCMDPASSWORD="$SQL_PASSWORD" "$DB_CONTAINER" "$SQLCMD" -S localhost -U "$SQL_USER" -C -b -h -1
 }
 
 # --- db.env -------------------------------------------------------------------
@@ -85,9 +89,6 @@ if [ ! -f "$SECRETS_DIR/db.env" ]; then
     fi
     printf 'ACCEPT_EULA=Y\nMSSQL_SA_PASSWORD=%s\n' "$SA_PASSWORD" > "$SECRETS_DIR/db.env"
 fi
-SA_PASSWORD=$(env_get "$SECRETS_DIR/db.env" MSSQL_SA_PASSWORD)
-echo "SET NOCOUNT ON; SELECT 1;" | sql_as_sa > /dev/null
-log "sa login works"
 
 # --- backup.env ---------------------------------------------------------------
 if [ ! -f "$SECRETS_DIR/backup.env" ]; then
@@ -101,10 +102,39 @@ if [ ! -f "$SECRETS_DIR/admin.env" ]; then
     printf 'SQL_ADMIN_USER=kunigi_admin\nSQL_ADMIN_PASSWORD=%s\n' "$(genpw)" > "$SECRETS_DIR/admin.env"
 fi
 
+# --- connect as kunigi_admin (created with sa only on a new server) -------------
+ADMIN_PASSWORD=$(env_get "$SECRETS_DIR/admin.env" SQL_ADMIN_PASSWORD)
+SQL_USER=kunigi_admin
+SQL_PASSWORD="$ADMIN_PASSWORD"
+if ! echo "SET NOCOUNT ON; SELECT 1;" | sql > /dev/null 2>&1; then
+    log "kunigi_admin can't connect yet: creating it with sa"
+    SQL_USER=sa
+    SQL_PASSWORD=$(env_get "$SECRETS_DIR/db.env" MSSQL_SA_PASSWORD)
+    if ! echo "SET NOCOUNT ON; SELECT 1;" | sql > /dev/null 2>&1; then
+        echo "Neither kunigi_admin (admin.env) nor sa (db.env) can connect. If sa is disabled, fix kunigi_admin's" >&2
+        echo "password by hand (see ops/vps/README.md, \"SQL logins\")." >&2
+        exit 1
+    fi
+    sql > /dev/null <<EOF
+SET NOCOUNT ON;
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'kunigi_admin')
+    CREATE LOGIN [kunigi_admin] WITH PASSWORD = N'$ADMIN_PASSWORD', CHECK_POLICY = ON;
+ELSE
+    ALTER LOGIN [kunigi_admin] WITH PASSWORD = N'$ADMIN_PASSWORD';
+ALTER LOGIN [kunigi_admin] ENABLE;
+ALTER SERVER ROLE [sysadmin] ADD MEMBER [kunigi_admin];
+GO
+EOF
+    SQL_USER=kunigi_admin
+    SQL_PASSWORD="$ADMIN_PASSWORD"
+    echo "SET NOCOUNT ON; SELECT 1;" | sql > /dev/null
+fi
+log "Connected as kunigi_admin (sysadmin)"
+
 # --- database -----------------------------------------------------------------
 log "Database $DB_NAME"
-echo "SET NOCOUNT ON; IF DB_ID(N'$DB_NAME') IS NULL CREATE DATABASE [$DB_NAME];" | sql_as_sa > /dev/null
-echo "SET NOCOUNT ON; ALTER DATABASE [$DB_NAME] SET RECOVERY SIMPLE;" | sql_as_sa > /dev/null
+echo "SET NOCOUNT ON; IF DB_ID(N'$DB_NAME') IS NULL CREATE DATABASE [$DB_NAME];" | sql > /dev/null
+echo "SET NOCOUNT ON; ALTER DATABASE [$DB_NAME] SET RECOVERY SIMPLE;" | sql > /dev/null
 
 # --- web.env ------------------------------------------------------------------
 if [ ! -f "$SECRETS_DIR/web.env" ]; then
@@ -132,7 +162,7 @@ chmod 600 "$SECRETS_DIR/backup.env" "$SECRETS_DIR/admin.env"
 ensure_login() {
     local name="$1" password="$2" role="$3" database="${4:-$DB_NAME}"
     log "SQL login $name ($role on $database)"
-    sql_as_sa > /dev/null <<EOF
+    sql > /dev/null <<EOF
 SET NOCOUNT ON;
 IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'$name')
     CREATE LOGIN [$name] WITH PASSWORD = N'$password', CHECK_POLICY = ON, DEFAULT_DATABASE = [$database];
@@ -155,21 +185,15 @@ ensure_login "$WEB_LOGIN" "$WEB_PASSWORD" db_owner
 ensure_login kunigi_backup "$BACKUP_PASSWORD" db_backupoperator
 # Its default database is master: a login whose default database is dropped can't connect at all (that silently
 # broke the nightly backup once, 2026-11-19).
-echo "ALTER LOGIN [kunigi_backup] WITH DEFAULT_DATABASE = [master];" | sql_as_sa > /dev/null
+echo "ALTER LOGIN [kunigi_backup] WITH DEFAULT_DATABASE = [master];" | sql > /dev/null
 # RESTORE VERIFYONLY (used by vps-backup.sh) requires CREATE DATABASE permission
-echo "USE [master]; GRANT CREATE ANY DATABASE TO [kunigi_backup];" | sql_as_sa > /dev/null
+echo "USE [master]; GRANT CREATE ANY DATABASE TO [kunigi_backup];" | sql > /dev/null
 
-ADMIN_PASSWORD=$(env_get "$SECRETS_DIR/admin.env" SQL_ADMIN_PASSWORD)
-log "SQL login kunigi_admin (sysadmin)"
-sql_as_sa > /dev/null <<EOF
-SET NOCOUNT ON;
-IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'kunigi_admin')
-    CREATE LOGIN [kunigi_admin] WITH PASSWORD = N'$ADMIN_PASSWORD', CHECK_POLICY = ON;
-ELSE
-    ALTER LOGIN [kunigi_admin] WITH PASSWORD = N'$ADMIN_PASSWORD';
-ALTER SERVER ROLE [sysadmin] ADD MEMBER [kunigi_admin];
-GO
-EOF
+# --- sa stays disabled (#46) ------------------------------------------------------
+# Nothing uses it: the site, the backup and you (SSMS) have their own logins. A disabled login can't sign in, so
+# guessing its password is useless. Re-enable in an emergency (as kunigi_admin): ALTER LOGIN [sa] ENABLE;
+log "sa disabled"
+echo "SET NOCOUNT ON; ALTER LOGIN [sa] DISABLE;" | sql > /dev/null
 
 # --- data folders ---------------------------------------------------------------
 for dir in kunigi_web_media kunigi_web_keys kunigi_web_logs; do
@@ -184,16 +208,14 @@ chmod 750 "$DATA_DIR/kunigi_web_logs"
 
 # --- optional: rotate sa ----------------------------------------------------------
 if $ROTATE_SA; then
-    log "Rotating sa password"
+    log "Rotating sa password (it stays disabled)"
     NEW_SA=$(genpw)
     printf 'ACCEPT_EULA=Y\nMSSQL_SA_PASSWORD=%s\n' "$NEW_SA" > "$SECRETS_DIR/db.env.new"
-    echo "ALTER LOGIN [sa] WITH PASSWORD = N'$NEW_SA';" | sql_as_sa > /dev/null
+    echo "ALTER LOGIN [sa] WITH PASSWORD = N'$NEW_SA';" | sql > /dev/null
     mv "$SECRETS_DIR/db.env.new" "$SECRETS_DIR/db.env"
     chown "root:$DEPLOY_GROUP" "$SECRETS_DIR/db.env"
     chmod 640 "$SECRETS_DIR/db.env"
-    SA_PASSWORD="$NEW_SA"
-    echo "SET NOCOUNT ON; SELECT 1;" | sql_as_sa > /dev/null
-    log "sa password rotated and verified"
+    log "sa password rotated"
 fi
 
 log "done"

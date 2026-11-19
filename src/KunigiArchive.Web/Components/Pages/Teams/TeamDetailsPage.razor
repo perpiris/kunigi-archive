@@ -13,7 +13,7 @@
     <PageMeta Title="@_team.Name" Description="@TeamDescription()" Image="@_team.Image" Type="profile" />
 
     <section class="record">
-        <TeamFrame Name="@_team.Name" Image="@_team.Image" />
+        <TeamFrame Name="@_team.Name" Image="@_team.Image" Zoom="true" />
         <div>
             <h1>@_team.Name</h1>
             <dl class="facts">
@@ -47,7 +47,7 @@
     {
         <section class="block">
             <h2>Η ιστορία της ομάδας</h2>
-            <RichText Html="@_team.Description" Class="history" />
+            <RichText Html="@_team.Description" Class="history k-text-card" />
         </section>
     }
 

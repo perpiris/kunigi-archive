@@ -48,18 +48,21 @@ jobs:
           script: |
             set -e
             cd ~/kunigi-archive
-            docker compose up -d --build
+            # --pull: the build takes the newest .NET 10.0.x base image, so runtime patches arrive with deploys (#39).
+            docker compose build --pull web
+            docker compose up -d
 
       - name: Health check
         run: |
           for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' https://tokinigi.gr/ || true)
+            # /healthz answers 200 only when the site can reach its database (#39).
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://tokinigi.gr/healthz || true)
             if [ "$code" = "200" ]; then
-              echo "Site is up (HTTP 200)"
+              echo "Site and database are up (/healthz 200)"
               exit 0
             fi
             echo "Attempt $i: HTTP $code, retrying in 10s..."
             sleep 10
           done
-          echo "::error::Site did not return HTTP 200 within 5 minutes after deploy"
+          echo "::error::/healthz did not return 200 within 5 minutes after deploy"
           exit 1
