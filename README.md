@@ -3,11 +3,6 @@
 [![CI](https://github.com/perpiris/kunigi-archive/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/perpiris/kunigi-archive/actions/workflows/ci.yml)
 [![.NET](https://img.shields.io/badge/.NET-10.0%20LTS-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 
-[![Deploy web](https://github.com/perpiris/kunigi-archive/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/perpiris/kunigi-archive/actions/workflows/deploy-web.yml)
-[![Web deployed](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fperpiris%2Fkunigi-archive%2Factions%2Fworkflows%2Fdeploy-web.yml%2Fruns%3Fper_page%3D1%26status%3Dsuccess&query=%24.workflow_runs%5B0%5D.updated_at&label=tokinigi.gr%20deployed&color=ff4d00)](https://tokinigi.gr)
-
-[![Schema changed](https://img.shields.io/github/last-commit/perpiris/kunigi-archive/master?path=src%2FKunigiArchive.Infrastructure%2FPersistence%2FMigrations&label=schema%20changed&color=ffd600)](https://github.com/perpiris/kunigi-archive/commits/master/src/KunigiArchive.Infrastructure/Persistence/Migrations)
-
 The archive of **"Το Κυνήγι Θησαυρού"**, the annual treasure hunt of Rethymno, Crete. For every year's game it keeps the team that organised it and the team that won, the game's days, every puzzle with its question and answer, posts, and photo, video and PDF material. The site is in Greek.
 
 **Live:** https://tokinigi.gr
