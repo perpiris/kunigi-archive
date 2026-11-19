@@ -43,15 +43,48 @@ ARCHIVE="$BACKUP_DIR/kunigi_backup_$TIMESTAMP.tar.gz"
 TMP_ARCHIVE="$ARCHIVE.partial"
 WARNINGS=0
 
-log() { echo "[$(date +"%F %T")] $*"; }
+LOG_LINES=()
+log() { local line; line="[$(date +"%F %T")] $*"; echo "$line"; LOG_LINES+=("$line"); }
 warn() { log "WARNING: $*"; WARNINGS=$((WARNINGS + 1)); }
+
+# Emails the owner when a run fails or warns (#38), through the site's own SMTP account (Mailtrap): the token and
+# the owner's address are read from web.env (AdminSeed__Email), or BACKUP_ALERT_EMAIL in backup.env. A failure to
+# send is only logged: the alert must never break the backup itself.
+SMTP_URL="smtp://live.smtp.mailtrap.io:587"
+SMTP_FROM="hello@tokinigi.gr"
+alert() {
+    local subject="$1" token to
+    token=$(grep -m1 '^EmailSettings__Password=' "$SECRETS_DIR/web.env" 2>/dev/null | cut -d= -f2- || true)
+    to="${BACKUP_ALERT_EMAIL:-$(grep -m1 '^AdminSeed__Email=' "$SECRETS_DIR/web.env" 2>/dev/null | cut -d= -f2- || true)}"
+    if [ -z "$token" ] || [ -z "$to" ]; then
+        echo "[$(date +"%F %T")] Alert not sent: no SMTP token or recipient in $SECRETS_DIR"
+        return 0
+    fi
+    {
+        printf 'From: Kunigi backup <%s>\r\nTo: %s\r\nSubject: %s\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n' \
+            "$SMTP_FROM" "$to" "$subject"
+        printf 'The nightly backup on %s needs a look. Its log for this run:\r\n\r\n' "$(hostname)"
+        printf '%s\r\n' "${LOG_LINES[@]}"
+        printf '\r\nFull log: /var/log/kunigi-backup.log\r\n'
+    } | curl -sS --max-time 30 --ssl-reqd --url "$SMTP_URL" --user "api:$token" \
+            --mail-from "$SMTP_FROM" --mail-rcpt "$to" --upload-file - \
+        && echo "[$(date +"%F %T")] Alert sent" \
+        || echo "[$(date +"%F %T")] Alert could not be sent"
+}
 
 cleanup() {
     rm -rf "$WORK_DIR" "$TMP_ARCHIVE"
     docker exec "$DB_CONTAINER" sh -c "rm -f /var/opt/mssql/data/db_backup_${TIMESTAMP}_*.bak" 2>/dev/null || true
 }
 trap cleanup EXIT
-trap 'log "BACKUP FAILED (line $LINENO)"; exit 1' ERR
+trap 'log "BACKUP FAILED (line $LINENO)"; alert "Kunigi backup FAILED on $(hostname)"; exit 1' ERR
+
+# vps-backup.sh --test-alert: send a test alert email and stop (checks the SMTP token and the recipient).
+if [ "${1:-}" = "--test-alert" ]; then
+    log "Test alert, no backup made"
+    alert "Kunigi backup alert test on $(hostname)"
+    exit 0
+fi
 
 sql() {
     docker exec "$DB_CONTAINER" "$SQLCMD" -S localhost -U "$DB_USER" -P "$DB_PASS" -C -b -h -1 -W -Q "SET NOCOUNT ON; $1"
@@ -120,6 +153,7 @@ done
 
 if [ "$WARNINGS" -gt 0 ]; then
     log "Backup completed with $WARNINGS warning(s)"
+    alert "Kunigi backup finished with $WARNINGS warning(s) on $(hostname)"
 else
     log "Backup completed successfully"
 fi

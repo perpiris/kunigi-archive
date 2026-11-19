@@ -9,7 +9,7 @@ Everything about the production server that isn't the app itself.
 
 | File | What it is |
 |---|---|
-| `setup.sh` | Idempotent host configuration (journal cap, cache prune, backup script + cron, optional SQL tuning). Safe to re-run. |
+| `setup.sh` | Idempotent host configuration (time zone, journal cap, cache prune, backup script + cron, optional SQL tuning). Safe to re-run. |
 | `wireguard.sh` | VPN helper, installed as `/usr/local/sbin/kunigi-wireguard` (`init`, `add <name>`, `list`). |
 | `init-secrets.sh` | Creates the env files in `/opt/kunigi` (if missing), the database, the SQL logins they use and the site's data folders, all as `kunigi_admin`, and keeps `sa` disabled (#46). `--rotate-sa` gives `sa` a new password. Safe to re-run. |
 | `rotate-smtp.sh` | Replaces the SMTP password (Mailtrap token) in `web.env` without showing it, and recreates the site container (#37). |
@@ -34,13 +34,28 @@ ssh kunigi-vps 'sudo ~iperp/kunigi-archive/ops/vps/setup.sh --sql'
 | App logs | `/home/iperp/kunigi_web_logs` (JSON lines, a file a day, new file past 10 MB, 30 kept), plus `docker logs kunigi_web` (capped at 5 × 10 MB) |
 | Backups | `/opt/kunigi-backups/kunigi_backup_<timestamp>.tar.gz` (newest 3 kept) |
 | Backup log | `/var/log/kunigi-backup.log` |
-| Backup cron | root crontab, `0 2 * * *` |
+| Backup cron | root crontab, `0 2 * * *` (the server's time zone is Europe/Athens) |
 | Cache prune cron | `/etc/cron.d/docker-builder-prune` (Sundays 04:00) |
 | Journal cap | `/etc/systemd/journald.conf.d/size.conf` (200 MB) |
 
 The three `kunigi_web_*` folders are owned by uid 1654, the container user.
 
 **Never** run `docker compose down -v`, and never rename the compose project or volumes: that deletes or detaches the database.
+
+## Deploy and rollback
+
+**Deploy web** (`.github/workflows/deploy-web.yml`, manual, master only) builds the site's image in GitHub Actions (with the newest .NET 10.0.x base image) and pushes it to GHCR as `ghcr.io/perpiris/kunigi-archive-web:<commit sha>` (#39). It then copies the repo to `~iperp/kunigi-archive` (compose file, nginx limits, these scripts), pulls the image on the server with the job's own token (logged out again right after), tags it `:latest`, runs `docker compose up -d` and waits for `/healthz` to answer 200. Nothing is built on the server any more. `docker-compose.yml` runs `:latest` with `pull_policy: never`, so a plain `docker compose up -d` on the server keeps running whatever was deployed last.
+
+The server keeps the 4 newest images. **Rollback** to one of them:
+
+```bash
+cd ~iperp/kunigi-archive
+docker images ghcr.io/perpiris/kunigi-archive-web     # tags = commit SHAs, newest first
+docker tag ghcr.io/perpiris/kunigi-archive-web:<sha> ghcr.io/perpiris/kunigi-archive-web:latest
+docker compose up -d web
+```
+
+A rollback doesn't undo database migrations: an older image runs against the newer schema, which is fine as long as the newer migrations only added things. For a migration that changed or dropped data, restore the backup taken before the deploy instead. The next **Deploy web** puts master back.
 
 ## Secrets and SQL logins
 
@@ -97,6 +112,7 @@ The nightly `vps-backup.sh` (#85):
 - the env files from `/opt/kunigi`
 - a missing database or folder is logged as `WARNING` and skipped; any other error (including a login that can't connect) aborts with `BACKUP FAILED` and the SQL error in the log
 - keeps the newest 3 archives; old ones are deleted only after a successful run
+- **alerts** (#38): a failed run, or one with warnings, emails its log to the owner through the site's Mailtrap account (token `EmailSettings__Password` and address `AdminSeed__Email` from `web.env`; `BACKUP_ALERT_EMAIL` in `backup.env` overrides the address). Test it with `sudo /opt/kunigi-backups/vps-backup.sh --test-alert` (sends a test email, makes no backup). If the alert can't be sent, that's only logged.
 
 The lists are at the top of the script. After changing it, install it again with `sudo bash ops/vps/setup.sh` (or `sudo install -o root -g root -m 700 ops/vps/backup/vps-backup.sh /opt/kunigi-backups/`) and run it once by hand: `sudo /opt/kunigi-backups/vps-backup.sh`.
 
@@ -112,9 +128,9 @@ kunigi_backup_<ts>.tar.gz
     └── config/*.env
 ```
 
-Off-site copies are made by the manual **Off-site backup** GitHub Action. It keeps one encrypted artifact. Decrypt it with `gpg --decrypt <file>.gpg > <file>`, using the `BACKUP_PASSPHRASE` secret.
+Off-site copies are made by the manual **Off-site backup** GitHub Action (run it from Actions now and then, e.g. after entering a lot of data). It copies the newest archive, checks it holds the database and media, encrypts it and keeps it as the only `kunigi-backup-*` artifact (90 days). Decrypt it with `gpg --decrypt <file>.gpg > <file>`, using the `BACKUP_PASSPHRASE` secret; the owner's copy of the passphrase is `C:\Users\iperp\kunigi-backups\OFFSITE-BACKUP-PASSPHRASE.txt` (keep it in a password manager too: without it the copy can't be opened). First run 2026-11-19.
 
-### Restore (outline, not yet rehearsed — see #38)
+### Restore (rehearsed 2026-11-19, #38)
 
 1. Stop the site: `cd ~iperp/kunigi-archive && sudo docker compose stop web`
 2. Extract the archive: `tar -xzf kunigi_backup_<ts>.tar.gz`
@@ -144,6 +160,14 @@ Host kunigi-vps
 ```
 
 ## Change log
+
+### 2026-11-19 — images from GHCR, backup alerts, off-site copy, time zone (#38, #39, #94)
+
+- Time zone Europe/Amsterdam → Europe/Athens (`setup.sh` now sets it); the 02:00 backup runs at 02:00 Greek time.
+- `vps-backup.sh` emails the owner on failure or warnings; test alert received.
+- Off-site backup: `BACKUP_PASSPHRASE` set, workflow enabled, first encrypted copy stored.
+- Deploys pull the image from GHCR instead of building on the server; the old locally built `kunigi-archive-web:latest` image can be removed after the first such deploy.
+- The site waits for SQL Server (up to 2 minutes) before migrating, so a reboot or a deploy no longer crash-loops it while the database is still opening (#94).
 
 ### 2026-11-19 — updates and hardening (#17, #18, #19, #46)
 

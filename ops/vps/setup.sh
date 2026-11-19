@@ -7,6 +7,7 @@
 #   sudo ~iperp/kunigi-archive/ops/vps/setup.sh --sql      # + SQL Server tuning
 #
 # What it does:
+#   0. Time zone Europe/Athens (cron times and logs in Greek time)
 #   1. Caps the systemd journal at 200 MB
 #   2. Weekly Docker build-cache prune (Sunday 04:00)
 #   3. Installs the nightly backup script and its root crontab entry (02:00)
@@ -29,6 +30,13 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 log() { echo "==> $*"; }
+
+# 0. Time zone: the site is in Crete, so cron (backup 02:00) and host logs use Greek time
+if [ "$(timedatectl show -p Timezone --value)" != "Europe/Athens" ]; then
+    log "time zone: Europe/Athens"
+    timedatectl set-timezone Europe/Athens
+    systemctl restart cron
+fi
 
 # 1. Journal size cap
 log "journald: cap at 200M"

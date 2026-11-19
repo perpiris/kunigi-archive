@@ -61,10 +61,11 @@ services:
 
   # 4. The site (src/KunigiArchive.Web). Its settings and secrets (connection string, SMTP password, first admin,
   # email link base URL) are in /opt/kunigi/web.env; the image listens on 8080.
+  # The image is built by the deploy workflow and pulled from GHCR (#39); the deploy tags the commit's image :latest
+  # here. Roll back by tagging an older one :latest (ops/vps/README.md, "Rollback").
   web:
-    build:
-      context: .
-      dockerfile: src/KunigiArchive.Web/Dockerfile
+    image: ghcr.io/perpiris/kunigi-archive-web:latest
+    pull_policy: never
     container_name: kunigi_web
     env_file:
       - /opt/kunigi/web.env

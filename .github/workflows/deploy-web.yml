@@ -1,5 +1,8 @@
 name: Deploy web (tokinigi.gr)
 
+# Builds the site's image here and pushes it to GHCR, tagged with the commit SHA; the server only pulls it (#39).
+# The server keeps the last few images, so a rollback is a one-line switch (ops/vps/README.md, "Rollback").
+
 on:
   workflow_dispatch:
 
@@ -10,17 +13,56 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+env:
+  IMAGE: ghcr.io/perpiris/kunigi-archive-web
+
 jobs:
-  deploy:
+  image:
+    name: Build and push image
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # pull: the newest .NET 10.0.x base image, so runtime patches arrive with deploys.
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: src/KunigiArchive.Web/Dockerfile
+          push: true
+          pull: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    name: Deploy
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # The folder is replaced as a whole (unpacked next to it, then swapped), so files deleted from the repo don't
-      # linger on the server (#45). Nothing server-only lives in it: secrets are in /opt/kunigi, data in sibling
-      # folders. Its name stays kunigi-archive: it's the compose project name, and with it the volume names.
+      # The folder (compose file, nginx limits, ops scripts) is replaced as a whole (unpacked next to it, then
+      # swapped), so files deleted from the repo don't linger on the server (#45). Nothing server-only lives in it:
+      # secrets are in /opt/kunigi, data in sibling folders. Its name stays kunigi-archive: it's the compose project
+      # name, and with it the volume names.
       - name: Copy files via SSH
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -39,18 +81,34 @@ jobs:
                 rm -rf $TARGET.old"
           rm -f ~/.ssh/vps_key
 
-      - name: Rebuild and restart containers
+      # Pulls this commit's image and tags it :latest on the server, which is what docker-compose.yml runs, so a
+      # plain `docker compose up -d` there keeps running the deployed image. The token only lives for this job; the
+      # server logs out again. Older images beyond the newest KEEP are removed (the running one never is).
+      - name: Pull image and restart
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ env.IMAGE }}
+          TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GHCR_USER,GHCR_TOKEN,IMAGE,TAG
           script: |
             set -e
             cd ~/kunigi-archive
-            # --pull: the build takes the newest .NET 10.0.x base image, so runtime patches arrive with deploys (#39).
-            docker compose build --pull web
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            docker pull "$IMAGE:$TAG" || { docker logout ghcr.io; exit 1; }
+            docker logout ghcr.io
+            docker tag "$IMAGE:$TAG" "$IMAGE:latest"
             docker compose up -d
+            KEEP=4
+            docker images "$IMAGE" --format '{{.Tag}}' | grep -vx latest | tail -n +$((KEEP + 1)) \
+              | while read -r old; do docker rmi "$IMAGE:$old" || true; done
+            echo "Images kept for rollback:"
+            docker images "$IMAGE" --format '{{.Tag}}  {{.CreatedSince}}'
 
       - name: Health check
         run: |
