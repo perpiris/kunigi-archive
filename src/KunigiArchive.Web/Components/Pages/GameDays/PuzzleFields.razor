@@ -1,0 +1,28 @@
+@using KunigiArchive.Domain.GameDays
+@using KunigiArchive.Web.Forms.GameDays
+@* The puzzle's text fields, shared by the create and edit pages. *@
+<div class="k-field">
+    <label for="question" class="form-label">Ερώτηση</label>
+    <k-rich-text>
+        <InputTextArea id="question" class="form-control" rows="6" @bind-Value="Form.Question" />
+    </k-rich-text>
+</div>
+
+<div class="k-field">
+    <label for="answer" class="form-label">Απάντηση</label>
+    <k-rich-text>
+        <InputTextArea id="answer" class="form-control" rows="6" @bind-Value="Form.Answer" />
+    </k-rich-text>
+</div>
+
+<div class="k-field short">
+    <label for="group" class="form-label">Πακέτο <span class="text-body-secondary">(προαιρετικό)</span></label>
+    <InputNumber id="group" class="form-control" min="1" max="@Puzzle.GroupMax" @bind-Value="Form.Group" />
+    <ValidationMessage For="() => Form.Group" />
+    <div class="form-text">Γρίφοι με τον ίδιο αριθμό πακέτου εμφανίζονται μαζί, ως ένα πακέτο που δόθηκε στις ομάδες.</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PuzzleForm Form { get; set; } = null!;
+}

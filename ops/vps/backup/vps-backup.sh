@@ -8,11 +8,14 @@
 #     backup_<timestamp>/config/*.env       (secrets from /opt/kunigi)
 # Old archives are deleted only after a new one has been created and verified.
 #
-# Both sites are covered (#85): the old app (KunigiArchive, kunigi_media) and Web2 (KunigiArchiveV2,
-# kunigi_beta_media, kunigi_beta_keys). A database or folder that doesn't exist is logged as a WARNING and
-# skipped, so retiring the old app doesn't break the backup; anything else that fails aborts it.
+# Covers the site (KunigiArchiveV2, kunigi_web_media, kunigi_web_keys) and, until it's removed, the old MVC
+# site's frozen data (KunigiArchive, kunigi_media), kept for a rollback (#89). A database or folder that doesn't
+# exist is logged as a WARNING and skipped, so removing the old data doesn't break the backup; anything else
+# that fails aborts it with BACKUP FAILED. The "_v2" names inside the archive are kept so older archives and
+# the off-site check read the same way.
 # ==============================================================================
-set -euo pipefail
+# -E: the ERR trap below also fires inside functions (sql), so a failure is always logged as BACKUP FAILED.
+set -Eeuo pipefail
 
 BACKUP_DIR="/opt/kunigi-backups"
 KEEP=3                                  # number of archives to keep locally
@@ -26,8 +29,8 @@ DATABASES=(KunigiArchive KunigiArchiveV2)
 # host folder -> name inside the archive
 FOLDERS=(
     "/home/iperp/kunigi_media:media"                # old app's uploads
-    "/home/iperp/kunigi_beta_media:media_v2"        # Web2's uploads
-    "/home/iperp/kunigi_beta_keys:keys_v2"          # Web2's Data Protection keys (sign-in cookies, forms)
+    "/home/iperp/kunigi_web_media:media_v2"         # the site's uploads
+    "/home/iperp/kunigi_web_keys:keys_v2"           # the site's Data Protection keys (sign-in cookies, forms)
 )
 
 # SQL login with db_backupoperator rights on each database (created by ops/vps/init-secrets.sh)
@@ -68,8 +71,8 @@ for db in "${DATABASES[@]}"; do
 
     container_bak="/var/opt/mssql/data/db_backup_${TIMESTAMP}_$db.bak"
     log "Backing up database $db..."
-    sql "BACKUP DATABASE [$db] TO DISK = N'$container_bak' WITH FORMAT, INIT, CHECKSUM" > /dev/null
-    sql "RESTORE VERIFYONLY FROM DISK = N'$container_bak' WITH CHECKSUM" > /dev/null
+    sql "BACKUP DATABASE [$db] TO DISK = N'$container_bak' WITH FORMAT, INIT, CHECKSUM"
+    sql "RESTORE VERIFYONLY FROM DISK = N'$container_bak' WITH CHECKSUM"
     docker cp "$DB_CONTAINER:$container_bak" "$WORK_DIR/databases/$db.bak"
     docker exec "$DB_CONTAINER" rm -f "$container_bak"
 

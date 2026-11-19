@@ -6,15 +6,11 @@
 [![Deploy web](https://github.com/perpiris/kunigi-archive/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/perpiris/kunigi-archive/actions/workflows/deploy-web.yml)
 [![Web deployed](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fperpiris%2Fkunigi-archive%2Factions%2Fworkflows%2Fdeploy-web.yml%2Fruns%3Fper_page%3D1%26status%3Dsuccess&query=%24.workflow_runs%5B0%5D.updated_at&label=tokinigi.gr%20deployed&color=ff4d00)](https://tokinigi.gr)
 
-[![Deploy beta](https://github.com/perpiris/kunigi-archive/actions/workflows/deploy-beta.yml/badge.svg)](https://github.com/perpiris/kunigi-archive/actions/workflows/deploy-beta.yml)
-[![Beta deployed](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fperpiris%2Fkunigi-archive%2Factions%2Fworkflows%2Fdeploy-beta.yml%2Fruns%3Fper_page%3D1%26status%3Dsuccess&query=%24.workflow_runs%5B0%5D.updated_at&label=beta.tokinigi.gr%20deployed&color=2e5cff)](https://beta.tokinigi.gr)
-
 [![Schema changed](https://img.shields.io/github/last-commit/perpiris/kunigi-archive/master?path=src%2FKunigiArchive.Infrastructure%2FPersistence%2FMigrations&label=schema%20changed&color=ffd600)](https://github.com/perpiris/kunigi-archive/commits/master/src/KunigiArchive.Infrastructure/Persistence/Migrations)
 
 The archive of **"Το Κυνήγι Θησαυρού"**, the annual treasure hunt of Rethymno, Crete. For every year's game it keeps the team that organised it and the team that won, the game's days, every puzzle with its question and answer, posts, and photo, video and PDF material. The site is in Greek.
 
-- **Live:** https://tokinigi.gr
-- **Beta:** https://beta.tokinigi.gr (test data, not indexed)
+**Live:** https://tokinigi.gr
 
 Visitors browse teams, games, days and puzzles. Team managers edit their own teams and the games those teams organised; admins manage everything, including user accounts.
 
@@ -33,9 +29,8 @@ Visitors browse teams, games, days and puzzles. Team managers edit their own tea
 | `src/KunigiArchive.Domain` | Entities and rules (teams, games, days, puzzles, slugs) |
 | `src/KunigiArchive.Application` | Use cases (one handler per action), queries, authorization |
 | `src/KunigiArchive.Infrastructure` | EF Core, migrations, Identity, media storage, email |
-| `src/KunigiArchive.Web2` | The site: Blazor pages, REST API, middleware |
-| `src/KunigiArchive.Import` | Re-runnable import from the old site's database and media |
-| `src/KunigiArchive.Web` | The old ASP.NET Core MVC site, being retired |
+| `src/KunigiArchive.Web` | The site: Blazor pages, REST API, middleware |
+| `src/KunigiArchive.Import` | One-off import from the old MVC site (2026), removed with the old data |
 | `ops/vps` | Server setup, secrets, backups ([runbook](ops/vps/README.md)) |
 
 ## Run locally
@@ -44,7 +39,7 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) an
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d                       # SQL Server on 127.0.0.1:1433
-dotnet run --project src/KunigiArchive.Web2 --launch-profile http   # http://localhost:5256
+dotnet run --project src/KunigiArchive.Web --launch-profile http   # http://localhost:5256
 ```
 
 On first start the app creates its database (`KunigiArchiveV2`), applies the migrations, and seeds the development accounts from `appsettings.Development.json`. In development:
@@ -53,9 +48,9 @@ On first start the app creates its database (`KunigiArchiveV2`), applies the mig
 - emails aren't sent: they're saved as `.eml` files in `kunigi_mail_v2/` (open one to read a temporary password)
 - the API is described at `/swagger`
 
-`dotnet watch --project src/KunigiArchive.Web2` reloads on changes. Stop SQL Server with `docker compose -f docker-compose.dev.yml stop`; its data stays in the `kunigi-dev_sql_data` volume.
+`dotnet watch --project src/KunigiArchive.Web` reloads on changes. Stop SQL Server with `docker compose -f docker-compose.dev.yml stop`; its data stays in the `kunigi-dev_sql_data` volume.
 
-For real content, `src/KunigiArchive.Import` copies an old-site database and media folder into the new one. It's a dry run unless you add `--apply`; the usage is at the top of its `Program.cs`.
+For real content locally, restore a backup's `databases/KunigiArchiveV2.bak` into the dev SQL Server and copy its `media_v2/` folder to `kunigi_media_v2/` (see the restore steps in [`ops/vps/README.md`](ops/vps/README.md)).
 
 ## Run with Docker
 
@@ -67,7 +62,7 @@ docker compose -f docker-compose.dev.yml --profile app up -d --build   # http://
 
 Uploads and emails still land in `kunigi_media_v2/` and `kunigi_mail_v2/`. Stop everything with `docker compose -f docker-compose.dev.yml --profile app stop`.
 
-To build only the image: `docker build -f src/KunigiArchive.Web2/Dockerfile -t kunigi-web2 .`
+To build only the image: `docker build -f src/KunigiArchive.Web/Dockerfile -t kunigi-web .`
 
 ## Build and checks
 
@@ -75,14 +70,14 @@ To build only the image: `docker build -f src/KunigiArchive.Web2/Dockerfile -t k
 dotnet build KunigiArchive.slnx -c Release -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904
 ```
 
-CI runs this on every pull request (warnings fail the build, except known vulnerable-package warnings, #15) and builds both Docker images. `master` is protected: changes go in through a squash-merged PR.
+CI runs this on every pull request (warnings fail the build, except known vulnerable-package warnings, #15) and builds the Docker image. `master` is protected: changes go in through a squash-merged PR.
 
 Database changes are EF Core migrations in `src/KunigiArchive.Infrastructure/Persistence/Migrations`, applied automatically at startup:
 
 ```bash
-dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --startup-project src/KunigiArchive.Web2 --output-dir Persistence/Migrations
+dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --startup-project src/KunigiArchive.Web --output-dir Persistence/Migrations
 ```
 
 ## Deploy
 
-Deploys are manual GitHub Actions from `master`: **Deploy web** (tokinigi.gr) and **Deploy beta** (beta.tokinigi.gr). Each copies the repo to the VPS, rebuilds the image there and checks that the site answers. Configuration and secrets live in env files on the server, never in the repo. Server layout, secrets, backups and restores are in [`ops/vps/README.md`](ops/vps/README.md).
+Deploys are a manual GitHub Action from `master`, **Deploy web**: it copies the repo to the VPS (replacing the folder, so deleted files don't linger), rebuilds the image there with `docker compose up -d --build` and checks that https://tokinigi.gr answers. Configuration and secrets live in env files on the server, never in the repo. Server layout, secrets, backups and restores are in [`ops/vps/README.md`](ops/vps/README.md).

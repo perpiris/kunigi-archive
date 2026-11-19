@@ -1,0 +1,126 @@
+@page "/auth/login"
+@attribute [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(KunigiArchive.Web.Middleware.RateLimitPolicies.Auth)]
+@using KunigiArchive.Infrastructure.Identity
+@using KunigiArchive.Web.Authentication
+@using KunigiArchive.Web.Forms.Auth
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<AppUser> SignInManager
+@inject UserManager<AppUser> UserManager
+@inject NavigationManager Navigation
+
+<PageTitle>Σύνδεση</PageTitle>
+
+<div class="k-form-page narrow">
+    <header class="k-page-head">
+        <h1>Σύνδεση</h1>
+    </header>
+    <p class="text-body-secondary">Για τους διαχειριστές των ομάδων και του αρχείου.</p>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert">@_error</div>
+    }
+    else if (Reset == 1)
+    {
+        <div class="alert alert-success" role="status">Ο κωδικός σας άλλαξε. Συνδεθείτε με τον νέο κωδικό.</div>
+    }
+
+    @* No enhanced navigation: the whole page has to reload so the menu picks up the new sign-in. *@
+    <EditForm Model="Form" FormName="login" OnValidSubmit="LoginAsync" class="k-form">
+        <DataAnnotationsValidator />
+
+        <div class="k-field">
+            <label for="email" class="form-label">Email</label>
+            <InputText id="email" type="email" autocomplete="username" class="form-control" @bind-Value="Form.Email" />
+            <ValidationMessage For="() => Form.Email" />
+        </div>
+
+        <div class="k-field mb-0">
+            <label for="password" class="form-label">Κωδικός</label>
+            <InputText id="password" type="password" autocomplete="current-password" class="form-control"
+                       @bind-Value="Form.Password" />
+            <ValidationMessage For="() => Form.Password" />
+        </div>
+
+        <div class="k-form-actions">
+            <button type="submit" class="btn btn-primary w-100">Σύνδεση</button>
+        </div>
+    </EditForm>
+
+    <p class="mt-3 text-center"><a href="auth/forgot-password">Ξεχάσατε τον κωδικό;</a></p>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = null!;
+
+    [SupplyParameterFromForm]
+    private LoginForm Form { get; set; } = null!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    private int? Reset { get; set; }
+
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        Form ??= new LoginForm();
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && HttpContext.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo(LocalUrl.OrHome(ReturnUrl));
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        SignInResult result = await SignInManager.PasswordSignInAsync(
+            Form.Email, Form.Password, isPersistent: false, lockoutOnFailure: true);
+
+        // One message for a wrong email and a wrong password, so the form doesn't reveal which accounts exist.
+        if (result.IsLockedOut)
+        {
+            _error = "Πολλές αποτυχημένες προσπάθειες. Δοκιμάστε ξανά σε λίγα λεπτά.";
+            return;
+        }
+
+        // A disabled account (DisabledUserConfirmation, #24).
+        if (result.IsNotAllowed)
+        {
+            _error = "Ο λογαριασμός έχει απενεργοποιηθεί. Επικοινωνήστε με τον διαχειριστή.";
+            return;
+        }
+
+        if (!result.Succeeded)
+        {
+            _error = "Το email ή ο κωδικός δεν ταιριάζουν.";
+            return;
+        }
+
+        Navigation.NavigateTo(await GetRedirectUrlAsync());
+    }
+
+    private async Task<string> GetRedirectUrlAsync()
+    {
+        if (LocalUrl.IsLocal(ReturnUrl))
+        {
+            return ReturnUrl!;
+        }
+
+        AppUser? user = await UserManager.FindByEmailAsync(Form.Email);
+        if (user is null)
+        {
+            return "/";
+        }
+
+        if (await UserManager.IsInRoleAsync(user, Roles.Admin))
+        {
+            return "/admin";
+        }
+
+        return await UserManager.IsInRoleAsync(user, Roles.Manager) ? "/my-teams" : "/";
+    }
+}

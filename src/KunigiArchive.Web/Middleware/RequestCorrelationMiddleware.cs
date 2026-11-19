@@ -3,7 +3,9 @@ using Serilog.Context;
 
 namespace KunigiArchive.Web.Middleware;
 
-public partial class RequestCorrelationMiddleware(RequestDelegate next)
+// Gives every request an id (X-Correlation-Id), returned in the response and attached to every log line of the
+// request, so one request's lines can be found together. Same as the old app's.
+public sealed partial class RequestCorrelationMiddleware(RequestDelegate next)
 {
     public const string HeaderName = "X-Correlation-Id";
     private const string LogProperty = "CorrelationId";
@@ -20,7 +22,7 @@ public partial class RequestCorrelationMiddleware(RequestDelegate next)
         }
     }
 
-    // Only accept short, safe ids from the client so the header can't be used to inject into logs.
+    // Only short, safe ids from the client are kept, so the header can't be used to inject into the logs.
     private static string GetOrCreateCorrelationId(HttpRequest request)
     {
         string? incoming = request.Headers[HeaderName].FirstOrDefault();

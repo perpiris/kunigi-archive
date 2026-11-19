@@ -48,24 +48,35 @@ services:
       - db_data:/var/opt/mssql
     restart: always
 
-  # 4. Web Application (.NET)
+  # 4. The site (src/KunigiArchive.Web). Its settings and secrets (connection string, SMTP password, first admin,
+  # email link base URL) are in /opt/kunigi/web.env; the image listens on 8080.
   web:
     build:
       context: .
       dockerfile: src/KunigiArchive.Web/Dockerfile
     container_name: kunigi_web
     env_file:
-      - /opt/kunigi/app.env
+      - /opt/kunigi/web.env
     environment:
       # Nginx Proxy settings
       - VIRTUAL_HOST=tokinigi.gr,www.tokinigi.gr
       - LETSENCRYPT_HOST=tokinigi.gr,www.tokinigi.gr
       - VIRTUAL_PORT=8080
       # App settings
-      - ASPNETCORE_URLS=http://+:8080
-      - MediaDirectory=/app/media
+      - DataProtection__KeysPath=/app/keys
+      - LogFile__Path=/app/logs/web-.log
     volumes:
-      - ../kunigi_media:/app/media
+      # Uploads, sign-in keys and log files. The container runs as uid 1654 (APP_UID), so the folders must be
+      # writable by it (ops/vps/init-secrets.sh creates them). All three are in the nightly backup but the logs.
+      - ../kunigi_web_media:/app/media
+      - ../kunigi_web_keys:/app/keys
+      - ../kunigi_web_logs:/app/logs
+    # `docker logs` output rotates too (#40); the files in kunigi_web_logs keep 30 days.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     depends_on:
       - db
     restart: always

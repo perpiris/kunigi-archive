@@ -65,7 +65,7 @@ jobs:
         run: |
           tar -tzvf "$BACKUP_FILE" > listing.txt
 
-          # Web2 is the live site (#85): its database and uploads must be there.
+          # The site's database and uploads must be there (#85).
           DB_SIZE=$(awk '$NF ~ /\/databases\/KunigiArchiveV2\.bak$/ {print $3}' listing.txt | head -1)
           MEDIA_FILES=$(awk '$1 !~ /^d/ && $NF ~ /\/media_v2\// {n++} END {print n+0}' listing.txt)
 
@@ -77,7 +77,7 @@ jobs:
             exit 1
           fi
           if [ "$MEDIA_FILES" -lt 1 ]; then
-            echo "::error::No Web2 media files in backup, refusing to replace the previous off-site backup"
+            echo "::error::No site media files in backup, refusing to replace the previous off-site backup"
             exit 1
           fi
 

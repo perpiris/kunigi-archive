@@ -1,0 +1,201 @@
+@page "/games/{Slug}/days/{DaySlug}/edit"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.GameDays.GetGameDays
+@using KunigiArchive.Application.GameDays.ManageGameDay
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Media
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Domain.GameDays
+@using KunigiArchive.Web.Forms.GameDays
+@using KunigiArchive.Web.Mappers
+@inject GetGameDayForEditHandler GetGameDayForEditHandler
+@inject UpdateGameDayHandler UpdateGameDayHandler
+@inject UploadGameDayMediaHandler UploadGameDayMediaHandler
+@inject DeleteGameDayMediaHandler DeleteGameDayMediaHandler
+@inherits FormPage
+
+<PageTitle>Επεξεργασία ημέρας</PageTitle>
+
+<div class="k-form-page wide">
+
+@if (_page is not null && Form is not null)
+{
+    GameDayDetails day = _page.Day;
+    <header class="k-page-head">
+        <h1>@day.Label</h1>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary" href="games/@Slug/actions">Ενέργειες παιχνιδιού</a>
+            <a class="btn btn-outline-secondary" href="games/@Slug/days/@DaySlug/puzzles">Γρίφοι</a>
+        </div>
+    </header>
+    <p class="text-body-secondary"><GameName Order="_page.Game.Order" Year="_page.Game.Year" /></p>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert alert-danger" role="alert">@_message</div>
+    }
+
+    <EditForm Model="Form" FormName="edit-day" OnValidSubmit="SaveAsync" Enhance class="k-form wide">
+        <DataAnnotationsValidator />
+        <input type="hidden" name="Form.Id" value="@Form.Id" />
+        <h2 class="k-form-title">Περιγραφή</h2>
+
+        <div class="k-field">
+            <label for="title" class="form-label">Τίτλος <span class="text-body-secondary">(προαιρετικός)</span></label>
+            <InputText id="title" class="form-control" maxlength="@GameDay.TitleMaxLength" @bind-Value="Form.Title" />
+            <ValidationMessage For="() => Form.Title" />
+            <div class="form-text">Εμφανίζεται κάτω από το «@day.Label» στη σελίδα της ημέρας.</div>
+        </div>
+
+        <div class="k-field">
+            <label for="description" class="form-label">Περιγραφή</label>
+            <k-rich-text>
+                <InputTextArea id="description" class="form-control" rows="10" @bind-Value="Form.Description" />
+            </k-rich-text>
+            <div class="form-text">Πώς έγινε η ημέρα: η διαδρομή, οι αποστολές, οι κανόνες.</div>
+        </div>
+
+        <div class="k-form-actions">
+            <a class="btn btn-outline-secondary" href="games/@Slug/actions">Ακύρωση</a>
+            <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+        </div>
+    </EditForm>
+
+    <section class="k-form wide">
+        <h2 class="k-form-title">Υλικό</h2>
+        <form method="post" enctype="multipart/form-data" @formname="upload-day-media" @onsubmit="UploadAsync">
+            <AntiforgeryToken />
+            <label for="files" class="form-label">Νέα αρχεία</label>
+            <div class="k-inline-form">
+                <input id="files" type="file" name="Files" multiple accept="@MediaRules.AcceptAttribute" class="form-control" />
+                <button type="submit" class="btn btn-primary">Ανέβασμα</button>
+            </div>
+            <UploadHint />
+        </form>
+
+        <form method="post" @formname="delete-day-media" @onsubmit="DeleteMediaAsync" class="mt-3">
+            <AntiforgeryToken />
+            <MediaGrid Items="day.Media.Select(m => new MediaGrid.Item(m.Id, m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList()"
+                       Gallery="day-media" />
+        </form>
+    </section>
+}
+
+</div>
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DaySlug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "edit-day")]
+    private GameDayForm? Form { get; set; }
+
+    [SupplyParameterFromForm(FormName = "upload-day-media")]
+    private IReadOnlyList<IFormFile>? Files { get; set; }
+
+    [SupplyParameterFromForm(FormName = "delete-day-media")]
+    private Guid? DeleteMediaId { get; set; }
+
+    private GameDayPage? _page;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        // When the form was posted its fields are kept; otherwise it starts from the saved day.
+        Form ??= _page is null ? null : new GameDayForm { Id = _page.Day.Id, Title = _page.Day.Title, Description = _page.Day.Description };
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_page is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await UpdateGameDayHandler.HandleAsync(new UpdateGameDayCommand(_page.Day.Id, Form!.Title, Form.Description), CancellationToken.None);
+        }
+        catch (DomainException exception)
+        {
+            _message = exception.Message;
+            return;
+        }
+
+        Done("Η ημέρα αποθηκεύτηκε.", $"/games/{Slug}/actions");
+    }
+
+    private async Task UploadAsync()
+    {
+        if (_page is null)
+        {
+            return;
+        }
+
+        List<MediaUpload> uploads = (Files ?? []).ToUploads();
+        try
+        {
+            IReadOnlyList<MediaDetails> added = await UploadGameDayMediaHandler.HandleAsync(
+                new UploadGameDayMediaCommand(_page.Day.Id, uploads), CancellationToken.None);
+            Reload(added.Count == 1 ? "Ανέβηκε 1 αρχείο." : $"Ανέβηκαν {added.Count} αρχεία.");
+        }
+        catch (Exception exception) when (exception is InvalidRequestException or DomainException)
+        {
+            _message = exception.Message;
+        }
+        finally
+        {
+            foreach (MediaUpload upload in uploads)
+            {
+                await upload.Content.DisposeAsync();
+            }
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task DeleteMediaAsync()
+    {
+        if (_page is null || DeleteMediaId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DeleteGameDayMediaHandler.HandleAsync(new DeleteGameDayMediaCommand(_page.Day.Id, DeleteMediaId.Value), CancellationToken.None);
+            Reload("Το αρχείο διαγράφηκε.");
+        }
+        catch (DomainException exception)
+        {
+            _message = exception.Message;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _page = await GetGameDayForEditHandler.HandleAsync(Slug, DaySlug, CancellationToken.None);
+        }
+        catch (NotFoundException)
+        {
+            _page = null;
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            _page = null;
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+}

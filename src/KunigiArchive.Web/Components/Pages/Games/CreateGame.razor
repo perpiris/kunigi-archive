@@ -1,0 +1,67 @@
+@page "/games/create"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Games.CreateGame
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.GetTeamOptions
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Web.Forms.Games
+@using KunigiArchive.Web.Mappers
+@inject CreateGameHandler CreateGameHandler
+@inject GetTeamOptionsHandler GetTeamOptionsHandler
+@inherits FormPage
+
+<PageTitle>Νέο παιχνίδι</PageTitle>
+
+<div class="k-form-page">
+
+<header class="k-page-head">
+    <h1>Νέο παιχνίδι</h1>
+</header>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger k-form-alert" role="alert">@_error</div>
+}
+
+<EditForm Model="Form" FormName="create-game" OnValidSubmit="CreateAsync" Enhance class="k-form">
+    <DataAnnotationsValidator />
+
+    <GameRecordFields Form="Form" Teams="_teams" />
+
+    <div class="k-form-actions">
+        <a class="btn btn-outline-secondary" href="games/manage">Ακύρωση</a>
+        <button type="submit" class="btn btn-primary">Δημιουργία</button>
+    </div>
+</EditForm>
+
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private GameRecordForm Form { get; set; } = null!;
+
+    private IReadOnlyList<TeamOption> _teams = [];
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Form ??= new GameRecordForm();
+        _teams = await GetTeamOptionsHandler.HandleAsync(CancellationToken.None);
+    }
+
+    private async Task CreateAsync()
+    {
+        try
+        {
+            await CreateGameHandler.HandleAsync(Form.ToCreateCommand(), CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is DomainException or ConflictException or InvalidRequestException)
+        {
+            _error = exception.Message;
+            return;
+        }
+
+        Done("Το παιχνίδι δημιουργήθηκε.", "/games/manage");
+    }
+}

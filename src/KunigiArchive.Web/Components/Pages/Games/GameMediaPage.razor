@@ -1,0 +1,133 @@
+@page "/games/{Slug}/media"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.DeleteGameMedia
+@using KunigiArchive.Application.Games.GetGameForEdit
+@using KunigiArchive.Application.Games.UploadGameMedia
+@using KunigiArchive.Application.Media
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Web.Mappers
+@inject GetGameForEditHandler GetGameForEditHandler
+@inject UploadGameMediaHandler UploadGameMediaHandler
+@inject DeleteGameMediaHandler DeleteGameMediaHandler
+@inherits FormPage
+
+<PageTitle>Υλικό παιχνιδιού</PageTitle>
+
+@if (_game is not null)
+{
+    <header class="k-page-head">
+        <h1><GameName Order="_game.Order" Year="_game.Year" /></h1>
+        <a class="btn btn-outline-secondary" href="games/@_game.Slug/actions">Ενέργειες παιχνιδιού</a>
+    </header>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+    }
+
+    <form method="post" enctype="multipart/form-data" @formname="upload-media" @onsubmit="UploadAsync" class="k-form mb-4">
+        <AntiforgeryToken />
+        <h2 class="k-form-title">Υλικό</h2>
+        <label for="files" class="form-label">Νέα αρχεία</label>
+        <div class="k-inline-form">
+            <input id="files" type="file" name="Files" multiple accept="@MediaRules.AcceptAttribute" class="form-control" />
+            <button type="submit" class="btn btn-primary">Ανέβασμα</button>
+        </div>
+        <UploadHint />
+    </form>
+
+    <form method="post" @formname="delete-media" @onsubmit="DeleteAsync">
+        <AntiforgeryToken />
+        <MediaGrid Items="_game.Media.Select(m => new MediaGrid.Item(m.Id, m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList()"
+                   Gallery="game-media" />
+    </form>
+}
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "upload-media")]
+    private IReadOnlyList<IFormFile>? Files { get; set; }
+
+    [SupplyParameterFromForm(FormName = "delete-media")]
+    private Guid? DeleteMediaId { get; set; }
+
+    private GameDetails? _game;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task UploadAsync()
+    {
+        if (_game is null)
+        {
+            return;
+        }
+
+        List<MediaUpload> uploads = (Files ?? []).ToUploads();
+        try
+        {
+            IReadOnlyList<GameMediaDetails> added = await UploadGameMediaHandler.HandleAsync(
+                new UploadGameMediaCommand(_game.Id, uploads), CancellationToken.None);
+            string uploaded = added.Count == 1 ? "Ανέβηκε 1 αρχείο." : $"Ανέβηκαν {added.Count} αρχεία.";
+            Reload(uploaded);
+        }
+        catch (Exception exception) when (exception is InvalidRequestException or DomainException)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+        finally
+        {
+            foreach (MediaUpload upload in uploads)
+            {
+                await upload.Content.DisposeAsync();
+            }
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_game is null || DeleteMediaId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DeleteGameMediaHandler.HandleAsync(new DeleteGameMediaCommand(_game.Id, DeleteMediaId.Value), CancellationToken.None);
+            Reload("Το αρχείο διαγράφηκε.");
+        }
+        catch (DomainException exception)
+        {
+            (_message, _isError) = (exception.Message, true);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+        }
+        catch (GameNotFoundException)
+        {
+            _game = null;
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+}

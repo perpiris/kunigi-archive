@@ -6,7 +6,7 @@
 #   docker compose -f docker-compose.dev.yml up -d                       start SQL Server
 #   docker compose -f docker-compose.dev.yml stop                        stop it, keeping the data
 #
-# Or run Web2 in a container too (the production image, Development settings), on http://localhost:8080:
+# Or run the site in a container too (the production image, Development settings), on http://localhost:8080:
 #
 #   docker compose -f docker-compose.dev.yml --profile app up -d --build
 #
@@ -31,11 +31,11 @@ services:
       retries: 20
       start_period: 10s
 
-  web2:
+  web:
     profiles: [app]
     build:
       context: .
-      dockerfile: src/KunigiArchive.Web2/Dockerfile
+      dockerfile: src/KunigiArchive.Web/Dockerfile
     depends_on:
       sql:
         condition: service_healthy
@@ -52,8 +52,8 @@ services:
     volumes:
       - ./kunigi_media_v2:/app/media
       - ./kunigi_mail_v2:/app/mail
-      - web2_keys:/app/keys
+      - web_keys:/app/keys
 
 volumes:
   sql_data:
-  web2_keys:
+  web_keys:

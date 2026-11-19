@@ -50,8 +50,6 @@ jobs:
         include:
           - app: web
             dockerfile: src/KunigiArchive.Web/Dockerfile
-          - app: beta
-            dockerfile: src/KunigiArchive.Web2/Dockerfile
     steps:
       - uses: actions/checkout@v7
 
