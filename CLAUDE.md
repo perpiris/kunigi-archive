@@ -74,16 +74,17 @@ dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --sta
 
 ## Deployment & Operations
 
-- **Deploy web** (`deploy-web.yml`, manual, master only): streams the repo to `~iperp/kunigi-archive` as a tar over SSH and swaps the folder in (so deleted files don't linger, #45), runs `docker compose build --pull web` (newest .NET 10.0.x base image) and `docker compose up -d`, then waits for https://tokinigi.gr/healthz (200 only when the database answers).
-- **Off-site backup** (`backup.yml`, manual, currently disabled): downloads the newest backup, checks it, stores it encrypted as an artifact (#38).
+- **Deploy web** (`deploy-web.yml`, manual, master only): builds the image in Actions (newest .NET 10.0.x base image) and pushes it to GHCR as `ghcr.io/perpiris/kunigi-archive-web:<sha>`; streams the repo to `~iperp/kunigi-archive` as a tar over SSH and swaps the folder in (so deleted files don't linger, #45); on the server pulls the image, tags it `:latest` (what compose runs, `pull_policy: never`), runs `docker compose up -d`, keeps the 4 newest images for rollback (#39), then waits for https://tokinigi.gr/healthz (200 only when the database answers). Nothing is built on the server.
+- **Off-site backup** (`backup.yml`, manual): downloads the newest backup, checks it, stores it encrypted (`BACKUP_PASSPHRASE`) as the only backup artifact (#38).
+- On startup the site waits up to 2 minutes for SQL Server and its database to be online before migrating (#94).
 - **Containers** (`docker-compose.yml`, compose project `kunigi-archive`):
   - `kunigi_web`: the site, on :8080, runs as uid 1654; mounts `kunigi_web_media`, `kunigi_web_keys`, `kunigi_web_logs`
   - `kunigi_db`: SQL Server 2022 (CU28), volume `kunigi-archive_db_data`; port 1433 is published but firewalled to the WireGuard VPN only; `sa` is disabled, admin work uses `kunigi_admin` (#46)
   - `nginx-proxy` + `nginx-acme-companion`: TLS / reverse proxy (HSTS comes from here)
-  - Images are pinned to release tags in `docker-compose.yml` (#39); upgrade by changing the tag (backup first for `db`). Every container's `docker logs` rotates (5 × 10 MB).
+  - The site's image comes from GHCR (built by the deploy); the others are pinned to release tags in `docker-compose.yml` (#39); upgrade by changing the tag (backup first for `db`). Every container's `docker logs` rotates (5 × 10 MB).
 - **Everything about the server** (layout, secrets, SQL logins, WireGuard/SSMS, backups, restore, rollback, change log) is in **`ops/vps/README.md`**. Host config is scripted in `ops/vps/` (`setup.sh`, `init-secrets.sh`, `rotate-smtp.sh`, `wireguard.sh`, `backup/vps-backup.sh`, `sql/tune.sql`). Run them on the VPS with `sudo bash <script>` (#41).
 - **Access**: `ssh kunigi-vps` (user `claude`, key `~/.ssh/kunigi_claude`, passwordless sudo).
-- **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (database `KunigiArchiveV2`, `kunigi_web_media`, `kunigi_web_keys`, env files). A failure, including a login that can't connect, is logged as `BACKUP FAILED` in `/var/log/kunigi-backup.log`.
+- **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (database `KunigiArchiveV2`, `kunigi_web_media`, `kunigi_web_keys`, env files). A failure, including a login that can't connect, is logged as `BACKUP FAILED` in `/var/log/kunigi-backup.log` and emailed to the owner (as are warnings); `--test-alert` sends a test email. The server's time zone is Europe/Athens.
 - Never run `docker compose down -v`, and never rename the compose project or volumes.
 
 ## Architecture

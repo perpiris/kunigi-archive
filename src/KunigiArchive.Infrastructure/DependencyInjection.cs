@@ -18,10 +18,12 @@ using KunigiArchive.Infrastructure.Persistence;
 using KunigiArchive.Infrastructure.Persistence.Queries;
 using KunigiArchive.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace KunigiArchive.Infrastructure;
 
@@ -87,10 +89,54 @@ public static class DependencyInjection
         using IServiceScope scope = services.CreateScope();
 
         KunigiArchiveDbContext dbContext = scope.ServiceProvider.GetRequiredService<KunigiArchiveDbContext>();
+        await WaitForDatabaseAsync(dbContext, scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup"));
         await dbContext.Database.MigrateAsync();
 
         IdentitySeeder seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
         await seeder.SeedAsync();
+    }
+
+    // When SQL Server starts together with the site (a reboot, a new image), the database is briefly not open yet.
+    // MigrateAsync would then take it for missing and try CREATE DATABASE, which the site's login may not do, and
+    // the site would crash (#94). So first wait, asking master (any login may), until the database is online or
+    // truly absent (a new development database, which MigrateAsync then creates). Gives up after two minutes.
+    private static async Task WaitForDatabaseAsync(KunigiArchiveDbContext dbContext, ILogger logger)
+    {
+        SqlConnectionStringBuilder target = new SqlConnectionStringBuilder(dbContext.Database.GetConnectionString());
+        string database = target.InitialCatalog;
+        SqlConnectionStringBuilder master = new SqlConnectionStringBuilder(target.ConnectionString)
+        {
+            InitialCatalog = "master",
+            ConnectTimeout = 5
+        };
+
+        DateTime giveUpAt = DateTime.UtcNow.AddMinutes(2);
+        while (true)
+        {
+            string? state;
+            try
+            {
+                await using SqlConnection connection = new SqlConnection(master.ConnectionString);
+                await connection.OpenAsync();
+                await using SqlCommand command = new SqlCommand("SELECT state_desc FROM sys.databases WHERE name = @name", connection);
+                command.Parameters.AddWithValue("@name", database);
+                state = (string?)await command.ExecuteScalarAsync();
+            }
+            catch (SqlException exception) when (DateTime.UtcNow < giveUpAt)
+            {
+                logger.LogWarning("SQL Server isn't answering yet ({Error}), waiting", exception.Message);
+                await Task.Delay(TimeSpan.FromSeconds(3));
+                continue;
+            }
+
+            if (state is null or "ONLINE" || DateTime.UtcNow >= giveUpAt)
+            {
+                return;
+            }
+
+            logger.LogWarning("Database {Database} is {State}, waiting until it's online", database, state);
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
     }
 
     private static void AddMediaStorage(this IServiceCollection services, IConfiguration configuration)
