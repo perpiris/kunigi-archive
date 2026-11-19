@@ -8,11 +8,10 @@
 #     backup_<timestamp>/config/*.env       (secrets from /opt/kunigi)
 # Old archives are deleted only after a new one has been created and verified.
 #
-# Covers the site (KunigiArchiveV2, kunigi_web_media, kunigi_web_keys) and, until it's removed, the old MVC
-# site's frozen data (KunigiArchive, kunigi_media), kept for a rollback (#89). A database or folder that doesn't
-# exist is logged as a WARNING and skipped, so removing the old data doesn't break the backup; anything else
-# that fails aborts it with BACKUP FAILED. The "_v2" names inside the archive are kept so older archives and
-# the off-site check read the same way.
+# Covers the site: database KunigiArchiveV2, uploads (kunigi_web_media) and sign-in keys (kunigi_web_keys).
+# A database or folder that doesn't exist is logged as a WARNING and skipped; anything else that fails aborts
+# the run with BACKUP FAILED. The "_v2" names inside the archive are kept so older archives and the off-site
+# check read the same way. (The old MVC site's database and media were removed on 2026-11-19, #89.)
 # ==============================================================================
 # -E: the ERR trap below also fires inside functions (sql), so a failure is always logged as BACKUP FAILED.
 set -Eeuo pipefail
@@ -24,11 +23,10 @@ SECRETS_DIR="/opt/kunigi"
 DB_CONTAINER="kunigi_db"
 SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
 
-DATABASES=(KunigiArchive KunigiArchiveV2)
+DATABASES=(KunigiArchiveV2)
 
 # host folder -> name inside the archive
 FOLDERS=(
-    "/home/iperp/kunigi_media:media"                # old app's uploads
     "/home/iperp/kunigi_web_media:media_v2"         # the site's uploads
     "/home/iperp/kunigi_web_keys:keys_v2"           # the site's Data Protection keys (sign-in cookies, forms)
 )
@@ -64,7 +62,11 @@ mkdir -p "$WORK_DIR/databases"
 
 # 1. Databases: full backup with checksums, then verify each is restorable
 for db in "${DATABASES[@]}"; do
-    if [ "$(sql "SELECT COUNT(*) FROM sys.databases WHERE name = N'$db'")" != "1" ]; then
+    # A plain assignment, so a failed query (can't connect, wrong password) aborts the run as BACKUP FAILED
+    # instead of being mistaken for a missing database. (On 2026-11-19 the backup login's default database was
+    # dropped and the site's database was silently skipped.)
+    exists=$(sql "SELECT COUNT(*) FROM sys.databases WHERE name = N'$db'")
+    if [ "$exists" != "1" ]; then
         warn "database $db not found, skipped"
         continue
     fi

@@ -32,7 +32,6 @@ ssh kunigi-vps 'sudo ~iperp/kunigi-archive/ops/vps/setup.sh --sql'
 | **Uploaded media** | `/home/iperp/kunigi_web_media` → `/app/media` in `kunigi_web` |
 | Sign-in keys | `/home/iperp/kunigi_web_keys` → `/app/keys` (Data Protection; losing them signs everyone out) |
 | App logs | `/home/iperp/kunigi_web_logs` (JSON lines, a file a day, new file past 10 MB, 30 kept), plus `docker logs kunigi_web` (capped at 5 × 10 MB) |
-| Old MVC site (rollback, until removed) | DB `KunigiArchive`, media `/home/iperp/kunigi_media`, image `kunigi-archive-web:old-mvc`, `/opt/kunigi/app.env`. Frozen on 2026-11-19, read by nothing. See [Rollback](#rollback-to-the-old-site). |
 | Backups | `/opt/kunigi-backups/kunigi_backup_<timestamp>.tar.gz` (newest 3 kept) |
 | Backup log | `/var/log/kunigi-backup.log` |
 | Backup cron | root crontab, `0 2 * * *` |
@@ -53,14 +52,12 @@ Secrets exist **only on the VPS**, in `/opt/kunigi`. The dir is `root:iperp 750`
 | `web.env` | `kunigi_web` | `ConnectionStrings__KunigiArchive` (login `kunigi_beta`), `AdminSeed__Email`, `AdminSeed__Password` (first admin on an empty database only), `EmailSettings__Password` (Mailtrap token), `EmailSettings__ApplicationUrl` (`https://tokinigi.gr`) |
 | `backup.env` | `vps-backup.sh` | `BACKUP_SQL_USER`, `BACKUP_SQL_PASSWORD` (login `kunigi_backup`) |
 | `admin.env` | you (SSMS), maintenance | `SQL_ADMIN_USER`, `SQL_ADMIN_PASSWORD` (login `kunigi_admin`) |
-| `app.env`, `beta.env` | nothing (old site / old beta) | kept for a rollback; delete with the old data |
 
 | SQL login | Rights | Purpose |
 |---|---|---|
 | `kunigi_beta` | `db_owner` on `KunigiArchiveV2` only | the site (owner rights because migrations run at startup). The name is historical; a new server gets `kunigi_web` (`init-secrets.sh` uses whatever `web.env` names). |
-| `kunigi_backup` | `db_backupoperator` on both databases + `CREATE ANY DATABASE` (needed for `RESTORE VERIFYONLY`) | nightly backup |
+| `kunigi_backup` | `db_backupoperator` on `KunigiArchiveV2` + `CREATE ANY DATABASE` (needed for `RESTORE VERIFYONLY`); default database `master` | nightly backup |
 | `kunigi_admin` | `sysadmin` | manual administration / SSMS |
-| `kunigi_app` | `db_owner` on `KunigiArchive` | the old site; unused since 2026-11-19, drop with the old data |
 | `sa` | `sysadmin` | `init-secrets.sh` only (#46); rotate with `init-secrets.sh --rotate-sa` |
 
 Any `appsettings.json` key can be overridden in `web.env` with `Section__Key=value`. After editing `web.env`, recreate the site: `cd ~iperp/kunigi-archive && sudo docker compose up -d --no-build web`.
@@ -68,20 +65,6 @@ Any `appsettings.json` key can be overridden in `web.env` with `Section__Key=val
 To see a value: `ssh kunigi-vps 'sudo cat /opt/kunigi/admin.env'`.
 
 **Recreating the database** (e.g. a restore into an empty server): dropping `KunigiArchiveV2` also drops its database users, so run `sudo bash ~iperp/kunigi-archive/ops/vps/init-secrets.sh` afterwards: it gives the site's login and `kunigi_backup` their rights again. Without it the nightly backup fails with `BACKUP FAILED`.
-
-## Rollback to the old site
-
-Until the old data is removed (#89), the old MVC site can be brought back exactly as it was frozen on 2026-11-19 (changes made on the new site since then don't carry back):
-
-```bash
-cd ~iperp/kunigi-archive && sudo docker compose stop web
-sudo docker run -d --name kunigi_web_old --network kunigi-archive_default --env-file /opt/kunigi/app.env \
-  -e VIRTUAL_HOST=tokinigi.gr,www.tokinigi.gr -e LETSENCRYPT_HOST=tokinigi.gr,www.tokinigi.gr -e VIRTUAL_PORT=8080 \
-  -e ASPNETCORE_URLS=http://+:8080 -e MediaDirectory=/app/media -v /home/iperp/kunigi_media:/app/media \
-  --restart always kunigi-archive-web:old-mvc
-```
-
-Back to the new site: `sudo docker rm -f kunigi_web_old && cd ~iperp/kunigi-archive && sudo docker compose up -d web`.
 
 ## VPN (WireGuard) and SSMS
 
@@ -109,10 +92,10 @@ ssh kunigi-vps 'sudo kunigi-wireguard add phone && sudo cat /etc/wireguard/clien
 ## Backups
 
 The nightly `vps-backup.sh` (#85):
-- databases `KunigiArchiveV2` (the site) and `KunigiArchive` (old site, until removed): `BACKUP DATABASE ... WITH CHECKSUM`, then `RESTORE VERIFYONLY`; aborts if a `.bak` is under 1 MB
-- folders `kunigi_web_media` (uploads), `kunigi_web_keys` (sign-in keys) and `kunigi_media` (old site, until removed)
+- the database `KunigiArchiveV2`: `BACKUP DATABASE ... WITH CHECKSUM`, then `RESTORE VERIFYONLY`; aborts if a `.bak` is under 1 MB
+- folders `kunigi_web_media` (uploads) and `kunigi_web_keys` (sign-in keys)
 - the env files from `/opt/kunigi`
-- a missing database or folder is logged as `WARNING` and skipped (so removing the old data doesn't break it); any other error aborts with `BACKUP FAILED` and the SQL error in the log
+- a missing database or folder is logged as `WARNING` and skipped; any other error (including a login that can't connect) aborts with `BACKUP FAILED` and the SQL error in the log
 - keeps the newest 3 archives; old ones are deleted only after a successful run
 
 The lists are at the top of the script. After changing it, install it again with `sudo bash ops/vps/setup.sh` (or `sudo install -o root -g root -m 700 ops/vps/backup/vps-backup.sh /opt/kunigi-backups/`) and run it once by hand: `sudo /opt/kunigi-backups/vps-backup.sh`.
@@ -123,11 +106,9 @@ Archive layout (the `_v2` names are kept so older archives read the same way):
 kunigi_backup_<ts>.tar.gz
 └── backup_<ts>/
     ├── databases/
-    │   ├── KunigiArchiveV2.bak   (the site)
-    │   └── KunigiArchive.bak     (old site, until removed)
+    │   └── KunigiArchiveV2.bak   (the site)
     ├── media_v2/...              (kunigi_web_media)
     ├── keys_v2/...               (kunigi_web_keys)
-    ├── media/...                 (kunigi_media, old site)
     └── config/*.env
 ```
 
@@ -163,6 +144,12 @@ Host kunigi-vps
 ```
 
 ## Change log
+
+### 2026-11-19 — old site's data removed (#89)
+
+- After a final off-server copy (`kunigi_backup_2026-11-19_10-37-54.tar.gz`, on the owner's PC): dropped the `KunigiArchive` database and the `kunigi_app` login, deleted `/home/iperp/kunigi_media`, the `kunigi-archive-web:old-mvc` image and `/opt/kunigi/{app,beta}.env`. There's no rollback to the old site any more.
+- Dropping `KunigiArchive` broke `kunigi_backup`'s connection (it was its default database): one nightly run skipped the site's database with only a warning. Fixed: `kunigi_backup` defaults to `master` (also in `init-secrets.sh`), and `vps-backup.sh` now aborts with `BACKUP FAILED` when it can't query SQL Server. The archive without a database was deleted.
+- Also removed: Docker build cache (22 GB), the .NET SDK image, the import reports. Disk use 29 GB → about 7 GB.
 
 ### 2026-11-19 — tokinigi.gr switched to the new app (#89)
 
