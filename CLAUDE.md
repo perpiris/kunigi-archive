@@ -29,7 +29,6 @@ src/KunigiArchive.Domain/         entities and rules, repository interfaces
 src/KunigiArchive.Application/    use cases (one handler per action), queries, authorization → Domain
 src/KunigiArchive.Infrastructure/ EF Core, migrations, Identity, media storage, email → Application, Domain
 src/KunigiArchive.Web/            the site: Blazor pages, REST API (/api), middleware (own Dockerfile) → Application, Infrastructure
-src/KunigiArchive.Import/         one-off import from the old MVC site (2026); the old database is gone, kept only until #91 (old URL redirects) no longer needs import.IdMap
 ops/vps/                          server scripts + runbook (README.md)
 docker-compose.yml                production stack (proxy, acme, db, web)
 docker-compose.dev.yml            local SQL Server (+ the site in a container with --profile app)
@@ -61,7 +60,7 @@ dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --sta
 ```
 
 - The production database is `KunigiArchiveV2` (a historical name: it was the new app's while the old site still ran). The site connects as `kunigi_beta` (also historical), `db_owner` on that database only.
-- `import.IdMap` (old long id → new Guid) is left from the import; harmless, goes with the Import project.
+- `dbo.LegacyGameDayIds` (old site's numeric day id → day) serves the old `/games/{slug}/day/{id}` links with a 301 (#91). It's outside the EF model (raw SQL in `LegacyDayLinks`).
 
 ## Configuration & Secrets
 
@@ -75,12 +74,13 @@ dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --sta
 
 ## Deployment & Operations
 
-- **Deploy web** (`deploy-web.yml`, manual, master only): streams the repo to `~iperp/kunigi-archive` as a tar over SSH and swaps the folder in (so deleted files don't linger, #45), runs `docker compose up -d --build`, checks that https://tokinigi.gr returns 200.
+- **Deploy web** (`deploy-web.yml`, manual, master only): streams the repo to `~iperp/kunigi-archive` as a tar over SSH and swaps the folder in (so deleted files don't linger, #45), runs `docker compose build --pull web` (newest .NET 10.0.x base image) and `docker compose up -d`, then waits for https://tokinigi.gr/healthz (200 only when the database answers).
 - **Off-site backup** (`backup.yml`, manual, currently disabled): downloads the newest backup, checks it, stores it encrypted as an artifact (#38).
 - **Containers** (`docker-compose.yml`, compose project `kunigi-archive`):
   - `kunigi_web`: the site, on :8080, runs as uid 1654; mounts `kunigi_web_media`, `kunigi_web_keys`, `kunigi_web_logs`
-  - `kunigi_db`: SQL Server 2022, volume `kunigi-archive_db_data`; port 1433 is published but firewalled to the WireGuard VPN only
+  - `kunigi_db`: SQL Server 2022 (CU28), volume `kunigi-archive_db_data`; port 1433 is published but firewalled to the WireGuard VPN only; `sa` is disabled, admin work uses `kunigi_admin` (#46)
   - `nginx-proxy` + `nginx-acme-companion`: TLS / reverse proxy (HSTS comes from here)
+  - Images are pinned to release tags in `docker-compose.yml` (#39); upgrade by changing the tag (backup first for `db`). Every container's `docker logs` rotates (5 × 10 MB).
 - **Everything about the server** (layout, secrets, SQL logins, WireGuard/SSMS, backups, restore, rollback, change log) is in **`ops/vps/README.md`**. Host config is scripted in `ops/vps/` (`setup.sh`, `init-secrets.sh`, `rotate-smtp.sh`, `wireguard.sh`, `backup/vps-backup.sh`, `sql/tune.sql`). Run them on the VPS with `sudo bash <script>` (#41).
 - **Access**: `ssh kunigi-vps` (user `claude`, key `~/.ssh/kunigi_claude`, passwordless sudo).
 - **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (database `KunigiArchiveV2`, `kunigi_web_media`, `kunigi_web_keys`, env files). A failure, including a login that can't connect, is logged as `BACKUP FAILED` in `/var/log/kunigi-backup.log`.
@@ -119,4 +119,4 @@ dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --sta
 
 ## Known Issues
 
-Open problems are tracked as GitHub issues (`gh issue list`). Notable ones: #15 (ImageSharp 3.1.12 advisories, no free fix), #17/#18/#19 (server updates and hardening), #38 (restore rehearsal, backup alerts, off-site copy), #91 (redirects for the old site's day URLs).
+Open problems are tracked as GitHub issues (`gh issue list`). Notable ones: #15 (ImageSharp 3.1.12 advisories, no free fix), #17/#18/#19 (server updates and hardening), #38 (restore rehearsal, backup alerts, off-site copy).

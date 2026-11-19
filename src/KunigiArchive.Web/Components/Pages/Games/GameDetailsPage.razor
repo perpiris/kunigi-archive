@@ -20,7 +20,7 @@
 
     <section class="record">
         <div class="poster">
-            <GamePoster Image="@_game.Image" Name="@_game.OrderTitle" Lazy="false" />
+            <GamePoster Image="@_game.Image" Name="@_game.OrderTitle" Lazy="false" Zoom="true" />
         </div>
         <div>
             <div class="year">@_game.Year</div>
@@ -55,7 +55,7 @@
     {
         <section class="block">
             <h2>Το παιχνίδι</h2>
-            <RichText Html="@_game.Description" Class="story" />
+            <RichText Html="@_game.Description" Class="story k-text-card" />
         </section>
     }
 

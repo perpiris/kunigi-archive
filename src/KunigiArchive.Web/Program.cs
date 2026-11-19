@@ -81,6 +81,9 @@ try
 
     app.MapStaticAssets();
     app.MapSearchEngineFiles();
+    app.MapLegacyRedirects();
+    // 200 "Healthy" when the database answers, 503 otherwise (#39). Used by the deploy's post-check.
+    app.MapHealthChecks("/healthz");
     app.MapControllers();
     app.MapAuthEndpoints();
     app.MapRazorComponents<App>()

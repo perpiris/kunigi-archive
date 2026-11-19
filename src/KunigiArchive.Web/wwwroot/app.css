@@ -11,6 +11,7 @@
 [data-bs-theme=light] {
     --k-paper: #f2efe8;
     --k-sheet: #fbfaf6;
+    --k-card: #ffffff;              /* text cards on the details pages: white for reading */
     --k-ink: #2b2018;
     --k-faded: #6e6255;
     --k-rule: #ddd5c8;
@@ -69,6 +70,7 @@
 [data-bs-theme=dark] {
     --k-paper: #15110e;
     --k-sheet: #1d1814;
+    --k-card: #231d18;              /* a step lighter than the sheet; white would glare in the dark theme */
     --k-ink: #efe8dc;
     --k-faded: #a99d8c;
     --k-rule: #342b24;
@@ -678,6 +680,35 @@ k-combobox {
     .k-prose > :first-child {
         margin-top: 0;
     }
+
+    .k-prose > :last-child {
+        margin-bottom: 0;
+    }
+
+/* A team picture or game poster that opens full size on click (TeamFrame / GamePoster with Zoom). */
+.k-zoom {
+    display: block;
+    cursor: zoom-in;
+}
+
+    .k-zoom:focus-visible {
+        outline: 2px solid var(--k-accent);
+        outline-offset: 3px;
+    }
+
+/* A description on a details page (team, game, day) sits on a card of its own, easier to read than the paper. */
+.k-prose.k-text-card {
+    background: var(--k-card);
+    border: 1px solid var(--k-rule);
+    box-shadow: 0 1px 3px var(--k-shadow);
+    padding: 1.5rem 1.75rem;
+}
+
+@media (max-width: 520px) {
+    .k-prose.k-text-card {
+        padding: 1.1rem 1.15rem;
+    }
+}
 
     .k-prose p,
     .k-prose ul,

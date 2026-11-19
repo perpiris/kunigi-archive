@@ -49,6 +49,8 @@ public static class DependencyInjection
         services.AddScoped<IGameDayRepository, GameDayRepository>();
         services.AddScoped<IGameDayQueries, GameDayQueries>();
         services.AddScoped<ISlugHistory, SlugHistory>();
+        services.AddScoped<ILegacyDayLinks, LegacyDayLinks>();
+        services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
         services.AddScoped<IUserQueries, UserQueries>();
         services.AddScoped<IUserAccounts, UserAccounts>();
         services.AddSingleton<IRichTextSanitizer, RichTextSanitizer>();

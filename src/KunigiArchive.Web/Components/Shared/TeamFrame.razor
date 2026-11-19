@@ -1,6 +1,13 @@
-@* A team's picture as a framed print in its own shape. Without a picture, a stone-colored card with the team's initial. *@
+@* A team's picture as a framed print in its own shape. Without a picture, a stone-colored card with the team's initial.
+   With Zoom (the team's own page), a click opens the picture full size in the gallery (site.js). *@
 <div class="team-frame @(Image is null ? "empty" : null) @Class">
-    @if (Image is not null)
+    @if (Image is not null && Zoom)
+    {
+        <a href="/@Image" data-gallery="team-picture" class="k-zoom" aria-label="Μεγέθυνση: @Name">
+            <img src="/@Image" alt="@Name" />
+        </a>
+    }
+    else if (Image is not null)
     {
         <img src="/@Image" alt="@Name" />
     }
@@ -19,6 +26,9 @@
 
     [Parameter]
     public string? Class { get; set; }
+
+    [Parameter]
+    public bool Zoom { get; set; }
 
     private string Initial => Name.FirstOrDefault(char.IsLetterOrDigit) is char c and not '\0'
         ? char.ToUpper(c, System.Globalization.CultureInfo.GetCultureInfo("el-GR")).ToString()

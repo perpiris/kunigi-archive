@@ -30,7 +30,6 @@ Visitors browse teams, games, days and puzzles. Team managers edit their own tea
 | `src/KunigiArchive.Application` | Use cases (one handler per action), queries, authorization |
 | `src/KunigiArchive.Infrastructure` | EF Core, migrations, Identity, media storage, email |
 | `src/KunigiArchive.Web` | The site: Blazor pages, REST API, middleware |
-| `src/KunigiArchive.Import` | One-off import from the old MVC site (2026), removed with the old data |
 | `ops/vps` | Server setup, secrets, backups ([runbook](ops/vps/README.md)) |
 
 ## Run locally

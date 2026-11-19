@@ -86,9 +86,11 @@ kunigi-wireguard init >/dev/null
 # 5. SQL Server tuning
 if $APPLY_SQL; then
     log "sql: apply sql/tune.sql"
-    SA_PASSWORD="${SA_PASSWORD:-$(grep -oP 'MSSQL_SA_PASSWORD=\K.*' "$SCRIPT_DIR/../../docker-compose.yml" | head -1)}"
-    docker exec -i kunigi_db /opt/mssql-tools18/bin/sqlcmd \
-        -S localhost -U sa -P "$SA_PASSWORD" -C -b < "$SCRIPT_DIR/sql/tune.sql"
+    # As kunigi_admin (sa is disabled, #46); the password goes through the environment.
+    ADMIN_USER=$(grep -m1 '^SQL_ADMIN_USER=' /opt/kunigi/admin.env | cut -d= -f2-)
+    ADMIN_PASSWORD=$(grep -m1 '^SQL_ADMIN_PASSWORD=' /opt/kunigi/admin.env | cut -d= -f2-)
+    docker exec -i -e SQLCMDPASSWORD="$ADMIN_PASSWORD" kunigi_db /opt/mssql-tools18/bin/sqlcmd \
+        -S localhost -U "$ADMIN_USER" -C -b < "$SCRIPT_DIR/sql/tune.sql"
 fi
 
 log "done"

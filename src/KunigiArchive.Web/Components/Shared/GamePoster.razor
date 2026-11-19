@@ -1,5 +1,12 @@
-@* A game's poster in its own shape. Without one, a stone card the shape of a poster with the compass watermark. *@
-@if (Image is not null)
+@* A game's poster in its own shape. Without one, a stone card the shape of a poster with the compass watermark.
+   With Zoom (the game's own page), a click opens the poster full size in the gallery (site.js). *@
+@if (Image is not null && Zoom)
+{
+    <a href="/@Image" data-gallery="game-poster" class="k-zoom" aria-label="Μεγέθυνση: αφίσα @Name">
+        <img class="game-poster" src="/@Image" alt="Αφίσα: @Name" loading="@(Lazy ? "lazy" : "eager")" />
+    </a>
+}
+else if (Image is not null)
 {
     <img class="game-poster" src="/@Image" alt="Αφίσα: @Name" loading="@(Lazy ? "lazy" : "eager")" />
 }
@@ -17,4 +24,7 @@ else
 
     [Parameter]
     public bool Lazy { get; set; } = true;
+
+    [Parameter]
+    public bool Zoom { get; set; }
 }
