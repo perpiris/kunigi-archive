@@ -1,0 +1,218 @@
+@page "/games/{Slug}/days/{DaySlug}/puzzles/{PuzzleId:guid}"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.GameDays
+@using KunigiArchive.Application.GameDays.GetGameDays
+@using KunigiArchive.Application.GameDays.ManagePuzzles
+@using KunigiArchive.Application.Media
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Domain.GameDays
+@using KunigiArchive.Web.Forms.GameDays
+@using KunigiArchive.Web.Mappers
+@inject GetGameDayForEditHandler GetGameDayForEditHandler
+@inject UpdatePuzzleHandler UpdatePuzzleHandler
+@inject UploadPuzzleMediaHandler UploadPuzzleMediaHandler
+@inject DeletePuzzleMediaHandler DeletePuzzleMediaHandler
+@inherits FormPage
+
+<PageTitle>Επεξεργασία γρίφου</PageTitle>
+
+<div class="k-form-page wide">
+
+@if (_page is not null && _puzzle is not null && Form is not null)
+{
+    <header class="k-page-head">
+        <h1>Γρίφος @_puzzle.Order</h1>
+        <a class="btn btn-outline-secondary" href="games/@Slug/days/@DaySlug/puzzles">Γρίφοι</a>
+    </header>
+    <p class="text-body-secondary"><GameName Order="_page.Game.Order" Year="_page.Game.Year" /> · @_page.Day.Label</p>
+
+    @if (_message is not null)
+    {
+        <div class="alert k-form-alert alert-danger" role="alert">@_message</div>
+    }
+
+    <EditForm Model="Form" FormName="edit-puzzle" OnValidSubmit="SaveAsync" Enhance class="k-form wide">
+        <DataAnnotationsValidator />
+        <input type="hidden" name="Form.Id" value="@Form.Id" />
+        <PuzzleFields Form="Form" />
+
+        <div class="k-form-actions">
+            <a class="btn btn-outline-secondary" href="games/@Slug/days/@DaySlug/puzzles">Ακύρωση</a>
+            <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+        </div>
+    </EditForm>
+
+    @foreach ((PuzzleMediaKind kind, string title, IReadOnlyList<MediaDetails> media) in Sections())
+    {
+        string key = kind == PuzzleMediaKind.Question ? "q" : "a";
+        <section class="k-form wide">
+            <h2 class="k-form-title">@title</h2>
+            <form method="post" enctype="multipart/form-data" @formname="@($"upload-puzzle-media-{key}")" @onsubmit="() => UploadAsync(kind)">
+                <AntiforgeryToken />
+                <label for="files-@key" class="form-label">Νέα αρχεία</label>
+                <div class="k-inline-form">
+                    <input id="files-@key" type="file" name="Files" multiple accept="@MediaRules.AcceptAttribute" class="form-control" />
+                    <button type="submit" class="btn btn-primary">Ανέβασμα</button>
+                </div>
+                <UploadHint />
+            </form>
+
+            <form method="post" @formname="@($"delete-puzzle-media-{key}")" @onsubmit="DeleteMediaAsync" class="mt-3">
+                <AntiforgeryToken />
+                <MediaGrid Items="media.Select(m => new MediaGrid.Item(m.Id, m.Path, m.ThumbnailPath, m.OriginalFileName)).ToList()"
+                           Gallery="@($"puzzle-{key}")" />
+            </form>
+        </section>
+    }
+}
+
+</div>
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DaySlug { get; set; } = string.Empty;
+
+    [Parameter]
+    public Guid PuzzleId { get; set; }
+
+    [SupplyParameterFromForm(FormName = "edit-puzzle")]
+    private PuzzleForm? Form { get; set; }
+
+    // Question and answer each have an upload and a delete form; their fields have the same names.
+    [SupplyParameterFromForm(FormName = "upload-puzzle-media-q", Name = "Files")]
+    private IReadOnlyList<IFormFile>? QuestionFiles { get; set; }
+
+    [SupplyParameterFromForm(FormName = "upload-puzzle-media-a", Name = "Files")]
+    private IReadOnlyList<IFormFile>? AnswerFiles { get; set; }
+
+    [SupplyParameterFromForm(FormName = "delete-puzzle-media-q", Name = "DeleteMediaId")]
+    private Guid? DeleteQuestionMediaId { get; set; }
+
+    [SupplyParameterFromForm(FormName = "delete-puzzle-media-a", Name = "DeleteMediaId")]
+    private Guid? DeleteAnswerMediaId { get; set; }
+
+    private IReadOnlyList<IFormFile>? Files => QuestionFiles ?? AnswerFiles;
+    private Guid? DeleteMediaId => DeleteQuestionMediaId ?? DeleteAnswerMediaId;
+
+    private GameDayPage? _page;
+    private PuzzleDetails? _puzzle;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        Form ??= _puzzle is null
+            ? null
+            : new PuzzleForm { Id = _puzzle.Id, Group = _puzzle.Group, Question = _puzzle.Question, Answer = _puzzle.Answer };
+    }
+
+    private IEnumerable<(PuzzleMediaKind Kind, string Title, IReadOnlyList<MediaDetails> Media)> Sections()
+    {
+        yield return (PuzzleMediaKind.Question, "Εικόνες ερώτησης", _puzzle!.QuestionMedia);
+        yield return (PuzzleMediaKind.Answer, "Εικόνες απάντησης", _puzzle!.AnswerMedia);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_page is null || _puzzle is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await UpdatePuzzleHandler.HandleAsync(
+                new PuzzleCommand(_page.Day.Id, _puzzle.Id, Form!.Group, Form.Question, Form.Answer), CancellationToken.None);
+        }
+        catch (DomainException exception)
+        {
+            _message = exception.Message;
+            return;
+        }
+
+        Done($"Ο γρίφος {_puzzle.Order} αποθηκεύτηκε.", $"/games/{Slug}/days/{DaySlug}/puzzles");
+    }
+
+    private async Task UploadAsync(PuzzleMediaKind kind)
+    {
+        if (_page is null || _puzzle is null)
+        {
+            return;
+        }
+
+        List<MediaUpload> uploads = (Files ?? []).ToUploads();
+        try
+        {
+            IReadOnlyList<MediaDetails> added = await UploadPuzzleMediaHandler.HandleAsync(
+                new UploadPuzzleMediaCommand(_page.Day.Id, _puzzle.Id, kind, uploads), CancellationToken.None);
+            Reload(added.Count == 1 ? "Ανέβηκε 1 αρχείο." : $"Ανέβηκαν {added.Count} αρχεία.");
+        }
+        catch (Exception exception) when (exception is InvalidRequestException or DomainException)
+        {
+            _message = exception.Message;
+        }
+        finally
+        {
+            foreach (MediaUpload upload in uploads)
+            {
+                await upload.Content.DisposeAsync();
+            }
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task DeleteMediaAsync()
+    {
+        if (_page is null || _puzzle is null || DeleteMediaId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DeletePuzzleMediaHandler.HandleAsync(
+                new DeletePuzzleMediaCommand(_page.Day.Id, _puzzle.Id, DeleteMediaId.Value), CancellationToken.None);
+            Reload("Το αρχείο διαγράφηκε.");
+        }
+        catch (DomainException exception)
+        {
+            _message = exception.Message;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _page = await GetGameDayForEditHandler.HandleAsync(Slug, DaySlug, CancellationToken.None);
+        }
+        catch (NotFoundException)
+        {
+            (_page, _puzzle) = (null, null);
+            Navigation.NotFound();
+            return;
+        }
+        catch (ForbiddenException)
+        {
+            (_page, _puzzle) = (null, null);
+            Navigation.NavigateTo("/access-denied");
+            return;
+        }
+
+        // The address names the day: a puzzle of another day is not found here.
+        _puzzle = _page.Day.Puzzles.FirstOrDefault(p => p.Id == PuzzleId);
+        if (_puzzle is null)
+        {
+            _page = null;
+            Navigation.NotFound();
+        }
+    }
+}

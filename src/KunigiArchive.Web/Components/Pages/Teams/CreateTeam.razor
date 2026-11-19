@@ -1,0 +1,74 @@
+@page "/teams/create"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Teams
+@using KunigiArchive.Application.Teams.CreateTeam
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Web.Forms.Teams
+@using KunigiArchive.Web.Mappers
+@inject CreateTeamHandler CreateTeamHandler
+@inherits FormPage
+
+<PageTitle>Νέα ομάδα</PageTitle>
+
+<div class="k-form-page">
+
+<header class="k-page-head">
+    <h1>Νέα ομάδα</h1>
+</header>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger k-form-alert" role="alert">@_error</div>
+}
+
+<EditForm Model="Form" FormName="create-team" OnValidSubmit="CreateAsync" Enhance class="k-form">
+    <DataAnnotationsValidator />
+
+    <div class="k-field">
+        <label for="name" class="form-label">Όνομα ομάδας</label>
+        <InputText id="name" class="form-control" autocomplete="off" @bind-Value="Form.Name" />
+        <div class="form-text">Όπως θα εμφανίζεται στο αρχείο. Η διεύθυνση της σελίδας βγαίνει από το όνομα.</div>
+        <ValidationMessage For="() => Form.Name" />
+    </div>
+
+    <div class="form-check">
+        <InputCheckbox id="is-active" class="form-check-input" @bind-Value="Form.IsActive" />
+        <label for="is-active" class="form-check-label">Ενεργή ομάδα</label>
+    </div>
+
+    <div class="k-form-actions">
+        <a class="btn btn-outline-secondary" href="teams/manage">Ακύρωση</a>
+        <button type="submit" class="btn btn-primary">Δημιουργία</button>
+    </div>
+</EditForm>
+
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private CreateTeamForm Form { get; set; } = null!;
+
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        Form ??= new CreateTeamForm();
+    }
+
+    private async Task CreateAsync()
+    {
+        TeamDetails team;
+        try
+        {
+            team = await CreateTeamHandler.HandleAsync(Form.ToCommand(), CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is DomainException or ConflictException)
+        {
+            _error = exception.Message;
+            return;
+        }
+
+        Done($"Η ομάδα «{team.Name}» δημιουργήθηκε.", "/teams/manage");
+    }
+}

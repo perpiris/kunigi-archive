@@ -1,83 +1,98 @@
-using KunigiArchive.Web.Data;
+using KunigiArchive.Application;
+using KunigiArchive.Application.Media;
+using KunigiArchive.Infrastructure;
+using KunigiArchive.Web.Authentication;
+using KunigiArchive.Web.Components;
 using KunigiArchive.Web.Extensions;
 using KunigiArchive.Web.Middleware;
-using KunigiArchive.Web.Utilities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Serilog;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .CreateLogger();
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
 try
 {
-    builder.Services.AddSerilog();
-    builder.WebHost.ConfigureKestrel(options =>
-        options.Limits.MaxRequestBodySize = ServiceCollectionExtensions.MaxRequestBodyBytes);
+    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+    builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = MediaRules.MaxRequestBytes);
 
     builder.Services
-        .AddWebInfrastructure()
-        .AddPersistence(builder.Configuration)
-        .AddApplicationServices(builder.Configuration);
+        .AddSerilogLogging(builder.Configuration, builder.Environment)
+        .AddApplication()
+        .AddInfrastructure(builder.Configuration)
+        .AddHosting(builder.Configuration)
+        .AddWebAuthentication()
+        .AddWebRateLimiting()
+        .AddCompression()
+        .AddApi();
+
+    builder.Services.AddRazorComponents()
+        .AddInteractiveServerComponents();
 
     WebApplication app = builder.Build();
 
-    // The developer exception page is added automatically in Development.
+    // First, so everything after it (logging, rate limits, HTTPS redirect, cookies) sees the client's scheme and IP.
+    app.UseForwardedHeaders();
+
+    // Before the request log, so its line carries the request's id too.
+    app.UseMiddleware<RequestCorrelationMiddleware>();
+
+    // Outermost after that, so it logs the final status code after errors have been turned into responses.
+    app.UseSerilogRequestLogging();
+    app.UseMiddleware<SecurityHeadersMiddleware>();
+    app.UseNoIndex();
+    app.UseResponseCompression();
+
+    // No UseHsts: nginx-proxy sends Strict-Transport-Security, and a second header from here only disagreed with it.
     if (!app.Environment.IsDevelopment())
     {
-        app.UseExceptionHandler("/error");
-        app.UseHsts();
+        app.UseExceptionHandler("/Error", createScopeForErrors: true);
     }
 
-    app.UseRequestCorrelation();
-    app.UseSecurityHeaders();
-    app.UseResponseCompression();
-    app.UseWebOptimizer();
-
-    const string staticCacheControl = "public, max-age=2592000";
-    app.UseStaticFiles(new StaticFileOptions
+    app.UseWhen(context => context.Request.IsApiRequest(), api =>
     {
-        OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = staticCacheControl
+        api.UseExceptionHandler();
+        api.UseStatusCodePages();
     });
+    app.UseWhen(context => !context.Request.IsApiRequest(), pages =>
+        pages.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 
-    string mediaRoot = MediaStorage.ResolveRoot(app.Configuration, app.Environment);
-    Directory.CreateDirectory(mediaRoot);
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new PhysicalFileProvider(mediaRoot),
-        RequestPath = "/media",
-        OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = staticCacheControl
-    });
-
-    app.UseSerilogRequestLogging();
     app.UseHttpsRedirection();
-    app.UseStatusCodePagesWithRedirects("/not-found");
+    app.UseMediaFiles();
+
+    // Explicit, so routing runs after the status code pages: a re-executed /not-found has to be routed again,
+    // otherwise unknown URLs get an empty 404.
     app.UseRouting();
+
+    // After routing: the limits are per endpoint (the auth pages carry [EnableRateLimiting]).
     app.UseRateLimiter();
+
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseMiddleware<MustChangePasswordMiddleware>();
+    app.UseAntiforgery();
 
-    app.MapStaticAssets();
-    app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}")
-        .WithStaticAssets();
-
-    using (IServiceScope scope = app.Services.CreateScope())
+    if (app.Environment.IsDevelopment())
     {
-        DataContext context = scope.ServiceProvider.GetRequiredService<DataContext>();
-        await context.Database.MigrateAsync();
+        app.MapOpenApi();
+        app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Kunigi Archive API"));
     }
 
-    await DataSeed.Seed(app.Services);
+    app.MapStaticAssets();
+    app.MapSearchEngineFiles();
+    app.MapControllers();
+    app.MapAuthEndpoints();
+    app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode();
 
+    await app.Services.InitializeDatabaseAsync();
     await app.RunAsync();
 }
-catch (Exception ex) when (ex is not HostAbortedException)
+catch (Exception exception) when (exception is not HostAbortedException)
 {
     // EF design-time tools (dotnet ef) stop the host by throwing HostAbortedException.
-    Log.Fatal(ex, "Application terminated unexpectedly");
+    Log.Fatal(exception, "Application terminated unexpectedly");
     throw;
 }
 finally

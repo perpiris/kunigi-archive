@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 An archive site for "Το Κυνήγι Θησαυρού", an annual scavenger hunt in Rethymno, Crete. For each year's game it stores the teams that hosted and won it, the game's days, the puzzles (with question/answer media), posts, and media galleries. UI text is in Greek. Live at https://tokinigi.gr, with a handful of users (mostly the owner).
 
+Since 2026-11-19 the site is `src/KunigiArchive.Web` (Blazor, clean layers). It replaced an older ASP.NET Core MVC app; that app's frozen database and media are still on the server for a rollback until they're removed (#89).
+
 ## Working Agreements
 
 - **Never commit, push, open PRs, or create/delete remote branches unless the owner explicitly says so.** Make changes in the working tree and report what's ready.
@@ -19,195 +21,102 @@ An archive site for "Το Κυνήγι Θησαυρού", an annual scavenger hu
 ## Solution Layout
 
 ```
-KunigiArchive.slnx          solution (folders: /src, /Solution Items)
-Directory.Build.props       shared MSBuild settings (net10.0, nullable, implicit usings, version)
-Directory.Packages.props    central package versions (projects use <PackageReference> without Version)
-global.json                 SDK pin (10.0.x)
-src/KunigiArchive.Web/             current MVC site, live at tokinigi.gr (own Dockerfile)
-src/KunigiArchive.Domain/          new: domain model (empty for now)
-src/KunigiArchive.Application/     new: use cases → Domain
-src/KunigiArchive.Infrastructure/  new: EF Core, files, email → Application, Domain
-src/KunigiArchive.Web2/            new: Blazor Web App + REST API, beta.tokinigi.gr (own Dockerfile) → Application, Infrastructure
-src/KunigiArchive.Import/          console: re-runnable import old DB + media → Web2 (#63); dry run unless --apply (usage in Program.cs)
-ops/vps/                           server scripts + README
-docker-compose.yml                 live stack (proxy, db, web)
-docker-compose.beta.yml            beta stack (own compose project, joins the live network)
+KunigiArchive.slnx                solution (folders: /src, /Solution Items)
+Directory.Build.props             shared MSBuild settings (net10.0, nullable, implicit usings, version)
+Directory.Packages.props          central package versions, with transitive pinning (projects use <PackageReference> without Version)
+global.json                       SDK pin (10.0.x)
+src/KunigiArchive.Domain/         entities and rules, repository interfaces
+src/KunigiArchive.Application/    use cases (one handler per action), queries, authorization → Domain
+src/KunigiArchive.Infrastructure/ EF Core, migrations, Identity, media storage, email → Application, Domain
+src/KunigiArchive.Web/            the site: Blazor pages, REST API (/api), middleware (own Dockerfile) → Application, Infrastructure
+src/KunigiArchive.Import/         one-off import from the old MVC database + media (2026); removed with the old data
+ops/vps/                          server scripts + runbook (README.md)
+docker-compose.yml                production stack (proxy, acme, db, web)
+docker-compose.dev.yml            local SQL Server (+ the site in a container with --profile app)
 ```
 
-The new projects are built **alongside** the MVC app: `KunigiArchive.Web` does not reference them. Features move over one endpoint at a time, and fixes go into both apps until the beta replaces the MVC site.
-
-To add or upgrade a package, edit `Directory.Packages.props` (versions) and the project's `<PackageReference Include="..." />`. New projects go under `src/` (and later `tests/`) and pick up both props files automatically.
+To add or upgrade a package, edit `Directory.Packages.props` (versions) and the project's `<PackageReference Include="..." />`.
 
 ## Build & Run
 
 ```bash
-dotnet build
-dotnet run --project src/KunigiArchive.Web
-dotnet watch run --project src/KunigiArchive.Web   # with hot reload
+docker compose -f docker-compose.dev.yml up -d                       # SQL Server on 127.0.0.1:1433 (sa / Your_password123)
+dotnet run --project src/KunigiArchive.Web --launch-profile http    # http://localhost:5256
+dotnet watch --project src/KunigiArchive.Web                         # with hot reload
+docker compose -f docker-compose.dev.yml --profile app up -d --build # the production image, on http://localhost:8080
 ```
 
-- Launch profiles: `http` → http://localhost:5000, `https` → https://localhost:5001
-- Local dev needs a SQL Server on `localhost:1433` (user `sa`, see `appsettings.Development.json`): `docker compose -f docker-compose.dev.yml up -d` (#47).
-- The dev SMTP password is in **user-secrets** (`dotnet user-secrets set EmailSettings:Password <value>` in `src/KunigiArchive.Web`).
-- The dev admin is seeded from `AdminSeed` in `appsettings.Development.json` (`admin@test.com`). There's also a dev-only manager, `manager@test.com`.
-- CI (`.github/workflows/ci.yml`) builds with `-warnaserror` (exempt: `NU1901–NU1904` vulnerable-package warnings) and runs `dotnet test`. Reproduce locally:
+- Development settings are in `appsettings.Development.json`: database `KunigiArchiveV2` on localhost, uploads in `<repo>/kunigi_media_v2`, emails saved as `.eml` files in `<repo>/kunigi_mail_v2` (no SMTP needed), Swagger at `/swagger`.
+- On an empty database `IdentitySeeder` creates the roles and a first admin from `AdminSeed:Email/Password` (user-secrets locally, `web.env` on the server); in development it also creates `manager@test.com`.
+- CI (`.github/workflows/ci.yml`) builds with `-warnaserror` (exempt: `NU1901–NU1904` vulnerable-package warnings, #15), runs `dotnet test` (there are no test projects), and builds the Docker image. Reproduce locally:
   `dotnet build KunigiArchive.slnx -c Release -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904`
+- Code style follows `.editorconfig` (run `dotnet format`): explicit types instead of `var`, file-scoped namespaces.
 
 ## Database & Migrations
 
-SQL Server (EF Core SqlServer provider). Pending migrations apply automatically on startup.
+SQL Server through EF Core (`KunigiArchiveDbContext`). Migrations live in `src/KunigiArchive.Infrastructure/Persistence/Migrations` and apply automatically on startup (`InitializeDatabaseAsync`, then `IdentitySeeder`).
 
 ```bash
-dotnet ef migrations add <Name> --project src/KunigiArchive.Web --output-dir Data/Migrations
-dotnet ef migrations has-pending-model-changes --project src/KunigiArchive.Web
+dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --startup-project src/KunigiArchive.Web --output-dir Persistence/Migrations
 ```
 
-Migrations live in `Data/Migrations` (namespace `KunigiArchive.Web.Data.Migrations`). In production the app connects as `kunigi_app` (db_owner on `KunigiArchive` only, because migrations run at startup).
+- The production database is `KunigiArchiveV2` (a historical name: it was the new app's while the old site still ran). The site connects as `kunigi_beta` (also historical), `db_owner` on that database only.
+- `import.IdMap` (old long id → new Guid) is left from the import; harmless, goes with the Import project.
 
 ## Configuration & Secrets
 
-- `appsettings.json` holds **no secrets**: the connection string, `EmailSettings:Password` and `AdminSeed:Email/Password` are empty placeholders.
-- Production values come from environment variables (`Section__Key`) in `/opt/kunigi/app.env` on the VPS, loaded through `env_file` in `docker-compose.yml`.
-- The app refuses to start if `ConnectionStrings:DefaultConnection` is empty.
-- `MediaDirectory` is where uploads are stored (`Utilities/MediaStorage.ResolveRoot`). It's required, and relative paths resolve against the project folder. In development it's `../../kunigi_media` (`<repo>/kunigi_media`). In production it's `/app/media`, bind-mounted from `/home/iperp/kunigi_media`.
-- JSON comments are allowed in the appsettings files. `appsettings.Development.json` only contains overrides. Config arrays merge **by index**, which is why Web2 sets its Serilog sinks in code (`AddSerilogLogging`): coloured text in development, JSON lines in production, rotating files where `LogFile:Path` is set.
-- `EmailSettings` binds to `Settings/EmailSettings.cs`. `ApplicationUrl` is used to build links in emails.
+- `appsettings.json` holds **no secrets**: the connection string (`ConnectionStrings:KunigiArchive`), `EmailSettings:Password` and `AdminSeed:Email/Password` are empty placeholders. JSON comments are allowed.
+- Production values come from environment variables (`Section__Key`) in `/opt/kunigi/web.env` on the VPS, loaded through `env_file` in `docker-compose.yml`. Compose itself sets `DataProtection__KeysPath=/app/keys` and `LogFile__Path=/app/logs/web-.log`.
+- `MediaStorage:RootPath` is where uploads go (`/app/media` in production, bind-mounted from `/home/iperp/kunigi_web_media`).
+- `EmailSettings` binds to `Infrastructure/Email/EmailOptions.cs`; `ApplicationUrl` builds the links in emails. `PickupDirectory` (development) writes `.eml` files instead of sending.
+- `Robots:NoIndex` (off in production) sends `X-Robots-Tag: noindex` and makes `/robots.txt` disallow everything, for a test copy.
+- Logging: Serilog sinks are set in code (`AddSerilogLogging`), because config arrays merge by index: coloured text in development, one JSON object per line in production, and rotating files (daily, 10 MB, 30 kept) where `LogFile:Path` is set. appsettings only holds levels and properties. SQL commands are not logged.
+- Data Protection keys persist in `DataProtection:KeysPath`. The application name stays `"KunigiArchive.Web2"` (see `AddHosting`): changing it voids the stored keys and signs everyone out.
 
 ## Deployment & Operations
 
-- **Deploy** (manual, master only, separate workflows):
-  - **Deploy web** (`deploy-web.yml`): copies the repo to `~iperp/kunigi-archive`, runs `docker compose up -d --build`, checks that https://tokinigi.gr returns 200.
-  - **Deploy beta** (`deploy-beta.yml`): copies the repo to `~iperp/kunigi-beta`, runs `docker compose -f docker-compose.beta.yml up -d --build`, checks https://beta.tokinigi.gr. It never touches the live stack. Needs a DNS A record `beta.tokinigi.gr → 185.4.135.49`.
-- CI builds the whole solution (required **Build** check) plus both Docker images (`Docker image (web)`, `Docker image (beta)`).
-- **Schema ownership:** only `KunigiArchive.Web` runs migrations against the production DB. The new Infrastructure layer maps the existing schema and must not migrate until cutover.
-- **Containers** (`docker-compose.yml`):
-  - `kunigi_web`: the app, on :8080
+- **Deploy web** (`deploy-web.yml`, manual, master only): streams the repo to `~iperp/kunigi-archive` as a tar over SSH and swaps the folder in (so deleted files don't linger, #45), runs `docker compose up -d --build`, checks that https://tokinigi.gr returns 200.
+- **Off-site backup** (`backup.yml`, manual, currently disabled): downloads the newest backup, checks it, stores it encrypted as an artifact (#38).
+- **Containers** (`docker-compose.yml`, compose project `kunigi-archive`):
+  - `kunigi_web`: the site, on :8080, runs as uid 1654; mounts `kunigi_web_media`, `kunigi_web_keys`, `kunigi_web_logs`
   - `kunigi_db`: SQL Server 2022, volume `kunigi-archive_db_data`; port 1433 is published but firewalled to the WireGuard VPN only
-  - `nginx-proxy` + `nginx-acme-companion`: TLS / reverse proxy
-- **Everything about the server** (layout, secrets, SQL logins, WireGuard/SSMS, backups, setup scripts, change log) is in **`ops/vps/README.md`**. Host config is scripted in `ops/vps/` (`setup.sh`, `init-secrets.sh`, `wireguard.sh`, `backup/vps-backup.sh`, `sql/tune.sql`). Run them on the VPS with `sudo bash <script>` (#41).
+  - `nginx-proxy` + `nginx-acme-companion`: TLS / reverse proxy (HSTS comes from here)
+- **Everything about the server** (layout, secrets, SQL logins, WireGuard/SSMS, backups, restore, rollback, change log) is in **`ops/vps/README.md`**. Host config is scripted in `ops/vps/` (`setup.sh`, `init-secrets.sh`, `rotate-smtp.sh`, `wireguard.sh`, `backup/vps-backup.sh`, `sql/tune.sql`). Run them on the VPS with `sudo bash <script>` (#41).
 - **Access**: `ssh kunigi-vps` (user `claude`, key `~/.ssh/kunigi_claude`, passwordless sudo).
-- **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (DB `.bak` + media + env files). An off-site encrypted copy comes from the manual **Off-site backup** workflow.
+- **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (both databases, `kunigi_web_media`, `kunigi_web_keys`, the old site's media, env files). A failure is logged as `BACKUP FAILED` in `/var/log/kunigi-backup.log`.
 - Never run `docker compose down -v`, and never rename the compose project or volumes.
 
 ## Architecture
 
-**Stack:** .NET 10, ASP.NET Core MVC, EF Core (SQL Server), ASP.NET Core Identity, Serilog, SixLabors.ImageSharp 3.1.x (thumbnails), PDFtoImage (first PDF page → PNG on upload), LigerShark WebOptimizer (JS/CSS minification).
+**Layers.** Domain (entities with their rules, no dependencies) ← Application (handlers) ← Infrastructure (EF Core, Identity, files, email) ← Web (Blazor pages and API controllers). Pages and controllers call Application handlers only.
 
-**Pattern:** service-oriented MVC.
-- Controllers are thin. All business logic lives in scoped services.
-- `Program.cs` only wires things up. Registration lives in `Extensions/ServiceCollectionExtensions.cs`:
-  - `AddWebInfrastructure`: MVC, compression, WebOptimizer, rate limiting, upload limits
-  - `AddPersistence`: EF Core and Identity
-  - `AddApplicationServices`: the app's services and settings
-  - Middleware is added with `UseRequestCorrelation()` / `UseSecurityHeaders()` (`Middleware/MiddlewareExtensions.cs`).
-- Services resolve the current user via `IHttpContextAccessor` (`private ClaimsPrincipal User => _httpContextAccessor.HttpContext?.User!`). Controllers never pass `userId`/`isAdmin` into services.
-- Code style follows `.editorconfig` (run `dotnet format`): explicit types instead of `var`, file-scoped namespaces.
+**Application.** One folder per use case with a `…Handler` (and a command/query record where needed), registered in `Application/DependencyInjection.cs`.
+- Writes go through domain entities and repositories (`ITeamRepository`, …) plus `IUnitOfWork`; reads go through query interfaces (`ITeamQueries`, …) implemented in `Infrastructure/Persistence/Queries`, returning DTO records.
+- Authorization lives in the handlers: `ICurrentUser` (`EnsureAdmin`, …), `GameAccess` for a game's editors. Failures are exceptions from `Abstractions/Exceptions` (`NotFoundException`, `InvalidRequestException`, `ConflictException`, …), which pages turn into messages and the API into problem details (`GlobalExceptionHandler`).
+- Lists use keyset paging (`KeysetCursor`); the admin lists load everything in one page so column sorting covers it (#80).
+- Changing a team or game slug records the old one (`SlugRedirects`); old URLs answer with a 301.
 
-**Auth:**
-- Identity with two roles, `Admin` and `Manager`. A manager is linked to teams via `TeamManager`.
-- A manager's access to a game = being a manager of the game's host team (the `HasGameAccess` / `HasTeamAccess` checks are duplicated per service, #25).
-- Login path is `/auth/login`. Lockout is on. `/auth` is rate-limited by the `RateLimitPolicies.Auth` policy (60 req/min per IP; note #2, forwarded headers missing).
-- Accounts are created by an admin, and the temporary password is emailed. Password reset uses a code kept in `IMemoryCache` (buggy, #14).
+**Web (Blazor, static server rendering with enhanced navigation).**
+- Pages in `Components/Pages`, shared parts in `Components/Shared`. Forms are plain `<form method="post">` / `EditForm` with `[SupplyParameterFromForm]`, models in `Forms/`; `FormPage` gives `Done`/`Reload` with a flash message (`Flash`).
+- The REST API is in `Controllers/` with request/response records in `Contracts/` and mappers in `Mappers/`.
+- Auth: Identity cookies, roles `Admin` and `Manager` (a manager edits the teams they manage and the games those teams hosted). Disabled accounts can't sign in (`DisabledUserConfirmation`); a temporary password forces a password change (`MustChangePasswordMiddleware`, #24). The security stamp is re-checked every minute.
+- Middleware (`Program.cs`, in order): forwarded headers, correlation id (`X-Correlation-Id` → log property `CorrelationId`), Serilog request log, security headers with a per-request CSP nonce (`SecurityHeadersMiddleware`), response compression, status code pages, media files at `/media`, routing, rate limiting (auth pages), authentication, authorization, must-change-password, antiforgery.
+- `site.js` handles the rich-text editor (Quill), the gallery (GLightbox), searchable selects, sortable tables, `data-confirm` buttons and busy (spinner) submit buttons. Scripts and fonts are self-hosted (CSP: `'self'` only).
+- `/robots.txt` and `/sitemap.xml` are endpoints (`WebApplicationExtensions.MapSearchEngineFiles`); pages set description, canonical and Open Graph tags with `<PageMeta>`.
 
-**Pipeline (`Program.cs`):**
-- Middleware:
-  - `RequestCorrelationMiddleware`: X-Correlation-Id → Serilog. Client-supplied ids are accepted only if they're `[A-Za-z0-9-]{1,64}`.
-  - `SecurityHeadersMiddleware`, response compression (Brotli/Gzip), WebOptimizer, static files with a 30-day cache.
-- Startup errors are logged as Fatal via the bootstrap Serilog logger (try/catch in `Program.cs`).
-- A second static-file provider serves `MediaDirectory` at `/media`.
-- `UseStatusCodePagesWithRedirects("/not-found")`, rate limiter, global `AutoValidateAntiforgeryTokenAttribute`.
-- Request limits: 250 MB per request (Kestrel, and nginx `client_max_body_size` in `nginx-limits.conf`), 100 MB per file.
-- Startup: `Database.MigrateAsync()`, then `DataSeed.Seed` (roles, admin from `AdminSeed`, dev manager, `GameDayType`s). The thumbnail backfill is commented out (#10).
+**Media (`LocalMediaStorage`).** Uploads are checked by content (images, PDF, MP4); images are shrunk and stored as WebP with a `thumb_` copy, PDFs become an image of their first page. Stored paths are web-relative (`media/teams/{teamId}/…`, `media/games/{gameId}/days/{dayId}/puzzles/{puzzleId}/…`). Files are named with random ids.
 
-**Routing:** entities have a `Slug` used in URLs (`/teams/{slug}`, `/games/{slug}`). `Utilities/SlugGenerator` transliterates Greek, strips diacritics, and checks reserved names.
+**Rich text.** Quill in the browser; `RichTextSanitizer` (HtmlSanitizer allowlist) cleans it on save and again on display, drops empty blocks at the start and end, and treats text-less HTML as empty.
 
-**Media (`DirectoryService`):**
-- Files live under `MediaDirectory`. Stored paths are web-relative (`media/...`).
-- Layout:
-  - `teams/{slug}/` — team media and `profile.*`
-  - `games/{year}/` — game, game-day and puzzle media, plus the game's `profile.*`
-  - `games/{year}/posts/{postId}/` — post media
-- Images get a `thumb_<name>` copy (max 400px wide). Generated filenames are 11-char random IDs. PDFs are converted to PNG (first page).
-- Changing a team slug or a game year moves the directory and rewrites the stored paths.
-- No file-type allowlist yet (#13).
-
-## Domain Model
-
-- **`AppUser`** (`IdentityUser<long>`): has `TeamManager`s. **`AppRole`** (`IdentityRole<long>`).
-- **`Team`**: `Name`, `Slug`, `IsActive`, `YearFounded?`, `Description?` (rich text), socials, `Image?`. Navigation: `Managers`, `MediaFiles`, `HostedGames`, `WonGames`.
-- **`Game`**: `Year`, `Order`, `Slug`, `OrderTitle` ("{Order}ο Κυνήγι Θησαυρού"), `Title?`, `Description?`, `Image?`, `HostId`, `WinnerId?` (optional). Navigation: `Host`, `Winner?`, `GameDays`, `MediaFiles`, `Posts`. Host/Winner use `DeleteBehavior.Restrict`. `Year`/`Order` uniqueness is checked in code only (#23).
-- **`GameDay`**: one per `GameDayType`, auto-created with the game and toggled with `IsEnabled`. Fields: `Title?`, `Description?`. Navigation: `Puzzles`, `GameDayMedia`.
-- **`GameDayType`**: seeded values Χορός, Σάββατο, Κυριακή, Διαδικτυακό, Παιδικό, Εφηβικό.
-- **`Puzzle`**: `GameDayId`, `Order`, `Group?` (puzzles in the same group form a "package"), `Question?`, `Answer?` (rich text). `PuzzleMedia.MediaType` is `"Q"` (question) or `"A"` (answer).
-- **`Post`**: belongs to a **Game**. Fields: `Title?`, `Content` (rich text), `CreatedAt`. `PostMedia`.
-- Media entities `TeamMedia`, `GameMedia`, `GameDayMedia`, `PuzzleMedia` and `PostMedia` all have `Path`, `OriginalFileName`, `FileName`, `TimeStamp`.
-
-## Services
-
-All are scoped, with interfaces in `Services/Interfaces`. They return `ServiceResponse` / `ServiceResponse<T>`.
-
-- **`AccountService`**: paginated users, create account (emails a temporary password), account details, change role (can't change your own role; demoting a Manager removes its `TeamManager` rows), change email/password, password reset.
-- **`TeamService`**: list/search, CRUD (delete is blocked if the team hosted or won games), manager assignment (Admin only), team media.
-- **`GameService`**: list/search, create (validates Year/Order, creates the days and `games/{year}/`), details (public and managed), day toggles, game-day edit, game update (admin: slug/year/order/host/winner; manager: title/description/image), game media, game-day media.
-- **`PuzzleService`**: puzzle management per day, create/edit with Q/A media, delete (compacts `Order`, dissolves single-member groups), delete puzzle media.
-- **`PostService`**: posts per game (newest first), CRUD, post media.
-- **`DirectoryService`**: create/delete/move directories, save files (+ thumbnail / PDF conversion), delete files, media status (admin page `/admin-dashboard/media-status`).
-- **`EmailService`**: account-creation and password-reset emails (inline HTML, sent synchronously; #20 proposes background jobs).
-
-## Controllers & Routes
-
-Controllers call a service, check `Success`, set TempData through `AlertMessageHandler.SetMessage`, then redirect or return a view.
-
-- **Home**: `/`, `/error`, `/not-found`, `/admin-dashboard` and `/admin-dashboard/media-status` [Admin]
-- **Authentication** (`/auth`, rate-limited): `login`, `logout`, `forgot-password`, `reset-password`
-- **Account** (`/account`): `management`, `create`, `details/{id}`, `details/{id}/change-role` [Admin]; `settings`, `change-email`, `change-password` [signed in]
-- **Team** (`/teams`):
-  - public: list, `{slug}`
-  - [Admin]: `manage`, `create`, `{slug}/delete`, `{slug}/managers` (+ add/remove)
-  - [Admin, Manager]: `{slug}/actions`, `{slug}/update`, `{slug}/media` (+ upload/delete)
-  - [Manager]: `team-manager-dashboard`
-- **Game** (`/games`):
-  - public: list, `{slug}`, `{slug}/day/{id}` (enabled days only)
-  - [Admin]: `manage`, `create`
-  - [Admin, Manager], all under `{slug}/`:
-    - `actions`, `update`, `days`, `media` (+ upload/delete)
-    - `day/{gameDayId}/` `actions`, `update`, `media` (+ upload/delete), `puzzles` (+ create, edit, delete, delete media)
-    - `posts` (+ create, edit, delete) and `posts/{postId}/media` (+ upload/delete)
+**Email.** `IAccountEmails` queues account emails (account created, temporary password, password reset) in memory; `EmailSendingService` sends them over SMTP (Mailtrap) with retries (#20). Bodies and addresses are never logged.
 
 ## UI Patterns
 
-- **Theme:** neo-brutalist custom Bootstrap 5.3 build (`wwwroot/lib/bootstrap/dist/css/style.css`):
-  - square corners, 2px borders, hard offset shadows (`--reth-shadow-color`)
-  - Space Grotesk headings
-  - primary `#ff4d00`, secondary `#2e5cff`, warning `#ffd600`
-  - light/dark toggle persisted in localStorage (`data-bs-theme`)
-- **Dark mode:** never use `border-dark`/`border-black` or hard-coded colors in views. Use `.border-ink` and CSS variables (`var(--bs-border-color)`, `var(--bs-tertiary-bg)`, `var(--bs-card-bg)`). Component styles (timeline, media gallery, tiles) live in `site.css`.
-- **Page headers:** set `ViewData["Banner"]` and the layout renders the banner. List pages render their own header row with `_SearchForm`.
-- **Shared partials:**
-  - `_Pagination` and `_SearchForm` take a `PageNavViewModel`
-  - `_MediaGallery` (fancybox), `_PuzzleContent` (Q/A split), `_Notification` (TempData alerts)
-- **Forms:** Bootstrap cards, `asp-for` tag helpers, validation spans, Back + Save aligned right. Team selects use `initCustomSelect(prefix)` (searchable dropdown driving an off-screen `<select>`).
-- **Rich text:** Quill editor. HTML goes into a hidden input on submit and is rendered with `Html.Raw` **without sanitization (#12)**.
-- **Role-specific UI:** `@if (User.IsInRole("Admin"))` / `("Manager")` in Razor.
-
-## ServiceResponse Pattern
-
-```csharp
-ServiceResponse.Successful("message")
-ServiceResponse.Failure("message")
-ServiceResponse.Warning("message")   // Success = true, Warning severity
-ServiceResponse<T>.Successful(data, "message")
-ServiceResponse<T>.Failure("message")
-```
-
-Methods that can change a slug (`UpdateTeamAsync`, `UpdateGameAsync`) return `ServiceResponse<string>` with the final slug for the redirect.
+- **Theme:** paper and ink, defined as CSS variables in `wwwroot/app.css` (`--k-paper`, `--k-ink`, `--k-accent`, `--k-rule`, …), with a light/dark toggle (`theme.js`). Headings in GFS Didot, text in Source Sans 3 (self-hosted, `wwwroot/fonts`). The base size is 18px, the page 1200px wide.
+- Page-specific styles are scoped (`*.razor.css`); site-wide ones are in `app.css`. Use the CSS variables, never hard-coded colours.
+- Details pages leave out empty sections. Puzzles show the question with the answer in a closed card (`PuzzleView`).
+- Forms sit in a centered `k-form` card; actions on the right.
 
 ## Known Issues
 
-Open problems are tracked as GitHub issues (`gh issue list`). The highest-impact ones:
-- #12 stored XSS
-- #13 upload file types
-- #14 password reset
-- #15 vulnerable ImageSharp
-- #2 forwarded headers
-- #3 Data Protection keys not persisted (every deploy logs users out)
+Open problems are tracked as GitHub issues (`gh issue list`). Notable ones: #15 (ImageSharp 3.1.12 advisories, no free fix), #17/#18/#19 (server updates and hardening), #38 (restore rehearsal, backup alerts, off-site copy), #89 (the switch and the old data's removal).

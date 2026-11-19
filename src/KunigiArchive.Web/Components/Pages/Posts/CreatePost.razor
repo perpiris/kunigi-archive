@@ -1,0 +1,93 @@
+@page "/games/{Slug}/posts/create"
+@attribute [Authorize(Roles = $"{Roles.Admin},{Roles.Manager}")]
+@using KunigiArchive.Application.Abstractions.Exceptions
+@using KunigiArchive.Application.Games
+@using KunigiArchive.Application.Games.GetGameForEdit
+@using KunigiArchive.Application.Posts
+@using KunigiArchive.Application.Posts.CreatePost
+@using KunigiArchive.Domain.Common
+@using KunigiArchive.Web.Forms.Posts
+@inject GetGameForEditHandler GetGameForEditHandler
+@inject CreatePostHandler CreatePostHandler
+@inherits FormPage
+
+<PageTitle>Νέα ανάρτηση</PageTitle>
+
+<div class="k-form-page wide">
+
+@if (_game is not null)
+{
+    <header class="k-page-head">
+        <h1>Νέα ανάρτηση</h1>
+        <a class="btn btn-outline-secondary" href="games/@_game.Slug/posts">Αναρτήσεις</a>
+    </header>
+
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger k-form-alert" role="alert">@_error</div>
+    }
+
+    <EditForm Model="Form" FormName="create-post" OnValidSubmit="CreateAsync" Enhance class="k-form wide">
+        <DataAnnotationsValidator />
+        <PostFields Form="Form" />
+        <p class="form-text mb-0">Φωτογραφίες προστίθενται από την επεξεργασία της ανάρτησης, αφού δημοσιευτεί.</p>
+
+        <div class="k-form-actions">
+            <a class="btn btn-outline-secondary" href="games/@_game.Slug/posts">Ακύρωση</a>
+            <button type="submit" class="btn btn-primary">Δημοσίευση</button>
+        </div>
+    </EditForm>
+}
+
+</div>
+
+@code {
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    [SupplyParameterFromForm(FormName = "create-post")]
+    private PostForm Form { get; set; } = null!;
+
+    private GameDetails? _game;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Form ??= new PostForm();
+
+        try
+        {
+            _game = await GetGameForEditHandler.HandleAsync(Slug, CancellationToken.None);
+        }
+        catch (GameNotFoundException)
+        {
+            Navigation.NotFound();
+        }
+        catch (ForbiddenException)
+        {
+            Navigation.NavigateTo("/access-denied");
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_game is null)
+        {
+            return;
+        }
+
+        PostDetails post;
+        try
+        {
+            post = await CreatePostHandler.HandleAsync(
+                new CreatePostCommand(_game.Id, Form.Title, Form.Content), CancellationToken.None);
+        }
+        catch (DomainException exception)
+        {
+            _error = exception.Message;
+            return;
+        }
+
+        Done("Η ανάρτηση δημοσιεύτηκε.", $"/games/{_game.Slug}/posts");
+    }
+}

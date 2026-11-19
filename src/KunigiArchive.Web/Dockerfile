@@ -13,9 +13,15 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /repo
 
 COPY ["global.json", "Directory.Build.props", "Directory.Packages.props", "./"]
+COPY ["src/KunigiArchive.Domain/KunigiArchive.Domain.csproj", "src/KunigiArchive.Domain/"]
+COPY ["src/KunigiArchive.Application/KunigiArchive.Application.csproj", "src/KunigiArchive.Application/"]
+COPY ["src/KunigiArchive.Infrastructure/KunigiArchive.Infrastructure.csproj", "src/KunigiArchive.Infrastructure/"]
 COPY ["src/KunigiArchive.Web/KunigiArchive.Web.csproj", "src/KunigiArchive.Web/"]
 RUN dotnet restore "src/KunigiArchive.Web/KunigiArchive.Web.csproj"
 
+COPY ["src/KunigiArchive.Domain/", "src/KunigiArchive.Domain/"]
+COPY ["src/KunigiArchive.Application/", "src/KunigiArchive.Application/"]
+COPY ["src/KunigiArchive.Infrastructure/", "src/KunigiArchive.Infrastructure/"]
 COPY ["src/KunigiArchive.Web/", "src/KunigiArchive.Web/"]
 RUN dotnet publish "src/KunigiArchive.Web/KunigiArchive.Web.csproj" \
     -c $BUILD_CONFIGURATION -o /app/publish --no-restore /p:UseAppHost=false

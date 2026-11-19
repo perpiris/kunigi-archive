@@ -1,0 +1,41 @@
+@using KunigiArchive.Web.Middleware
+<!DOCTYPE html>
+<html lang="el">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <script src="@Assets["theme.js"]"></script>
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["fonts/fonts.css"]" />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    @* Small and static, so they load with every page; site.js loads the libraries' scripts only where needed. *@
+    <link rel="stylesheet" href="@Assets["lib/quill/quill.snow.css"]" />
+    <link rel="stylesheet" href="@Assets["lib/glightbox/glightbox.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["KunigiArchive.Web.styles.css"]" />
+    @* The import map is the only inline script: it carries the request's CSP nonce (SecurityHeadersMiddleware). *@
+    <ImportMap nonce="@(HttpContext?.Items[SecurityHeadersMiddleware.NonceKey] as string)" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+    <link rel="manifest" href="site.webmanifest" />
+    <meta name="theme-color" content="#f2efe8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15110e" media="(prefers-color-scheme: dark)" />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <ReconnectModal />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["site.js"]"></script>
+</body>
+
+</html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+}

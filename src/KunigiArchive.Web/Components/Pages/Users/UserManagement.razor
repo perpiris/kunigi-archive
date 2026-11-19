@@ -1,0 +1,76 @@
+@page "/users"
+@attribute [Authorize(Roles = Roles.Admin)]
+@using KunigiArchive.Application.Users
+@using KunigiArchive.Application.Users.GetUsers
+@using KunigiArchive.Web.Forms.Users
+@inject GetUsersHandler GetUsersHandler
+
+<PageTitle>Χρήστες</PageTitle>
+
+<header class="k-page-head">
+    <h1>Χρήστες</h1>
+    <a class="btn btn-primary" href="users/create">Νέος χρήστης</a>
+</header>
+
+<SearchForm Action="users" Search="@Search" Placeholder="Αναζήτηση email" MaxLength="GetUsersQuery.SearchMaxLength" />
+
+@if (_page is not null)
+{
+    @if (_page.Items.Count == 0)
+    {
+        <p class="text-body-secondary">@(string.IsNullOrWhiteSpace(Search) ? "Δεν υπάρχουν χρήστες." : "Δεν βρέθηκαν χρήστες.")</p>
+    }
+    else
+    {
+        <div class="k-table">
+        <table class="table align-middle k-sortable">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Ρόλος</th>
+                    <th class="text-end" data-no-sort>Ενέργειες</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (UserAccount user in _page.Items)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>
+                            <span class="badge @(user.Role is null ? "text-bg-secondary" : "text-bg-primary")">
+                                @RoleOptions.Label(user.Role)
+                            </span>
+                            @if (user.IsDisabled)
+                            {
+                                <span class="badge text-bg-secondary">Απενεργοποιημένος</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="users/@user.Id">Λεπτομέρειες</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+
+    <CursorPager BaseUrl="users" IsFirstPage="_after is null" NextCursor="@_page.NextCursor" Search="@Search" />
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? After { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Search { get; set; }
+
+    private UsersCursor? _after;
+    private UsersPage? _page;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _after = UsersCursor.TryDecode(After, out UsersCursor? after) ? after : null;
+        _page = await GetUsersHandler.HandleAsync(new GetUsersQuery(_after, Search), CancellationToken.None);
+    }
+}

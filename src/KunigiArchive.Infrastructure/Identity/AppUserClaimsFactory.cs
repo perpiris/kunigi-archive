@@ -6,7 +6,7 @@ namespace KunigiArchive.Infrastructure.Identity;
 
 public static class AppClaims
 {
-    // On the sign-in cookie while the user still has a temporary password (#24); Web2 sends them to their
+    // On the sign-in cookie while the user still has a temporary password (#24); the site sends them to their
     // account page until they choose their own.
     public const string MustChangePassword = "kunigi:must_change_password";
 }
