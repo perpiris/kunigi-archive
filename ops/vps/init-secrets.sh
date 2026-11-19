@@ -16,7 +16,7 @@
 #
 # The database is named KunigiArchiveV2 for history (it was the new app's while the old site still ran). The
 # login is whatever web.env's connection string names (kunigi_beta on the current server, kunigi_web on a new
-# one). The old site's database KunigiArchive and app.env are left alone until they're removed (#89).
+# one).
 #
 # Usage (as root on the VPS):
 #   init-secrets.sh                 create missing files, ensure logins and folders
@@ -153,6 +153,9 @@ WEB_PASSWORD=$(echo "$CONNECTION" | grep -oP 'Password=\K[^;]+')
 BACKUP_PASSWORD=$(env_get "$SECRETS_DIR/backup.env" BACKUP_SQL_PASSWORD)
 ensure_login "$WEB_LOGIN" "$WEB_PASSWORD" db_owner
 ensure_login kunigi_backup "$BACKUP_PASSWORD" db_backupoperator
+# Its default database is master: a login whose default database is dropped can't connect at all (that silently
+# broke the nightly backup once, 2026-11-19).
+echo "ALTER LOGIN [kunigi_backup] WITH DEFAULT_DATABASE = [master];" | sql_as_sa > /dev/null
 # RESTORE VERIFYONLY (used by vps-backup.sh) requires CREATE DATABASE permission
 echo "USE [master]; GRANT CREATE ANY DATABASE TO [kunigi_backup];" | sql_as_sa > /dev/null
 

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 An archive site for "Το Κυνήγι Θησαυρού", an annual scavenger hunt in Rethymno, Crete. For each year's game it stores the teams that hosted and won it, the game's days, the puzzles (with question/answer media), posts, and media galleries. UI text is in Greek. Live at https://tokinigi.gr, with a handful of users (mostly the owner).
 
-Since 2026-11-19 the site is `src/KunigiArchive.Web` (Blazor, clean layers). It replaced an older ASP.NET Core MVC app; that app's frozen database and media are still on the server for a rollback until they're removed (#89).
+Since 2026-11-19 the site is `src/KunigiArchive.Web` (Blazor, clean layers). It replaced an older ASP.NET Core MVC app, whose data was imported and then removed (#89).
 
 ## Working Agreements
 
@@ -29,7 +29,7 @@ src/KunigiArchive.Domain/         entities and rules, repository interfaces
 src/KunigiArchive.Application/    use cases (one handler per action), queries, authorization → Domain
 src/KunigiArchive.Infrastructure/ EF Core, migrations, Identity, media storage, email → Application, Domain
 src/KunigiArchive.Web/            the site: Blazor pages, REST API (/api), middleware (own Dockerfile) → Application, Infrastructure
-src/KunigiArchive.Import/         one-off import from the old MVC database + media (2026); removed with the old data
+src/KunigiArchive.Import/         one-off import from the old MVC site (2026); the old database is gone, kept only until #91 (old URL redirects) no longer needs import.IdMap
 ops/vps/                          server scripts + runbook (README.md)
 docker-compose.yml                production stack (proxy, acme, db, web)
 docker-compose.dev.yml            local SQL Server (+ the site in a container with --profile app)
@@ -83,7 +83,7 @@ dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --sta
   - `nginx-proxy` + `nginx-acme-companion`: TLS / reverse proxy (HSTS comes from here)
 - **Everything about the server** (layout, secrets, SQL logins, WireGuard/SSMS, backups, restore, rollback, change log) is in **`ops/vps/README.md`**. Host config is scripted in `ops/vps/` (`setup.sh`, `init-secrets.sh`, `rotate-smtp.sh`, `wireguard.sh`, `backup/vps-backup.sh`, `sql/tune.sql`). Run them on the VPS with `sudo bash <script>` (#41).
 - **Access**: `ssh kunigi-vps` (user `claude`, key `~/.ssh/kunigi_claude`, passwordless sudo).
-- **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (both databases, `kunigi_web_media`, `kunigi_web_keys`, the old site's media, env files). A failure is logged as `BACKUP FAILED` in `/var/log/kunigi-backup.log`.
+- **Backups**: `vps-backup.sh` runs nightly at 02:00 and keeps 3 archives in `/opt/kunigi-backups` (database `KunigiArchiveV2`, `kunigi_web_media`, `kunigi_web_keys`, env files). A failure, including a login that can't connect, is logged as `BACKUP FAILED` in `/var/log/kunigi-backup.log`.
 - Never run `docker compose down -v`, and never rename the compose project or volumes.
 
 ## Architecture
@@ -119,4 +119,4 @@ dotnet ef migrations add <Name> --project src/KunigiArchive.Infrastructure --sta
 
 ## Known Issues
 
-Open problems are tracked as GitHub issues (`gh issue list`). Notable ones: #15 (ImageSharp 3.1.12 advisories, no free fix), #17/#18/#19 (server updates and hardening), #38 (restore rehearsal, backup alerts, off-site copy), #89 (the switch and the old data's removal).
+Open problems are tracked as GitHub issues (`gh issue list`). Notable ones: #15 (ImageSharp 3.1.12 advisories, no free fix), #17/#18/#19 (server updates and hardening), #38 (restore rehearsal, backup alerts, off-site copy), #91 (redirects for the old site's day URLs).
