@@ -12,6 +12,10 @@
 #                            (login kunigi_backup, db_backupoperator)                (vps-backup.sh)
 #   /opt/kunigi/admin.env    SQL_ADMIN_USER/PASSWORD
 #                            (login kunigi_admin, sysadmin)  for SSMS / manual work
+#   /opt/kunigi/dashboard.env  Dashboard__Frontend__BrowserToken  (kunigi_dashboard; the login token for
+#                            http://10.8.0.1:18888 over WireGuard)
+#   /opt/kunigi/openobserve.env  ZO_ROOT_USER_EMAIL/PASSWORD, OPENOBSERVE_AUTH  (kunigi_openobserve and
+#                            kunigi_otel_collector; sign-in for http://10.8.0.1:5080 over WireGuard)
 #   /home/iperp/kunigi_web_media, kunigi_web_keys, kunigi_web_logs   owned by the container user (uid 1654)
 #
 # The database is named KunigiArchiveV2 for history (it was the new app's while the old site still ran). The
@@ -102,6 +106,24 @@ if [ ! -f "$SECRETS_DIR/admin.env" ]; then
     printf 'SQL_ADMIN_USER=kunigi_admin\nSQL_ADMIN_PASSWORD=%s\n' "$(genpw)" > "$SECRETS_DIR/admin.env"
 fi
 
+# --- dashboard.env --------------------------------------------------------------
+# The Aspire Dashboard's login token (docker-compose.yml). Read it with: sudo cat /opt/kunigi/dashboard.env
+if [ ! -f "$SECRETS_DIR/dashboard.env" ]; then
+    log "Creating dashboard.env"
+    printf 'Dashboard__Frontend__BrowserToken=%s\n' "$(genpw)" > "$SECRETS_DIR/dashboard.env"
+fi
+
+# --- openobserve.env ------------------------------------------------------------
+# OpenObserve's admin (created on its first start) and the matching header the collector sends with the data.
+if [ ! -f "$SECRETS_DIR/openobserve.env" ]; then
+    log "Creating openobserve.env"
+    O2_EMAIL=admin@tokinigi.gr
+    O2_PASSWORD=$(genpw)
+    printf 'ZO_ROOT_USER_EMAIL=%s\nZO_ROOT_USER_PASSWORD=%s\nOPENOBSERVE_AUTH=Basic %s\n' \
+        "$O2_EMAIL" "$O2_PASSWORD" "$(printf '%s:%s' "$O2_EMAIL" "$O2_PASSWORD" | base64 -w0)" \
+        > "$SECRETS_DIR/openobserve.env"
+fi
+
 # --- connect as kunigi_admin (created with sa only on a new server) -------------
 ADMIN_PASSWORD=$(env_get "$SECRETS_DIR/admin.env" SQL_ADMIN_PASSWORD)
 SQL_USER=kunigi_admin
@@ -149,12 +171,13 @@ EmailSettings__ApplicationUrl=$SITE_URL
 ENV
 fi
 
-# Permissions: compose (run as $DEPLOY_GROUP by the deploy) must read db.env and
-# web.env; backup.env and admin.env are root-only.
+# Permissions: compose (run as $DEPLOY_GROUP by the deploy) must read db.env,
+# web.env, dashboard.env and openobserve.env; backup.env and admin.env are root-only.
 chown "root:$DEPLOY_GROUP" "$SECRETS_DIR"
 chmod 750 "$SECRETS_DIR"
-chown "root:$DEPLOY_GROUP" "$SECRETS_DIR/db.env" "$SECRETS_DIR/web.env"
-chmod 640 "$SECRETS_DIR/db.env" "$SECRETS_DIR/web.env"
+chown "root:$DEPLOY_GROUP" "$SECRETS_DIR/db.env" "$SECRETS_DIR/web.env" "$SECRETS_DIR/dashboard.env" \
+    "$SECRETS_DIR/openobserve.env"
+chmod 640 "$SECRETS_DIR/db.env" "$SECRETS_DIR/web.env" "$SECRETS_DIR/dashboard.env" "$SECRETS_DIR/openobserve.env"
 chown root:root "$SECRETS_DIR/backup.env" "$SECRETS_DIR/admin.env"
 chmod 600 "$SECRETS_DIR/backup.env" "$SECRETS_DIR/admin.env"
 

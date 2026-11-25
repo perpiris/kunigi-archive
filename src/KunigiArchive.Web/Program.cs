@@ -19,6 +19,7 @@ try
 
     builder.Services
         .AddSerilogLogging(builder.Configuration, builder.Environment)
+        .AddTelemetry(builder.Configuration)
         .AddApplication()
         .AddInfrastructure(builder.Configuration)
         .AddHosting(builder.Configuration)
@@ -58,7 +59,7 @@ try
     app.UseWhen(context => !context.Request.IsApiRequest(), pages =>
         pages.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 
-    app.UseHttpsRedirection();
+    // No UseHttpsRedirection: nginx-proxy redirects http to https, and the container only listens on http (8080).
     app.UseMediaFiles();
 
     // Explicit, so routing runs after the status code pages: a re-executed /not-found has to be routed again,

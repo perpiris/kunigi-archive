@@ -11,8 +11,8 @@
 #   1. Caps the systemd journal at 200 MB
 #   2. Weekly Docker build-cache prune (Sunday 04:00)
 #   3. Installs the nightly backup script and its root crontab entry (02:00)
-#   4. Firewall: SQL Server (published on 1433) only reachable over WireGuard
-#      (wg0); installs the kunigi-wireguard helper (see wireguard.sh)
+#   4. Firewall: SQL Server (1433), the Aspire Dashboard (18888) and
+#      OpenObserve (5080) only reachable over WireGuard (wg0); installs the kunigi-wireguard helper (see wireguard.sh)
 #   5. (--sql) Applies sql/tune.sql inside the kunigi_db container
 #
 # It never touches the database volume, the media folder or the containers'
@@ -68,18 +68,24 @@ if ! crontab -l 2>/dev/null | grep -Fq "/opt/kunigi-backups/vps-backup.sh"; then
     (crontab -l 2>/dev/null; echo "$BACKUP_CRON") | crontab -
 fi
 
-# 4. Firewall for the published SQL port + WireGuard helper
+# 4. Firewall for the published SQL and telemetry ports + WireGuard helper
 # Docker-published ports bypass ufw's INPUT rules, so filtering happens in the
 # DOCKER-USER chain. ufw (re)creates it from after.rules on every start/reload.
-log "firewall: SQL Server (1433) only via WireGuard"
-if ! grep -q "BEGIN KUNIGI DOCKER-USER" /etc/ufw/after.rules; then
+# The block is rewritten when it lacks a port (servers set up before the telemetry ports were added).
+log "firewall: SQL Server (1433), dashboard (18888), OpenObserve (5080) only via WireGuard"
+if ! grep -q -- "--ctorigdstport 5080 --ctdir ORIGINAL -j DROP" /etc/ufw/after.rules; then
+    cp /etc/ufw/after.rules "/etc/ufw/after.rules.bak-$(date +%F)"
+    sed -i '/^# BEGIN KUNIGI DOCKER-USER/,/^# END KUNIGI DOCKER-USER/d' /etc/ufw/after.rules
     cat >> /etc/ufw/after.rules <<'EOF'
-
-# BEGIN KUNIGI DOCKER-USER (SQL Server only reachable over WireGuard)
+# BEGIN KUNIGI DOCKER-USER (SQL Server and the telemetry UIs only reachable over WireGuard)
 *filter
 :DOCKER-USER - [0:0]
 -A DOCKER-USER -i wg0 -p tcp -m conntrack --ctorigdstport 1433 --ctdir ORIGINAL -j RETURN
 -A DOCKER-USER -p tcp -m conntrack --ctorigdstport 1433 --ctdir ORIGINAL -j DROP
+-A DOCKER-USER -i wg0 -p tcp -m conntrack --ctorigdstport 18888 --ctdir ORIGINAL -j RETURN
+-A DOCKER-USER -p tcp -m conntrack --ctorigdstport 18888 --ctdir ORIGINAL -j DROP
+-A DOCKER-USER -i wg0 -p tcp -m conntrack --ctorigdstport 5080 --ctdir ORIGINAL -j RETURN
+-A DOCKER-USER -p tcp -m conntrack --ctorigdstport 5080 --ctdir ORIGINAL -j DROP
 -A DOCKER-USER -j RETURN
 COMMIT
 # END KUNIGI DOCKER-USER
