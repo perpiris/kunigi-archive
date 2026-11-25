@@ -97,6 +97,16 @@ SQL Server is published on port 1433, but the firewall only lets it through when
 
 Only traffic to `10.8.0.0/24` goes through the VPN; everything else on the device is unaffected.
 
+**Telemetry: Aspire Dashboard and OpenObserve (traces, metrics, logs)**
+The site sends OpenTelemetry data to `kunigi_otel_collector` (config: `otel-collector.yaml` in the repo root), which copies it to two places. Both UI ports are firewalled the same way as 1433, so they are reachable only over the VPN:
+
+| | Address (VPN on) | Keeps | Sign-in |
+|---|---|---|---|
+| Aspire Dashboard (`kunigi_dashboard`) | http://10.8.0.1:18888 | memory only, newest ~10k per type; a restart clears it | token in `/opt/kunigi/dashboard.env` |
+| OpenObserve (`kunigi_openobserve`) | http://10.8.0.1:5080 | 30 days on disk (volume `kunigi-archive_openobserve_data`) | `ZO_ROOT_USER_EMAIL` / `ZO_ROOT_USER_PASSWORD` in `/opt/kunigi/openobserve.env` |
+
+Read a sign-in: `ssh kunigi-vps 'sudo cat /opt/kunigi/dashboard.env /opt/kunigi/openobserve.env'` (both created by `init-secrets.sh`). Use the dashboard to watch live, OpenObserve to look back. The telemetry data isn't backed up (only the env files are): losing it loses nothing the site needs. OpenObserve's admin is created on its first start only; changing the password later is done in its UI, and `OPENOBSERVE_AUTH` (base64 of `email:password`) must then be updated to match.
+
 **Add a device:**
 ```bash
 ssh kunigi-vps 'sudo kunigi-wireguard add phone && sudo cat /etc/wireguard/clients/phone.conf'

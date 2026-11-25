@@ -3,7 +3,7 @@
 # SQL Server on 127.0.0.1:1433, matching the connection strings in appsettings.Development.json
 # (sa / Your_password123, a dev-only password). Run the app with `dotnet run` against it:
 #
-#   docker compose -f docker-compose.dev.yml up -d                       start SQL Server
+#   docker compose -f docker-compose.dev.yml up -d                       start SQL Server (+ the Aspire Dashboard)
 #   docker compose -f docker-compose.dev.yml stop                        stop it, keeping the data
 #
 # Or run the site in a container too (the production image, Development settings), on http://localhost:8080:
@@ -31,6 +31,16 @@ services:
       retries: 20
       start_period: 10s
 
+  # Traces, metrics and logs from the site (OTLP), in memory only: a restart clears them. UI on
+  # http://localhost:18888 (no login, local only); `dotnet run` sends to localhost:4317 (launchSettings.json).
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.5
+    environment:
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "127.0.0.1:18888:18888"
+      - "127.0.0.1:4317:18889"
+
   web:
     profiles: [app]
     build:
@@ -47,6 +57,7 @@ services:
       EmailSettings__PickupDirectory: /app/mail
       EmailSettings__ApplicationUrl: http://localhost:8080
       DataProtection__KeysPath: /app/keys
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
     ports:
       - "127.0.0.1:8080:8080"
     volumes:

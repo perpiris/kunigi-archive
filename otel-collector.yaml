@@ -1,0 +1,45 @@
+# OpenTelemetry Collector (docker-compose.yml, service otel-collector).
+# The site sends its traces, metrics and logs here (OTLP gRPC, :4317, Docker network only); the collector copies
+# them to the Aspire Dashboard (live view, in memory) and OpenObserve (kept 30 days on disk).
+# ${env:OPENOBSERVE_AUTH} comes from /opt/kunigi/openobserve.env (ops/vps/init-secrets.sh).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # Refuses data instead of growing past the container's memory limit (docker-compose.yml: 256 MB).
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 200
+    spike_limit_mib: 50
+  batch: {}
+
+exporters:
+  otlp/aspire:
+    endpoint: aspire-dashboard:18889
+    tls:
+      insecure: true
+  # The collector appends /v1/traces, /v1/logs and /v1/metrics; no trailing slash here.
+  otlphttp/openobserve:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: ${env:OPENOBSERVE_AUTH}
+      stream-name: default
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/aspire, otlphttp/openobserve]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/aspire, otlphttp/openobserve]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/aspire, otlphttp/openobserve]

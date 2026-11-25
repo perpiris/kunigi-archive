@@ -77,6 +77,8 @@ services:
       # App settings
       - DataProtection__KeysPath=/app/keys
       - LogFile__Path=/app/logs/web-.log
+      # Traces, metrics and logs to the collector below, over the Docker network only.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     volumes:
       # Uploads, sign-in keys and log files. The container runs as uid 1654 (APP_UID), so the folders must be
       # writable by it (ops/vps/init-secrets.sh creates them). All three are in the nightly backup but the logs.
@@ -89,8 +91,67 @@ services:
       - db
     restart: always
 
+  # 5-7. Telemetry (owner only). The site sends traces, metrics and logs (OpenTelemetry) to the collector, which
+  # copies them to the Aspire Dashboard (live, in memory) and OpenObserve (30 days on disk). Only the two UIs are
+  # published, and the firewall lets them through over the WireGuard VPN only, like 1433 (ops/vps/setup.sh):
+  # http://10.8.0.1:18888 (dashboard) and http://10.8.0.1:5080 (OpenObserve). No VIRTUAL_HOST on any of them, so
+  # nginx-proxy never serves them. Nothing here is backed up: losing it loses only telemetry.
+  otel-collector:
+    image: otel/opentelemetry-collector:0.166.0
+    container_name: kunigi_otel_collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    env_file:
+      - path: /opt/kunigi/openobserve.env   # OPENOBSERVE_AUTH
+        required: false
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    mem_limit: 256m
+    logging: *logging
+    restart: always
+
+  # Live view, kept in memory only (a restart clears it); asks for the token in /opt/kunigi/dashboard.env.
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.5
+    container_name: kunigi_dashboard
+    env_file:
+      # Dashboard__Frontend__BrowserToken. Without the file the dashboard makes up a token at each start and
+      # prints the login link in `docker logs kunigi_dashboard`.
+      - path: /opt/kunigi/dashboard.env
+        required: false
+    environment:
+      - Dashboard__Frontend__AuthMode=BrowserToken
+      - Dashboard__Otlp__AuthMode=Unsecured
+    ports:
+      - "18888:18888"
+    mem_limit: 512m
+    logging: *logging
+    restart: always
+
+  # History: logs, traces and metrics kept 30 days in the openobserve_data volume. Sign in with
+  # ZO_ROOT_USER_EMAIL / ZO_ROOT_USER_PASSWORD from /opt/kunigi/openobserve.env (used on the first start only).
+  openobserve:
+    image: openobserve/openobserve:v1.1.2
+    container_name: kunigi_openobserve
+    env_file:
+      - path: /opt/kunigi/openobserve.env
+        required: false
+    environment:
+      - ZO_DATA_DIR=/data
+      - ZO_COMPACT_DATA_RETENTION_DAYS=30
+      # Its in-memory table defaults to half the host's memory; keep it well inside mem_limit.
+      - ZO_MEM_TABLE_MAX_SIZE=256
+      - ZO_TELEMETRY=false
+    ports:
+      - "5080:5080"
+    volumes:
+      - openobserve_data:/data
+    mem_limit: 1g
+    logging: *logging
+    restart: always
+
 volumes:
   db_data:
+  openobserve_data:
   conf:
   vhost:
   html:

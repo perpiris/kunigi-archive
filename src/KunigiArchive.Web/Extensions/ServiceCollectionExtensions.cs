@@ -10,6 +10,10 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Formatting.Compact;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -26,6 +30,10 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration,
         IHostEnvironment environment)
     {
+        // writeToProviders (below) hands every event to the other registered providers too. The defaults
+        // (Console, Debug, EventSource) would print each line a second time, so only OpenTelemetry's stays.
+        services.AddLogging(logging => logging.ClearProviders());
+
         services.AddSerilog((serviceProvider, logger) =>
         {
             logger
@@ -61,7 +69,39 @@ public static class ServiceCollectionExtensions
                     retainedFileCountLimit: 30,
                     flushToDiskInterval: TimeSpan.FromSeconds(1));
             }
-        });
+        },
+        // Also hands each event to OpenTelemetry's logger provider (AddTelemetry), so logs reach the dashboard
+        // with the TraceId of the request they belong to.
+        writeToProviders: true);
+
+        return services;
+    }
+
+    // Traces, metrics and logs over OTLP (as in pulse-wallet), shown in the Aspire Dashboard. Exported only where
+    // OTEL_EXPORTER_OTLP_ENDPOINT is set (docker-compose.yml, launchSettings.json); without it nothing is sent.
+    public static IServiceCollection AddTelemetry(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(serviceName: "KunigiArchive.Web"))
+            .WithTracing(tracing => tracing
+                // Docker and the deploy probe /healthz: identical traces that say nothing.
+                .AddAspNetCoreInstrumentation(options =>
+                    options.Filter = context => !context.Request.Path.StartsWithSegments("/healthz"))
+                // HttpClient makes its own spans since .NET 9 (SMTP isn't HTTP, so this is mostly future-proofing).
+                .AddSource("System.Net.Http")
+                // EF Core goes through SqlClient: every query and SaveChanges becomes a span (the SQL text, with
+                // parameter names only, never their values).
+                .AddSqlClientInstrumentation())
+            .WithMetrics(metrics => metrics
+                .AddMeter("Microsoft.AspNetCore.Hosting", "Microsoft.AspNetCore.Server.Kestrel",
+                    "Microsoft.AspNetCore.Components", "System.Net.Http", "System.Runtime"))
+            // Sends the rendered message along with the template and its properties.
+            .WithLogging(configureBuilder: null, configureOptions: options => options.IncludeFormattedMessage = true);
+
+        if (!string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+        {
+            services.AddOpenTelemetry().UseOtlpExporter();
+        }
 
         return services;
     }
